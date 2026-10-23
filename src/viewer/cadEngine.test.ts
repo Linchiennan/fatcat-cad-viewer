@@ -111,7 +111,13 @@ const make = (hasRenderer = true) => {
   });
 };
 const tick = () => new Promise((r) => setTimeout(r, 0));
-const until = async (test: () => boolean) => { for (let i = 0; i < 200 && !test(); i++) await tick(); if (!test()) throw new Error("timed out waiting"); };
+const until = async (test: () => boolean) => {
+  // Count elapsed time, not timer ticks: Linux can run 200 zero-delay ticks
+  // before the engine's 300 ms rebuild debounce has elapsed.
+  await vi.waitFor(() => {
+    if (!test()) throw new Error("timed out waiting");
+  }, { timeout: 3000, interval: 10 });
+};
 const pointer = (type: string, props: Record<string, unknown>) => Object.assign(new Event(type), { pointerId: 1, pointerType: "mouse", button: 0, clientX: 0, clientY: 0, ...props });
 
 beforeEach(() => { (globalThis as Any).localStorage = new MemoryStorage(); });
