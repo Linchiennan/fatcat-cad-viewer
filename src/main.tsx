@@ -21,7 +21,7 @@ if (typeof FontFace !== "undefined" && document.fonts) {
 // Web build only: offline cache from the service worker next to index.html (T10 6.1-2). The APK never registers it.
 if (IS_WEB_BUILD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).then(registration => registration.update()).catch(() => { /* Access still requires the server; caching is optional. */ });
+    navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).then(registration => registration.update()).catch(() => { /* Online use remains possible; the gate reports offline resources as not ready. */ });
   });
 }
 

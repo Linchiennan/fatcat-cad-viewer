@@ -13,6 +13,8 @@
 | dxf-parser（dxf-viewer 內含） | — | DXF 解析 | MIT | licenses/dxf-parser-MIT.txt |
 | three.js | 0.161.0 | 3D 繪圖 | MIT | licenses/three-MIT.txt |
 | PDF.js（pdfjs-dist） | 6.4.299 | PDF 顯示 | Apache-2.0 | licenses/pdfjs-Apache-2.0.txt |
+| QuickJS（PDF.js 內含） | 2026-06-04 / 3d5e064e9dd6 | PDF JavaScript 沙箱 | MIT | licenses/quickjs-MIT.txt |
+| PDF.js QuickJS 整合來源 | 1b37671f1b52（匹配上游建置設定） | 沙箱介接 | MIT | licenses/pdfjs-quickjs-MIT.txt |
 | PDF.js 內含 OpenJPEG、JBIG2、QCMS 等 | — | PDF 影像解碼 | 各自授權 | licenses/pdfjs-wasm-*.txt |
 | libarchive-wasm | 1.2.0 | ZIP／RAR 讀取（WebAssembly） | MIT | licenses/libarchive-wasm-LICENSE.txt |
 | libarchive（libarchive-wasm 內含） | 3.7.7 | 壓縮檔格式 | BSD-2-Clause 等 | licenses/libarchive-3.7.7-COPYING.txt |

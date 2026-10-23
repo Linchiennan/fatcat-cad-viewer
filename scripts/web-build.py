@@ -21,8 +21,8 @@ build = hashlib.sha256(json.dumps({'inputs': digests, 'variant': 'web'}, sort_ke
 
 env = os.environ.copy()
 env['VITE_FATCAT_WEB'] = '1'
-tmp = w.parent / '_tmp'
-tmp.mkdir(exist_ok=True)
+tmp = w / 'build-logs/tmp'
+tmp.mkdir(parents=True, exist_ok=True)
 env['TMPDIR'] = env['TEMP'] = env['TMP'] = str(tmp)
 logs.mkdir(exist_ok=True)
 

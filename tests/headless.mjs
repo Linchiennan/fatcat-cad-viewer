@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import assert from 'node:assert/strict';
-const evidence=resolve('../evidence'); await mkdir(evidence,{recursive:true});
+const evidence=resolve('evidence/offline-14days/regression-headless'); await mkdir(evidence,{recursive:true});
 const mime={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.wasm':'application/wasm','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.otf':'font/otf','.ttf':'font/ttf','.md':'text/plain'};
 async function serve(dir) {
  const root=resolve(dir);
@@ -17,7 +17,7 @@ async function serve(dir) {
  await new Promise(r=>server.listen(0,'127.0.0.1',r)); return {server,url:`http://127.0.0.1:${server.address().port}/fatcat-cad-viewer/`};
 }
 const prod=await serve('dist-web'); const mock=await serve('dist-mock');
-const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',args:['--enable-unsafe-swiftshader','--no-first-run']});
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe',args:['--enable-unsafe-swiftshader','--no-first-run']});
 const report={production:[],mock:[],errors:[],externalIntercepted:[],exports:[],layout:[]};
 async function context(options={}) {
  const c=await browser.newContext({...options});
@@ -80,14 +80,14 @@ try {
   const frame=p.frames().find(f=>f.url().includes('usage.html'));await p.waitForTimeout(1000);
   const analytics=await frame.evaluate(()=>JSON.stringify(window.dataLayer||[]));assert.ok(!analytics.includes('NEVER_SEND_THIS_FILENAME')&&!analytics.includes('Alice@example.test')&&!analytics.includes('engineering-fixture'));report.mock.push({analyticsQueue:analytics,collection:'intercepted, not live'});
   const cameraBefore = await p.evaluate(()=>window.__fatcatDebug.camera());
-  await p.evaluate(()=>{window.__accessTest.setFailure('unavailable');window.dispatchEvent(new Event('offline'));});await p.getByRole('button',{name:'重新連線驗證'}).waitFor();
+  await p.evaluate(()=>{window.__accessTest.setFailure('unavailable');window.dispatchEvent(new Event('offline'));});await p.waitForFunction(()=>document.querySelector('.web-account')?.textContent?.includes('目前離線'));
   console.log('LOCKED_APPS',await p.locator('.app').evaluateAll(nodes=>nodes.map(n=>({tag:n.tagName,cls:n.className,parent:n.parentElement.outerHTML.slice(0,500)}))));
   await p.keyboard.press('Escape');
-  assert.equal(await p.locator('.app').count(),1);assert.equal(await p.locator('.app').isVisible(),false);assert.equal(await p.locator('.usage-frame').count(),0);
+  assert.equal(await p.locator('.app').count(),1);assert.equal(await p.locator('.app').isVisible(),true);assert.equal(await p.locator('.usage-frame').count(),0);
   await p.evaluate(()=>{window.__accessTest.setFailure('');window.dispatchEvent(new Event('online'));});await p.locator('.web-account').waitFor();assert.equal(await p.evaluate(()=>window.__fatcatDebug.ready()),true);
   await p.waitForFunction(()=>document.querySelector('.drawing-engine canvas')?.width > 0);
   const cameraAfter = await p.evaluate(()=>window.__fatcatDebug.camera()); assert.deepEqual(cameraAfter,cameraBefore);
-  report.mock.push('offline locks existing drawing and removes analytics; reconnect rechecks and preserves drawing and camera');
+  report.mock.push('valid offline grant preserves drawing and camera, removes analytics; reconnect checks in background');
   await p.evaluate(()=>window.__accessTest.setRecord({exists:true,enabled:false,server:true}));await p.getByRole('button',{name:'使用 Google 登入',exact:true}).waitFor();assert.equal(await p.locator('.app').count(),0);assert.equal(await p.locator('.usage-frame').count(),0);
   const libraryAfter = await p.evaluate(async()=>{const db=await new Promise((r,j)=>{const q=indexedDB.open('fatcat-drawing-library');q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});const q=db.transaction('entries').objectStore('entries').getAll();const rows=await new Promise((r,j)=>{q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});db.close();return rows.map(x=>({name:x.name,kind:x.kind}));});assert.ok(libraryAfter.some(x=>x.name==='engineering-fixture.dxf'));report.mock.push({libraryPreservedAfterRevocation:libraryAfter});
   report.mock.push('server disabled watch unmounts CAD and signs out');

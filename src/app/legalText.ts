@@ -11,6 +11,8 @@ export const THIRD_PARTY: ThirdParty[] = [
   { name: "dxf-parser", version: "—", use: "legal.use.dxfParse", license: "MIT", texts: ["dxf-parser-MIT.txt"] },
   { name: "three.js", version: "0.161.0", use: "legal.use.three", license: "MIT", texts: ["three-MIT.txt"] },
   { name: "PDF.js (pdfjs-dist)", version: "6.4.299", use: "legal.use.pdf", license: "Apache-2.0", texts: ["pdfjs-Apache-2.0.txt"] },
+  { name: "QuickJS (PDF.js)", version: "2026-06-04", use: "legal.use.pdf", license: "MIT", texts: ["quickjs-MIT.txt"] },
+  { name: "PDF.js QuickJS integration", version: "1b37671f1b52", use: "legal.use.pdf", license: "MIT", texts: ["pdfjs-quickjs-MIT.txt"] },
   { name: "OpenJPEG / JBIG2 / QCMS (PDF.js)", version: "—", use: "legal.use.pdfImages", license: "BSD-2-Clause / Apache-2.0 / MIT",
     texts: ["pdfjs-wasm-LICENSE_OPENJPEG.txt", "pdfjs-wasm-LICENSE_JBIG2.txt", "pdfjs-wasm-LICENSE_QCMS.txt", "pdfjs-wasm-LICENSE_PDFJS_OPENJPEG.txt", "pdfjs-wasm-LICENSE_PDFJS_JBIG2.txt", "pdfjs-wasm-LICENSE_PDFJS_QCMS.txt"] },
   { name: "libarchive-wasm", version: "1.2.0", use: "legal.use.archive", license: "MIT", texts: ["libarchive-wasm-LICENSE.txt"] },

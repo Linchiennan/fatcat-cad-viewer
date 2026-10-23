@@ -2,7 +2,7 @@
 
 Copyright (C) 2026 大肥貓
 
-大肥貓CAD看圖在裝置上處理 DWG、DXF 與 PDF。原生/一般本機版保留離線能力；本白名單網頁版啟動與返回前景需連線驗證授權。
+大肥貓CAD看圖在裝置上處理 DWG、DXF 與 PDF。原生/一般本機版保留離線能力；本白名單網頁版成功連線驗證後，可在本機授權的14天有效期內離線使用（需保留登入狀態及完整網站資源快取）。到期需重新連線驗證；離線使用不延長期限，有網路時確認撤權即停止放行。
 圖檔只在使用者自己的裝置上處理，不會上傳。
 
 ## 授權
@@ -21,7 +21,7 @@ Copyright (C) 2026 大肥貓
 
 - DWG 轉檔：LibreDWG（@mlightcad/libredwg-web，GPL-3.0）
 - 圖面顯示：dxf-viewer（MPL-2.0，內含 dxf-parser，MIT）、three.js（MIT）
-- PDF：PDF.js（Apache-2.0）
+- PDF：PDF.js（Apache-2.0）；內含 QuickJS 與 PDF.js QuickJS 整合程式（MIT），完整原作者及授權告知見 licenses/quickjs-MIT.txt、licenses/pdfjs-quickjs-MIT.txt。
 - 壓縮檔：libarchive-wasm（MIT），內含 libarchive（BSD）、zlib、bzip2、xz、OpenSSL（Apache-2.0）
 - SHX 字型：@mlightcad/shx-parser（MIT）；壓縮：fflate（MIT）
 - 介面與平台：React（MIT）、Capacitor（MIT）、AndroidX（Apache-2.0）

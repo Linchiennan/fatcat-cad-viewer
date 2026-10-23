@@ -1,5 +1,7 @@
 # Acceptance matrix — local web candidate
 
+> 歷史紀錄：本文件 server-only／斷網鎖定／重開需在線的舊契約與驗收，已由 `../008-offline-access/spec.md` 的 14 天本機離線授權取代；其餘登入、隱私、公開來源與功能保留要求仍有效。新版結果見 008 acceptance，不把舊測試數當本次結果。
+
 本文件只記錄本機驗證，不代表網站已公開或真 Google 登入成功。
 
 | ID / 原需求 | 狀態 | 對應程式 / 真實證據 |

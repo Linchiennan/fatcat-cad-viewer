@@ -14,6 +14,12 @@
 - All modified and supporting source files are provided in `dxf-viewer-1.0.48-patched/`, under MPL-2.0 with upstream copyright retained.
 - Reproduce the modifications using `scripts/patch-cjk-fonts.mjs`, `scripts/patch-engineering.mjs`, `scripts/patch-mtext-height.mjs` against the exact package. No global/shared node_modules was patched.
 
+## QuickJS notices shipped with PDF.js
+
+PDF.js `d0991a0d53f3bb3a7307e3b83f279c1d117aafb3` includes QuickJS JS/WASM. Its import commit `7a7e4fd382481a76f55c6d735873f635c9178db1` identifies QuickJS `3d5e064e9dd67c70f7962836505a7fa067bf0a4e` (2026-06-04). The distributed JS/WASM were compared byte-for-byte with that pinned PDF.js source. `licenses/quickjs-MIT.txt` preserves the pinned upstream LICENSE and linked-source copyright/permission headers.
+
+The integration reference `mozilla/pdf.js.quickjs@1b37671f1b529f887673f33ba4c5f00981a8065b` is the last upstream commit preceding that PDF.js import, and its Dockerfile selects the same QuickJS revision. `licenses/pdfjs-quickjs-MIT.txt` preserves its source headers. This establishes matching source configuration, not a reconstructed build attestation. No runtime binaries were changed. These notices are included in both the in-app license page and generated distributions.
+
 ## Other runtime sources
 NPM-SOURCES.json inventories installed production dependencies, their exact version, upstream repository, source tarball integrity and license text copies. It may include Firebase subpackages not reachable in this web bundle, and does not claim every installed package is shipped. UPSTREAM-REVISIONS.json records registry gitHead when available.
 - Firebase JS SDK 13.1.0 (Apache-2.0): https://github.com/firebase/firebase-js-sdk/tree/cc7ead49187d024958a4a3bcee87436dc03be12c
@@ -23,4 +29,4 @@ NPM-SOURCES.json inventories installed production dependencies, their exact vers
 - Fonts: Noto CJK TC and Liberation Sans are unchanged; OFL texts ship next to fonts and in licenses/.
 
 ## Local changes for the web candidate
-Added Web-only Firebase gate, server-only whitelist decision controller, analytics-only document, Web privacy notice, subpath/SW policy and tests. Existing CAD engine, export, annotation and library implementation are preserved. Security patch updates in isolated dependency lock: Vite 7.3.7, Vitest 4.1.12, Node-only @grpc/grpc-js override 1.14.6. No author license was replaced. No private CAD, account token, signing key or diagnostic is part of this source package.
+Added Web-only Firebase gate with fresh Google/server whitelist verification and a 14-day uid/email-bound local offline grant, analytics-only document, Web privacy notice, subpath/SW readiness policy and tests. The local grant is not a cryptographic signature or tamper-resistant DRM; offline revocation is not immediate. Existing CAD engine, export, annotation and library implementation are preserved. Security patch updates in isolated dependency lock: Vite 7.3.7, Vitest 4.1.12, Node-only @grpc/grpc-js override 1.14.6. No author license was replaced. No private CAD, account token, signing key or diagnostic is part of this source package.

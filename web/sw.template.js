@@ -14,18 +14,26 @@ self.addEventListener('install', event => {
 });
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
-    for (const key of await caches.keys()) {
-      if (key.startsWith(PREFIX) && key !== CORE && key !== RUNTIME) await caches.delete(key);
-      // Remove legacy caches only when ALL entries belong to this exact application scope.
-      if (/^fatcat-(core|runtime)-/.test(key)) {
-        const cache = await caches.open(key); const keys = await cache.keys();
-        if (keys.length && keys.every(r => r.url.startsWith(self.registration.scope))) await caches.delete(key);
-      }
-    }
+    // Preserve prior public bundles: an already-open CAD may still lazy-load its
+    // old hashed modules after this worker activates. Never delete drawing stores.
+    // Browser storage management can evict caches; readiness is checked separately.
     await self.clients.claim();
     for (const client of await self.clients.matchAll({ type: 'window' })) {
       if (client.url.startsWith(self.registration.scope)) client.postMessage({ type: 'fatcat-worker-ready', build: BUILD });
     }
+  })());
+});
+self.addEventListener('message', event => {
+  if (event.data?.type !== 'fatcat-cache-status') return;
+  event.waitUntil((async () => {
+    let ready = false;
+    try {
+      const core = new Set((await (await caches.open(CORE)).keys()).map(r => r.url));
+      const runtime = new Set((await (await caches.open(RUNTIME)).keys()).map(r => r.url));
+      ready = PRECACHE.every(p => core.has(new URL(p, self.registration.scope).href)) &&
+        RUNTIME_PRECACHE.every(p => runtime.has(new URL(p, self.registration.scope).href));
+    } catch { /* blocked/evicted cache is not offline ready */ }
+    event.source?.postMessage({ type: 'fatcat-cache-status', build: BUILD, ready });
   })());
 });
 self.addEventListener('fetch', event => {
@@ -36,8 +44,16 @@ self.addEventListener('fetch', event => {
     return;
   }
   // Exact allowlist (no query-string normalization). Never intercept Google/Firebase or user files.
-  if (!assetURLs.has(url.href)) return;
+  // Also serve exact previously precached public URLs for still-open old clients.
   event.respondWith((async () => {
-    return (await (await caches.open(CORE)).match(request)) || (await (await caches.open(RUNTIME)).match(request)) || fetch(request);
+    if (assetURLs.has(url.href)) {
+      const hit = (await (await caches.open(CORE)).match(request)) || (await (await caches.open(RUNTIME)).match(request));
+      if (hit) return hit;
+    }
+    for (const key of await caches.keys()) {
+      if (!key.startsWith(PREFIX)) continue;
+      const hit = await (await caches.open(key)).match(request); if (hit) return hit;
+    }
+    return fetch(request);
   })());
 });
