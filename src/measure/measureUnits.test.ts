@@ -1,0 +1,59 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { nextUnits, changeUnits, clampPanelHeight, formatLabel, formatResult, loadPanelHeight, savePanelHeight, sheetUnits } from "./measureUnits";
+import { savePosition } from "../viewer/readingPosition";
+
+const store = new Map<string, string>();
+beforeEach(() => {
+  store.clear();
+  (globalThis as any).localStorage = {
+    getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k),
+    key: (i: number) => [...store.keys()][i] ?? null, get length() { return store.size; },
+  };
+  // Object.keys(localStorage) in readingPosition: expose stored keys as own properties.
+  (globalThis as any).localStorage = new Proxy((globalThis as any).localStorage, { ownKeys: () => [...store.keys()], getOwnPropertyDescriptor: () => ({ enumerable: true, configurable: true }) });
+});
+
+describe("sheet units (T16 3.4)", () => {
+  it("follows INSUNITS, else assumes centimetres; display defaults to cm", () => {
+    expect(sheetUnits("k1", "mm")).toEqual({ source: "mm", display: "cm", assumed: false });
+    expect(sheetUnits("k2", "drawing")).toEqual({ source: "cm", display: "cm", assumed: true });
+  });
+
+  it("a saved choice wins and changing the source moves the display along", () => {
+    const key = "fatcat-reading-v1:a.dxf:00";
+    savePosition(key, { x: 0, y: 0, width: 10 });
+    const next = changeUnits(key, "drawing", sheetUnits(key, "drawing"), { source: "mm" });
+    expect(next).toEqual({ source: "mm", display: "mm", assumed: false });
+    expect(sheetUnits(key, "drawing")).toEqual({ source: "mm", display: "mm", assumed: false });
+    expect(changeUnits(key, "drawing", next, { display: "m" }).display).toBe("m");
+    expect(changeUnits(key, "drawing", next, { source: "drawing" })).toMatchObject({ source: "drawing", display: "drawing" });
+  });
+
+  it("panel changes: source moves display along; drawing source forces drawing display", () => {
+    expect(nextUnits({ source: "mm", display: "cm" }, { source: "m" })).toEqual({ source: "m", display: "m" });
+    expect(nextUnits({ source: "mm", display: "cm" }, { display: "ft" })).toEqual({ source: "mm", display: "ft" });
+    expect(nextUnits({ source: "mm", display: "cm" }, { source: "drawing" })).toEqual({ source: "drawing", display: "drawing" });
+    expect(nextUnits({ source: "drawing", display: "drawing" }, { display: "cm" })).toEqual({ source: "drawing", display: "drawing" });
+  });
+
+  it("formats results and drawing labels (no unit word for drawing units)", () => {
+    const mm = { source: "mm" as const, display: "cm" as const, assumed: false };
+    expect(formatResult(mm, 1)(628)).toBe("62.8 cm");
+    expect(formatResult(mm, 1)(10000, true)).toBe("100.0 cm²");
+    expect(formatLabel(628, mm, 1)).toBe("62.8 cm");
+    expect(formatLabel(628, { source: "drawing", display: "drawing", assumed: false }, 2)).toBe("628.00");
+  });
+});
+
+describe("panel height (T16 2.4-2)", () => {
+  it("is kept between 110 and window height − 190, and ignored below 110", () => {
+    expect(clampPanelHeight(50, 800)).toBe(110);
+    expect(clampPanelHeight(900, 800)).toBe(610);
+    expect(clampPanelHeight(500, 250)).toBe(110);
+    expect(loadPanelHeight()).toBeNull();
+    savePanelHeight(321.6);
+    expect(loadPanelHeight()).toBe(322);
+    store.set("fatcat:measure-panel-height", "90");
+    expect(loadPanelHeight()).toBeNull();
+  });
+});

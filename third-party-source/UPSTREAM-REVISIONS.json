@@ -1,0 +1,138 @@
+[
+  {
+    "name": "@mlightcad/libredwg-web",
+    "version": "0.7.9",
+    "gitHead": null,
+    "repository": {
+      "url": "git+https://github.com/mlightcad/libredwg-web.git",
+      "type": "git"
+    },
+    "dist": {
+      "shasum": "840bb79cf8ba5599fd2f6e1077eb82e2fb942162",
+      "tarball": "https://registry.npmjs.org/@mlightcad/libredwg-web/-/libredwg-web-0.7.9.tgz",
+      "fileCount": 179,
+      "integrity": "sha512-tqjx0eCiR0CNI3TyO3LVYzl4ptuzSFm7asGn/C1YiJaEk7Vneto+lRrVUco85qw+PZDihaFLwWqdYIEse1swbA==",
+      "signatures": [
+        {
+          "sig": "MEUCIGFqz0vSXy/AyxVh1eNK7WN0ks0U850dhRfPajA5mLO4AiEAq/3ueqDDRonnxbxO3WmILN8Av4enCkg61Jdqd3XVciU=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/@mlightcad%2flibredwg-web@0.7.9",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 11181898
+    }
+  },
+  {
+    "name": "libarchive-wasm",
+    "version": "1.2.0",
+    "gitHead": "2e72c66d92fb8aa5914d0ff2f9e29608e38f2294",
+    "repository": {
+      "url": "git+https://github.com/ofk/libarchive-wasm.git",
+      "type": "git"
+    },
+    "dist": {
+      "shasum": "92fd37e045654e790b17d8d9eabe55de8eb41087",
+      "tarball": "https://registry.npmjs.org/libarchive-wasm/-/libarchive-wasm-1.2.0.tgz",
+      "fileCount": 28,
+      "integrity": "sha512-aunFn8oL9VwGRj+brRvdOv8BRUD4Ea1WxJW45IdiuXE2Vp/m/X+M1UxSU+yPzXfc1mPPC8AARaflg/CtF11u8g==",
+      "signatures": [
+        {
+          "sig": "MEQCIDD3gZQ2AKQRNJ4z62OOphvf4SItjNRglgjgIvVXJ1PcAiAJqPTtuzOv288UYcbS8RJLwbp0wke9swMu6AmxgTpqsQ==",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "unpackedSize": 1510872
+    }
+  },
+  {
+    "name": "pdfjs-dist",
+    "version": "6.4.299",
+    "gitHead": "d0991a0d53f3bb3a7307e3b83f279c1d117aafb3",
+    "repository": {
+      "url": "git+https://github.com/mozilla/pdf.js.git",
+      "type": "git"
+    },
+    "dist": {
+      "shasum": "4a46f5146ac6505564c1a5d472900be4df8bf628",
+      "tarball": "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.4.299.tgz",
+      "fileCount": 554,
+      "integrity": "sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==",
+      "signatures": [
+        {
+          "sig": "MEUCIANFOtvvvNGmxlVa6Y9QCzq37pTxqJ158DtYT7YLMpwDAiEAoiTHdJrCono0hv72HNRa7TL6/cK0rLKKsStkjlNtWSQ=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEYCIQDh61X2sPdS5BlBMRK+soD+Xde+4PMDdwVWIB0xMy1W5QIhAMBAYDXPhYnoShHZTMrVgSn8t8R/YYIdNFnTyk6eYJ6Y",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/pdfjs-dist@6.4.299",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 34913648
+    }
+  },
+  {
+    "name": "@mlightcad/shx-parser",
+    "version": "1.4.5",
+    "gitHead": null,
+    "repository": {
+      "url": "git+https://github.com/mlightcad/shx-parser.git",
+      "type": "git"
+    },
+    "dist": {
+      "shasum": "1c4dba7cdec522b877aa885ab714ed01d9434ac4",
+      "tarball": "https://registry.npmjs.org/@mlightcad/shx-parser/-/shx-parser-1.4.5.tgz",
+      "fileCount": 19,
+      "integrity": "sha512-wFY0X7vnuq1IYdP6JRggb7LHcKho1P8zmcWGtXa6XYthwyKZCUoZCswTXr7J26pbzyhBB7KsiCcCL48iwIevdQ==",
+      "signatures": [
+        {
+          "sig": "MEUCIDNSgRoOuLrh/pKKWS9wEtY+OB1kKI1hd1USGZvAJNFzAiEAgyoAShiLp3CnBA2HB4kf2AOOqcSUXAkUDrN2ol2xD0c=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/@mlightcad%2fshx-parser@1.4.5",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 161964
+    }
+  },
+  {
+    "name": "firebase",
+    "version": "13.1.0",
+    "gitHead": "cc7ead49187d024958a4a3bcee87436dc03be12c",
+    "repository": {
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git",
+      "type": "git"
+    },
+    "dist": {
+      "shasum": "62d83542df92f77ec9264610b23a3f51625f1693",
+      "tarball": "https://registry.npmjs.org/firebase/-/firebase-13.1.0.tgz",
+      "fileCount": 2974,
+      "integrity": "sha512-II/6P63vYzWdS6gTM9+OaMZD6XaCHJdI/9OVa8Z+bEs18t3CR2JlSwCI12KYMramNqTkywJocjSpGePaVPng+A==",
+      "signatures": [
+        {
+          "sig": "MEUCIQC7F8ZkGsQ2judanteGs2hnEmS+ZK45lBv1j1ImvIG04gIgC1RIPhm2V0r7BZAZ5mUHq39WSoGrrj5cYafPGvlLLo8=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "sig": "MEUCIQCuneS2bTV5NALxt8SCTGdfnniX5zKEt+T77igQ2QmxugIgURwbL+XUN71VKSqkyGMR7e+WtqvJPH7ivQaZuF1en1E=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        }
+      ],
+      "unpackedSize": 37763673
+    }
+  }
+]

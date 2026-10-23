@@ -1,0 +1,14 @@
+.web-account { position: fixed; inset: 0 0 auto; height: 48px; display: flex; justify-content: space-between; align-items: center; padding: 2px 12px; background: #101a24; border-bottom: 1px solid #4d6b80; gap: 8px; z-index: 20; font-size: 12px; }
+.web-account button { min-height: 40px; padding: 6px 18px; border: 1px solid #4d6b80; border-radius: 8px; background: #1d3343; }
+.web-cad { position: absolute; inset: 48px 0 0; transform: translateZ(0); overflow: hidden; }
+.web-cad.is-locked { visibility: hidden; pointer-events: none; }
+.web-cad.is-locked * { visibility: hidden !important; }
+.auth-screen { position: fixed; inset: 0; overflow: auto; padding: max(18px, env(safe-area-inset-top)) 16px 24px; display: grid; align-items: center; }
+.auth-card { width: 100%; max-width: 520px; margin: auto; padding: 24px; background: #101a24; border: 1px solid #4d6b80; border-radius: 20px; line-height: 1.6; overflow-wrap: anywhere; }
+.auth-card h1 { margin: 18px 0 4px; font-size: 26px; }
+.auth-card h2 { font-size: 18px; margin: 0; }
+.auth-card a { color: #ffd089; }
+.auth-card .secondary-btn { margin-top: 12px; width: 100%; }
+.auth-note { font-size: 13px; color: #a3b7bf; }
+.usage-frame { display: none; }
+@media (max-width: 390px) { .auth-card { padding: 18px; } }

@@ -1,0 +1,16 @@
+/* Drawing canvas and its overlays (T15 2.1): drawing, measuring overlay, markups, search box. */
+.drawing-canvas { position: absolute; inset: 0; overflow: hidden; }
+.drawing-canvas.measuring .drawing-engine { cursor: crosshair; }
+.drawing-engine { position: absolute; inset: 0; width: 100%; height: 100%; }
+.measure-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.drawing-canvas .markup-layer { position: absolute; inset: 0; width: 100%; height: 100%; }
+.search-hit-box {
+  position: absolute; pointer-events: none; box-sizing: border-box;
+  border: 3px solid #ff3b30; border-radius: 6px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 0 18px #ff3b30;
+  animation: search-hit-pulse 1.2s ease-in-out 3;
+}
+@keyframes search-hit-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 0 18px #ff3b30; }
+  50% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7), 0 0 34px #ff3b30; }
+}

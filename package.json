@@ -1,0 +1,57 @@
+{
+  "name": "fatcat-cad",
+  "private": true,
+  "version": "3.0.0",
+  "description": "大肥貓CAD看圖：手機離線看 DWG／DXF／PDF 施工圖",
+  "license": "GPL-3.0-only",
+  "author": "大肥貓",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "runtime": "node scripts/copy-runtime.mjs",
+    "patch": "node scripts/patch-cjk-fonts.mjs && node scripts/patch-engineering.mjs && node scripts/patch-mtext-height.mjs",
+    "prebuild": "npm run runtime && npm run patch",
+    "dev": "npm run prebuild && vite",
+    "build": "tsc -b && vite build",
+    "web": "python scripts/web-build.py",
+    "pretest": "npm run runtime && npm run patch",
+    "test": "vitest run",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.4.3",
+    "@capacitor/browser": "8.0.4",
+    "@capacitor/core": "8.4.3",
+    "@mlightcad/libredwg-web": "0.7.9",
+    "@mlightcad/shx-parser": "1.4.5",
+    "dxf-viewer": "1.0.48",
+    "fflate": "0.8.3",
+    "firebase": "13.1.0",
+    "libarchive-wasm": "1.2.0",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.4.299",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "three": "0.161.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.3",
+    "@firebase/rules-unit-testing": "6.0.0",
+    "@types/node": "24.7.0",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@types/three": "0.161.2",
+    "@vitejs/plugin-react": "5.0.4",
+    "fake-indexeddb": "6.2.4",
+    "jsdom": "30.1.2",
+    "playwright": "1.64.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.6"
+  }
+}

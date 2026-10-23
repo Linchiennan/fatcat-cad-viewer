@@ -1,0 +1,709 @@
+// Drawing library overlay (T11 2, 4, 8.5; exports area spec 005). Owner: P4 group A.
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { IS_WEB_BUILD } from "../app/platform";
+import { MarqueeText } from "../components/MarqueeText";
+import { RecentCarousel } from "../components/RecentCarousel";
+import {
+  ArrowLeftIcon, ChevronRightIcon, CloseIcon, CopyIcon, FileIcon, FolderCheckIcon, FolderIcon, ImportIcon, MoreIcon, MoveIcon,
+  RenameIcon, TrashIcon,
+} from "../components/Icons";
+import { openArchive, type ArchiveItem, type ArchiveSession } from "../files/archives";
+import { FILE_ACCEPT, detectDrawingFormat, isArchiveFormat } from "../files/fileTypes";
+import { useI18n } from "../i18n/translations";
+import {
+  MAX_NAME_LENGTH, ROOT_ID, copyLibraryEntry, createLibraryFolder, deleteLibraryEntry, importArchiveToLibrary,
+  importDrawingToLibrary, libraryBreadcrumb, listLibraryChildren, listLibraryFolders, listRecentDrawings, moveLibraryEntry,
+  openLibraryDrawing, renameLibraryEntry, replaceLibraryDrawing, requestPersistentStorage,
+  type LibraryDrawingEntry, type LibraryEntry, type LibraryFolderEntry,
+} from "./drawingLibrary";
+import { libraryText } from "./libraryText";
+import {
+  decideLibraryBack, filterLibraryEntries, formatLibraryDate, formatLibrarySize, isAbortError, libraryErrorMessage,
+  progressPercent, setLibraryBackHandler, sortLibraryEntries, type LibrarySort,
+} from "./libraryView";
+import { Dialog } from "./LibraryDialog";
+import { ExportsView, type ExportPopup } from "./ExportsView";
+import "./library.css";
+
+export type LibraryScreenProps = {
+  /** Open a file; entryId is set when it came from the library. */
+  onOpen(file: File, entryId: string): void;
+  onClose(): void;
+  /** An archive handed in from outside (picker or Android) to extract here, or null. */
+  incomingArchive: File | null;
+  /** The library has taken the incoming archive (App clears it). */
+  onArchiveTaken(): void;
+};
+
+type Toast = { text: string; error: boolean };
+type Overlay =
+  | { kind: "actions"; entry: LibraryEntry }
+  | { kind: "text"; mode: "create" | "rename"; entry?: LibraryEntry }
+  | { kind: "destination"; mode: "copy" | "move"; entry: LibraryEntry }
+  | { kind: "delete"; entry: LibraryEntry }
+  | null;
+type ArchiveState = {
+  name: string;
+  phase: "loading" | "ready" | "extracting" | "error";
+  items: ArchiveItem[];
+  checked: Set<string>;
+  progress: number;
+  error: string | null;
+};
+
+const TOAST_MS = 3200;
+
+export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken }: LibraryScreenProps) {
+  const { locale, t } = useI18n();
+  const [folderId, setFolderId] = useState(ROOT_ID);
+  const [children, setChildren] = useState<LibraryEntry[]>([]);
+  const [crumbs, setCrumbs] = useState<LibraryFolderEntry[]>([]);
+  const [recent, setRecent] = useState<LibraryDrawingEntry[]>([]);
+  const [folders, setFolders] = useState<LibraryFolderEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  // Overlays are mutually exclusive: one popup at a time (T11 4.1-3); the archive dialog sits above them.
+  const [popup, setPopup] = useState<Overlay>(null);
+  const [searchText, setSearchText] = useState("");
+  const [notice, setNotice] = useState<Toast | null>(null);
+  const [sortMode, setSortMode] = useState<LibrarySort>("name");
+  const [archive, setArchive] = useState<ArchiveState | null>(null);
+  const [reload, setReload] = useState(0);
+  // Exports area (spec 005): replaces the old "new folder" button.
+  const [exportsOpen, setExportsOpen] = useState(false);
+  const [exportPopup, setExportPopup] = useState<ExportPopup>(null);
+  const busyRef = useRef(false);
+  const addInput = useRef<HTMLInputElement>(null);
+  const replaceInput = useRef<HTMLInputElement>(null);
+  const replaceTarget = useRef<LibraryDrawingEntry | null>(null);
+  const archiveRun = useRef<{ token: number; controller: AbortController; session: ArchiveSession | null; file: File | null }>({ token: 0, controller: new AbortController(), session: null, file: null });
+
+  const message = useCallback((error: unknown) => {
+    const m = libraryErrorMessage(error);
+    return "key" in m ? t(m.key) : libraryText(locale, m.own);
+  }, [t, locale]);
+  const showError = useCallback((error: unknown) => setNotice({ text: message(error), error: true }), [message]);
+  const refresh = useCallback(() => setReload((n) => n + 1), []);
+
+  useEffect(() => requestPersistentStorage(), []);
+
+  // Load the current folder; late results for a folder we already left are dropped (T11 4.1-4).
+  useEffect(() => {
+    let live = true;
+    setLoading(true);
+    (async () => {
+      try {
+        const [list, path, all, rec] = await Promise.all([
+          listLibraryChildren(folderId), libraryBreadcrumb(folderId), listLibraryFolders(),
+          folderId === ROOT_ID ? listRecentDrawings(6) : Promise.resolve([]),
+        ]);
+        if (!live) return;
+        setChildren(list);
+        setCrumbs(path);
+        setFolders(all);
+        setRecent(rec);
+      } catch (e) {
+        if (!live) return;
+        setChildren([]);
+        setRecent([]);
+        showError(e);
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [folderId, reload, showError]);
+
+  useEffect(() => {
+    if (!notice || notice.error) return;
+    const timer = setTimeout(() => setNotice(null), TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  const goToFolder = (id: string) => {
+    setSearchText("");
+    setFolderId(id);
+  };
+
+  /** Run one write at a time; busy clicks are ignored (T11 4.1-5). */
+  const runBusy = async (work: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      await work();
+    } catch (e) {
+      if (!isAbortError(e)) showError(e);
+      refresh();
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
+
+  // ---- archives (T11 2.10, 4.5) ----
+  const cancelArchive = useCallback(() => {
+    const run = archiveRun.current;
+    run.token++;
+    run.controller.abort();
+    run.session?.close();
+    run.session = null;
+    run.file = null;
+    setArchive(null);
+  }, []);
+
+  const startArchive = useCallback(async (file: File, incoming: boolean) => {
+    cancelArchive();
+    const run = archiveRun.current;
+    const token = run.token;
+    const controller = new AbortController();
+    run.controller = controller;
+    run.file = file;
+    setArchive({ name: file.name, phase: "loading", items: [], checked: new Set(), progress: 0, error: null });
+    try {
+      const session = await openArchive(file, controller.signal);
+      if (run.token !== token) {
+        session.close();
+        return;
+      }
+      run.session = session;
+      if (incoming) {
+        // An archive from outside is kept in the root folder too, before the dialog becomes ready (T11 4.5-1).
+        await importDrawingToLibrary(file, ROOT_ID);
+        if (run.token !== token) return;
+        refresh();
+      }
+      setArchive({
+        name: file.name, phase: "ready", items: session.items, progress: 0, error: null,
+        checked: new Set(session.items.filter((i) => i.supported).map((i) => i.path)),
+      });
+    } catch (e) {
+      if (run.token !== token || isAbortError(e)) return;
+      setArchive((a) => (a ? { ...a, phase: "error", error: message(e) } : a));
+    }
+  }, [cancelArchive, message, refresh]);
+
+  const extractArchive = async () => {
+    const run = archiveRun.current;
+    const state = archive;
+    if (!state || state.phase !== "ready" || !run.session || state.checked.size === 0) return;
+    const token = run.token;
+    const paths = state.items.filter((i) => state.checked.has(i.path)).map((i) => i.path);
+    setArchive({ ...state, phase: "extracting", progress: 0, error: null });
+    try {
+      const files = await run.session.extract(paths, run.controller.signal, (done, total) => {
+        if (run.token === token) setArchive((a) => (a ? { ...a, progress: progressPercent(done, total) } : a));
+      });
+      if (run.token !== token) return;
+      const result = await importArchiveToLibrary(files, folderId, state.name, run.controller.signal);
+      if (run.token !== token) return;
+      cancelArchive();
+      goToFolder(result.folder.id);
+      refresh();
+      setNotice({ text: `${t("archive.imported")}: ${result.drawings.length}`, error: false });
+    } catch (e) {
+      if (run.token !== token || isAbortError(e)) return;
+      const alive = run.session && !run.session.closed;
+      setArchive((a) => (a ? { ...a, phase: alive ? "ready" : "error", error: message(e) } : a));
+    }
+  };
+
+  // Hand-over from the App (Android open/share, other entry points) (T11 4.5-1).
+  useEffect(() => {
+    if (!incomingArchive) return;
+    onArchiveTaken();
+    setPopup(null);
+    goToFolder(ROOT_ID);
+    void startArchive(incomingArchive, true);
+  }, [incomingArchive, onArchiveTaken, startArchive]);
+
+  // Leaving the library cancels any archive work.
+  useEffect(() => () => cancelArchive(), [cancelArchive]);
+
+  // ---- open / add / replace ----
+  const openEntry = (entry: LibraryEntry) => {
+    if (loading || busyRef.current) return;
+    if (entry.kind === "folder") {
+      goToFolder(entry.id);
+      return;
+    }
+    void runBusy(async () => {
+      const file = await openLibraryDrawing(entry.id);
+      if (isArchiveFormat(entry.format)) void startArchive(file, false);
+      else onOpen(file, entry.id);
+    });
+  };
+
+  const onAddFiles = (list: FileList | null) => {
+    const files = list ? Array.from(list) : [];
+    if (addInput.current) addInput.current.value = "";
+    if (files.length === 0) return;
+    void runBusy(async () => {
+      if (files.length === 1) {
+        const entry = await importDrawingToLibrary(files[0], folderId);
+        const snapshot = await openLibraryDrawing(entry.id);
+        refresh();
+        if (isArchiveFormat(entry.format)) void startArchive(snapshot, false);
+        else onOpen(snapshot, entry.id);
+        return;
+      }
+      let added = 0;
+      let firstError: unknown = null;
+      for (const f of files) {
+        try {
+          await importDrawingToLibrary(f, folderId);
+          added++;
+        } catch (e) {
+          firstError ??= e;
+        }
+      }
+      refresh();
+      const failed = files.length - added;
+      if (failed === 0) setNotice({ text: `${t("library.importedTitle")}: ${added}`, error: false });
+      else setNotice({ text: `${t("library.importedTitle")}: ${added} · ${t("library.failedTitle")}: ${failed}. ${message(firstError)}`, error: true });
+    });
+  };
+
+  const onReplaceFile = (list: FileList | null) => {
+    const file = list?.[0];
+    if (replaceInput.current) replaceInput.current.value = "";
+    const target = replaceTarget.current;
+    replaceTarget.current = null;
+    if (!file || !target || busyRef.current) return;
+    void runBusy(async () => {
+      await replaceLibraryDrawing(target.id, file);
+      setPopup(null);
+      refresh();
+      onOpen(await openLibraryDrawing(target.id), target.id);
+    });
+  };
+
+  // ---- back key / Esc (T11 4.2) ----
+  const back = useCallback(() => {
+    const action = decideLibraryBack({
+      archiveOpen: archive !== null, busy: busyRef.current, textDialogOpen: popup?.kind === "text",
+      destinationOpen: popup?.kind === "destination", deleteOpen: popup?.kind === "delete",
+      actionsOpen: popup?.kind === "actions", exportPopupOpen: exportPopup !== null, exportsOpen,
+      hasSearch: searchText !== "", inSubfolder: folderId !== ROOT_ID,
+    });
+    switch (action) {
+      case "cancel-archive": cancelArchive(); break;
+      case "close-text": case "close-destination": case "close-delete": case "close-actions": setPopup(null); break;
+      case "close-export-popup": setExportPopup(null); break;
+      case "close-exports": setExportsOpen(false); break;
+      case "clear-search": setSearchText(""); break;
+      case "up": goToFolder(crumbs.length > 1 ? crumbs[crumbs.length - 2].id : ROOT_ID); break;
+      case "close-library": onClose(); break;
+      default: break;
+    }
+  }, [archive, popup, exportPopup, exportsOpen, searchText, folderId, crumbs, cancelArchive, onClose]);
+
+  useEffect(() => {
+    setLibraryBackHandler(back);
+    return () => setLibraryBackHandler(null);
+  }, [back]);
+
+  const onRootKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Escape") return;
+    e.stopPropagation();
+    e.preventDefault();
+    back();
+  };
+
+  // ---- derived ----
+  const visible = useMemo(() => sortLibraryEntries(filterLibraryEntries(children, searchText, locale), sortMode, locale), [children, searchText, sortMode, locale]);
+  const showRecent = folderId === ROOT_ID && searchText.trim() === "" && recent.length > 0;
+  const blocked = popup !== null || archive !== null || exportPopup !== null;
+  const describe = (entry: LibraryEntry) => entry.kind === "folder"
+    ? formatLibraryDate(entry.updatedAt, locale)
+    : `${entry.format.toUpperCase()} · ${formatLibrarySize(entry.size, locale)} · ${formatLibraryDate(entry.updatedAt, locale)}`;
+
+  return (
+    <div className="library-screen" onKeyDown={onRootKey}>
+      <header className="lib-header" inert={blocked}>
+        <button type="button" className="lib-icon-btn" title={t("action.back")} aria-label={t("action.back")} disabled={busy || loading} onClick={back}>
+          <ArrowLeftIcon />
+        </button>
+        <div className="lib-titles">
+          <h1>{exportsOpen ? libraryText(locale, "exports") : t("library.title")}</h1>
+          <p>{exportsOpen ? libraryText(locale, "exportsSubtitle") : t("library.subtitle")}</p>
+        </div>
+        <button type="button" className="lib-icon-btn" title={t("library.close")} aria-label={t("library.close")} disabled={busy} onClick={onClose}>
+          <CloseIcon />
+        </button>
+      </header>
+
+      {exportsOpen ? (
+        <ExportsView
+          popup={exportPopup} setPopup={setExportPopup} busy={busy} runBusy={runBusy} inert={blocked}
+          notify={(text) => setNotice({ text, error: false })}
+        />
+      ) : (
+      <div className="lib-body" inert={blocked}>
+        <nav className="lib-crumbs" aria-label={t("library.rootFolder")}>
+          <button type="button" className={folderId === ROOT_ID ? "current" : ""} disabled={busy || loading} onClick={() => goToFolder(ROOT_ID)}>
+            {t("library.rootFolder")}
+          </button>
+          {crumbs.map((c) => (
+            <span key={c.id} className="lib-crumb">
+              <span aria-hidden="true">›</span>
+              <button type="button" className={c.id === folderId ? "current" : ""} disabled={busy || loading} onClick={() => goToFolder(c.id)}>{c.name}</button>
+            </span>
+          ))}
+        </nav>
+
+        {IS_WEB_BUILD ? <p className="lib-web-note">{t("library.webNote")}</p> : null}
+
+        <div className="lib-actions">
+          <button type="button" className="lib-primary" disabled={busy} onClick={() => addInput.current?.click()}>
+            <ImportIcon /> <span>{t("library.addFiles")}</span>
+          </button>
+          <button type="button" className="lib-secondary" disabled={busy} onClick={() => { setExportPopup(null); setExportsOpen(true); }}>
+            <FolderCheckIcon /> <span>{libraryText(locale, "exports")}</span>
+          </button>
+          <input ref={addInput} type="file" multiple accept={FILE_ACCEPT} hidden onChange={(e) => onAddFiles(e.currentTarget.files)} />
+          <input ref={replaceInput} type="file" hidden aria-label={t("library.replacePickerLabel")} onChange={(e) => onReplaceFile(e.currentTarget.files)} />
+        </div>
+
+        {showRecent ? (
+          <section className="lib-recent">
+            <h2>{t("library.recent")}</h2>
+            <RecentCarousel count={recent.length} label={libraryText(locale, "recentPages")} pageLabel={(n) => libraryText(locale, "page", { n })}>
+              {recent.map((r) => (
+                <button key={r.id} type="button" className="recent-card" disabled={busy} onClick={() => openEntry(r)}>
+                  <span className="recent-badge">{r.format.toUpperCase()}</span>
+                  <MarqueeText text={r.name} />
+                  <span className="recent-size">{formatLibrarySize(r.size, locale)}</span>
+                </button>
+              ))}
+            </RecentCarousel>
+          </section>
+        ) : null}
+
+        <div className="lib-filter">
+          <h2>{t("library.filesAndFolders")}</h2>
+          <div className="lib-filter-row">
+            <input
+              type="search" value={searchText} placeholder={t("library.search")} aria-label={t("library.search")}
+              onChange={(e) => setSearchText(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && searchText) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setSearchText("");
+                }
+              }}
+            />
+            <select value={sortMode} aria-label={t("library.sort")} onChange={(e) => setSortMode(e.currentTarget.value as LibrarySort)}>
+              <option value="name">{t("library.sortName")}</option>
+              <option value="newest">{t("library.sortNewest")}</option>
+              <option value="largest">{t("library.sortLargest")}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="lib-list" aria-busy={loading}>
+          {loading ? (
+            <div className="lib-skeleton" aria-label={t("load.opening")}><span /><span /><span /></div>
+          ) : visible.length === 0 && searchText.trim() !== "" ? (
+            <div className="lib-empty">
+              <FolderIcon />
+              <strong>{t("library.noResults")}</strong>
+              <button type="button" className="lib-secondary" onClick={() => setSearchText("")}>{t("library.clearSearch")}</button>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="lib-empty">
+              <FolderIcon />
+              <strong>{t("library.emptyTitle")}</strong>
+              <p>{t("library.emptyBody")}</p>
+            </div>
+          ) : (
+            <ul>
+              {visible.map((entry) => (
+                <li key={entry.id} className={`lib-row ${entry.kind}`}>
+                  <button type="button" className="lib-row-main" disabled={busy} onClick={() => openEntry(entry)}>
+                    <span className="lib-row-icon">{entry.kind === "folder" ? <FolderIcon /> : <FileIcon />}</span>
+                    <span className="lib-row-text">
+                      <MarqueeText text={entry.name} />
+                      <small>{describe(entry)}</small>
+                    </span>
+                    {entry.kind === "folder" ? <ChevronRightIcon className="lib-row-chevron" /> : null}
+                  </button>
+                  <button
+                    type="button" className="lib-icon-btn lib-more" title={t("library.itemActions")}
+                    aria-label={`${t("library.itemActions")}: ${entry.name}`} disabled={busy}
+                    onClick={() => setPopup({ kind: "actions", entry })}
+                  >
+                    <MoreIcon />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      )}
+
+      {popup?.kind === "actions" ? (
+        <ActionSheet
+          entry={popup.entry}
+          onCancel={() => setPopup(null)}
+          onReplace={() => {
+            replaceTarget.current = popup.entry as LibraryDrawingEntry;
+            replaceInput.current?.click();
+          }}
+          onPick={(kind) => setPopup(kind === "rename" ? { kind: "text", mode: "rename", entry: popup.entry }
+            : kind === "delete" ? { kind: "delete", entry: popup.entry } : { kind: "destination", mode: kind, entry: popup.entry })}
+        />
+      ) : null}
+
+      {popup?.kind === "text" ? (
+        <TextDialog
+          mode={popup.mode}
+          initial={popup.entry?.name ?? ""}
+          onCancel={() => setPopup(null)}
+          onConfirm={(name) => {
+            const target = popup;
+            setPopup(null);
+            void runBusy(async () => {
+              if (target.mode === "create") {
+                await createLibraryFolder(folderId, name);
+                setNotice({ text: t("library.toast.folderCreated"), error: false });
+              } else if (target.entry) {
+                await renameLibraryEntry(target.entry.id, name);
+                setNotice({ text: t("library.toast.renamed"), error: false });
+              }
+              refresh();
+            });
+          }}
+        />
+      ) : null}
+
+      {popup?.kind === "destination" ? (
+        <DestinationDialog
+          entry={popup.entry}
+          folders={folders}
+          onCancel={() => setPopup(null)}
+          onPick={(destination) => {
+            const target = popup;
+            setPopup(null);
+            void runBusy(async () => {
+              if (target.mode === "copy") await copyLibraryEntry(target.entry.id, destination);
+              else await moveLibraryEntry(target.entry.id, destination);
+              setNotice({ text: t(target.mode === "copy" ? "library.toast.copied" : "library.toast.moved"), error: false });
+              refresh();
+            });
+          }}
+        />
+      ) : null}
+
+      {popup?.kind === "delete" ? (
+        <Dialog className="lib-dialog" role="alertdialog" label={t("library.deleteTitle")} onCancel={() => setPopup(null)}>
+          <h3>{t("library.deleteTitle")}</h3>
+          <p>{t(popup.entry.kind === "folder" ? "library.deleteFolderBody" : "library.deleteDrawingBody")}</p>
+          <div className="lib-dialog-buttons">
+            <button type="button" className="lib-secondary" onClick={() => setPopup(null)}>{t("action.cancel")}</button>
+            <button
+              type="button" className="lib-danger"
+              onClick={() => {
+                const target = popup.entry;
+                setPopup(null);
+                void runBusy(async () => {
+                  await deleteLibraryEntry(target.id);
+                  setNotice({ text: t("library.toast.deleted"), error: false });
+                  refresh();
+                });
+              }}
+            >
+              {t("action.delete")}
+            </button>
+          </div>
+        </Dialog>
+      ) : null}
+
+      {archive ? (
+        <ArchiveDialog
+          state={archive}
+          onCancel={cancelArchive}
+          onToggle={(path, on) => setArchive((a) => {
+            if (!a) return a;
+            const checked = new Set(a.checked);
+            if (on) checked.add(path);
+            else checked.delete(path);
+            return { ...a, checked };
+          })}
+          onAll={(on) => setArchive((a) => (a ? { ...a, checked: new Set(on ? a.items.filter((i) => i.supported).map((i) => i.path) : []) } : a))}
+          onExtract={() => void extractArchive()}
+        />
+      ) : null}
+
+      {notice ? (
+        <div className={notice.error ? "lib-toast error" : "lib-toast"} role={notice.error ? "alert" : "status"} onClick={() => setNotice(null)}>
+          {notice.text}
+        </div>
+      ) : null}
+
+      {busy ? <div className="lib-busy" aria-hidden="true"><span className="lib-spinner" /></div> : null}
+    </div>
+  );
+}
+
+function ActionSheet({ entry, onCancel, onReplace, onPick }: {
+  entry: LibraryEntry; onCancel(): void; onReplace(): void; onPick(kind: "rename" | "copy" | "move" | "delete"): void;
+}) {
+  const { t } = useI18n();
+  const canReplace = entry.kind === "drawing" && !isArchiveFormat(entry.format);
+  const tiles: { kind: "rename" | "copy" | "move" | "delete"; icon: ReactNode; label: string }[] = [
+    { kind: "rename", icon: <RenameIcon />, label: t("action.rename") },
+    { kind: "copy", icon: <CopyIcon />, label: t("action.copy") },
+    { kind: "move", icon: <MoveIcon />, label: t("action.move") },
+    { kind: "delete", icon: <TrashIcon />, label: t("action.delete") },
+  ];
+  return (
+    <Dialog className="lib-sheet" label={entry.name} onCancel={onCancel}>
+      <span className="lib-sheet-handle" aria-hidden="true" />
+      <h3>{entry.name}</h3>
+      {canReplace ? (
+        <div className="lib-replace">
+          <p>{t("library.snapshotNote")}</p>
+          <button type="button" className="lib-secondary" onClick={onReplace}>{t("library.replace")}</button>
+          <p>{t("library.replaceNote")}</p>
+        </div>
+      ) : null}
+      <div className="lib-sheet-tiles">
+        {tiles.map((tile) => (
+          <button key={tile.kind} type="button" className={tile.kind === "delete" ? "lib-tile danger" : "lib-tile"} onClick={() => onPick(tile.kind)}>
+            {tile.icon}
+            <span>{tile.label}</span>
+          </button>
+        ))}
+      </div>
+    </Dialog>
+  );
+}
+
+function TextDialog({ mode, initial, onCancel, onConfirm }: { mode: "create" | "rename"; initial: string; onCancel(): void; onConfirm(name: string): void }) {
+  const { t } = useI18n();
+  const [value, setValue] = useState(initial);
+  const title = mode === "create" ? t("library.newFolder") : t("action.rename");
+  const label = mode === "create" ? t("library.folderName") : t("action.rename");
+  const ok = value.trim() !== "";
+  return (
+    <Dialog className="lib-dialog" label={title} onCancel={onCancel}>
+      <h3>{title}</h3>
+      <form onSubmit={(e) => { e.preventDefault(); if (ok) onConfirm(value); }}>
+        <label className="lib-field">
+          <span>{label}</span>
+          <input value={value} maxLength={MAX_NAME_LENGTH} onChange={(e) => setValue(e.currentTarget.value)} />
+        </label>
+        <div className="lib-dialog-buttons">
+          <button type="button" className="lib-secondary" onClick={onCancel}>{t("action.cancel")}</button>
+          <button type="submit" className="lib-primary" disabled={!ok}>{mode === "create" ? t("action.create") : t("action.save")}</button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function DestinationDialog({ entry, folders, onCancel, onPick }: {
+  entry: LibraryEntry; folders: LibraryFolderEntry[]; onCancel(): void; onPick(id: string): void;
+}) {
+  const { t } = useI18n();
+  const root = t("library.rootFolder");
+  const byId = new Map(folders.map((f) => [f.id, f]));
+  const pathOf = (f: LibraryFolderEntry) => {
+    const parts: string[] = [];
+    let cur: LibraryFolderEntry | undefined = f;
+    for (let guard = 0; cur && guard < 1000; guard++) {
+      parts.unshift(cur.name);
+      cur = byId.get(cur.parentId);
+    }
+    return [root, ...parts].join(" / ");
+  };
+  // A folder can't go into itself or anything below it.
+  const blocked = (f: LibraryFolderEntry) => {
+    if (entry.kind !== "folder") return false;
+    let cur: LibraryFolderEntry | undefined = f;
+    for (let guard = 0; cur && guard < 1000; guard++) {
+      if (cur.id === entry.id) return true;
+      cur = byId.get(cur.parentId);
+    }
+    return false;
+  };
+  return (
+    <Dialog className="lib-dialog lib-destination" label={t("library.chooseDestination")} onCancel={onCancel}>
+      <h3>{t("library.chooseDestination")}</h3>
+      <ul className="lib-destinations">
+        <li><button type="button" onClick={() => onPick(ROOT_ID)}>{root}</button></li>
+        {folders.map((f) => (
+          <li key={f.id}><button type="button" disabled={blocked(f)} onClick={() => onPick(f.id)}>{pathOf(f)}</button></li>
+        ))}
+      </ul>
+      <div className="lib-dialog-buttons">
+        <button type="button" className="lib-secondary" onClick={onCancel}>{t("action.cancel")}</button>
+      </div>
+    </Dialog>
+  );
+}
+
+function ArchiveDialog({ state, onCancel, onToggle, onAll, onExtract }: {
+  state: ArchiveState; onCancel(): void; onToggle(path: string, on: boolean): void; onAll(on: boolean): void; onExtract(): void;
+}) {
+  const { locale, t } = useI18n();
+  const extracting = state.phase === "extracting";
+  const supported = state.items.some((i) => i.supported);
+  const listed = state.items.length > 0;
+  return (
+    <Dialog className="lib-dialog lib-archive" label={t("archive.title")} onCancel={onCancel}>
+      <h3>{t("archive.title")}</h3>
+      <strong className="lib-archive-name">{state.name}</strong>
+      <p>{t("archive.body")}</p>
+      {state.phase === "loading" ? <p className="lib-status" role="status">{t("archive.loading")}</p> : null}
+      {extracting ? <p className="lib-status" role="status">{t("archive.importing")} {state.progress}%</p> : null}
+      {state.error ? <p className="lib-error" role="alert">{state.error}</p> : null}
+      {listed && !supported && state.phase !== "loading" ? <p className="lib-status">{t("archive.noneSupported")}</p> : null}
+      {listed && state.phase !== "loading" ? (
+        <>
+          {state.phase !== "error" ? (
+            <div className="lib-archive-tools">
+              <button type="button" className="lib-small" disabled={extracting || !supported} onClick={() => onAll(true)}>{t("archive.selectAll")}</button>
+              <button type="button" className="lib-small" disabled={extracting || !supported} onClick={() => onAll(false)}>{t("archive.selectNone")}</button>
+            </div>
+          ) : null}
+          <ul className="lib-archive-items">
+            {state.items.map((item) => (
+              <li key={item.path} className={item.supported ? "" : "unsupported"}>
+                <label>
+                  <input
+                    type="checkbox" checked={state.checked.has(item.path)} disabled={!item.supported || extracting || state.phase === "error"}
+                    onChange={(e) => onToggle(item.path, e.currentTarget.checked)}
+                  />
+                  <span className="lib-archive-path">{item.directory ? `${item.path}/` : item.path}</span>
+                  <small>
+                    {item.directory
+                      ? libraryText(locale, "archiveFolder")
+                      : `${formatLibrarySize(item.size, locale)}${item.supported ? "" : ` · ${t("archive.unsupportedEntry")}`}`}
+                  </small>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      <div className="lib-dialog-buttons">
+        <button type="button" className="lib-secondary" onClick={onCancel}>{t("action.cancel")}</button>
+        <button type="button" className="lib-primary" disabled={state.phase !== "ready" || state.checked.size === 0} onClick={onExtract}>
+          {t("archive.extract")} ({state.checked.size})
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
+/** Format of a picked file, used by the App to decide whether it goes to the library as an archive. */
+export function isArchiveFile(file: File): boolean {
+  const format = detectDrawingFormat(file.name);
+  return format !== null && isArchiveFormat(format);
+}

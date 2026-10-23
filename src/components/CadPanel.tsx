@@ -1,0 +1,61 @@
+import { Capacitor } from '@capacitor/core';
+import { incomingDrawingPlugin,readIncomingDrawingFile } from '../native/incomingDrawing';
+import { isAppleMobile } from '../app/platform';
+import { splitCadWarnings } from '../viewer/cadWarnings';
+import { useState,useEffect } from 'react';
+import { useI18n, type TranslationKey } from '../i18n/translations';
+import { nativeErrorText } from '../i18n/nativeErrors';
+import type { CadReport } from '../viewer/engineering';
+import {importCadFont,listCadFonts,removeCadFont,type CadFontRecord} from '../viewer/cadFonts';
+import {beginParse,getParseAudit,type ParseAudit} from '../viewer/parseAudit';
+import { assembleXrefs, type XrefStatus } from '../viewer/xrefs';
+import { canRememberFolders, forgetFolder, pickAndRememberFolder, regrantFolders, rememberedFolderNames } from '../viewer/xrefFolders';
+
+// Tab ids stay the zh names (the App opens a tab by them); the labels come from the dictionary.
+const TABS=['圖層','缺件警告','外部參考','本機字型'] as const;
+const TAB_KEYS:Record<(typeof TABS)[number],TranslationKey>={'圖層':'cad.tab.layers','缺件警告':'cad.tab.missing','外部參考':'cad.tab.xrefs','本機字型':'cad.tab.fonts'};
+const TOO_LARGE='XREF_FOLDER_TOO_LARGE';
+
+const sessions=new WeakMap<File,{files:File[];mapping:Record<string,string>;disabled:Set<string>;statuses:XrefStatus[]}>();
+/** Hand automatically found references to the panel, so it shows them and can reload with them. */
+export function setXrefSession(source:File,files:File[],statuses:XrefStatus[]):void{sessions.set(source,{files,mapping:{},disabled:new Set(),statuses});}
+export const hasXrefSession=(source:File)=>sessions.has(source);
+export async function reuseXrefSession(previous: File, next: File): Promise<File | null> {
+ const session=sessions.get(previous);
+ if(!session)return null;
+ sessions.set(next,session);
+ if(!session.files.length)return null;
+ const result=await assembleXrefs(next,session.files,session.mapping,session.disabled);
+ sessions.set(next,{...session,statuses:result.statuses});
+ return result.file;
+}
+export function CadPanel({report,audit,source,initialTab,onLayer,onReload,onClose}:{report:CadReport;audit?:ParseAudit|null;source:File;initialTab?:string;onLayer:(name:string,visible:boolean)=>void;onReload:(file:File)=>void;onClose:()=>void}){
+ const {t:tr,locale}=useI18n();
+ const errorText=(e:unknown)=>e instanceof Error&&e.message===TOO_LARGE?tr('cad.xref.tooLarge'):nativeErrorText(locale,e)??(e instanceof Error?e.message:String(e));
+ const previous=sessions.get(source);
+ const split=splitCadWarnings(report.warnings);
+ const [fonts,setFonts]=useState<CadFontRecord[]>([]);
+ useEffect(()=>{void listCadFonts().then(setFonts).catch(e=>setMessage(String(e)));},[]);
+ const [isolated,setIsolated]=useState<Map<string,boolean>|null>(null);
+ const [tab,setTab]=useState(initialTab??'圖層'),[query,setQuery]=useState(''),[,refresh]=useState(0);
+ const [files,setFiles]=useState<File[]>(previous?.files??[]),[mapping,setMapping]=useState<Record<string,string>>(previous?.mapping??{}),[disabled,setDisabled]=useState<Set<string>>(previous?.disabled??new Set());
+ const [statuses,setStatuses]=useState<XrefStatus[]>(previous?.statuses??[]),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const [folders,setFolders]=useState<string[]>([]);
+ useEffect(()=>{if(!Capacitor.isNativePlatform())void rememberedFolderNames().then(setFolders).catch(()=>setFolders([]));},[]);
+ async function rememberFolder(){setBusy(true);try{const r=await pickAndRememberFolder();const picked=r.files.slice(0,64);setFiles(picked);setMapping({});setFolders(await rememberedFolderNames());setBusy(false);await reload(picked,{},true);}catch(e){setMessage(e instanceof Error&&e.name==='AbortError'?tr('cad.xref.cancelled'):errorText(e));}finally{setBusy(false);}}
+ useEffect(()=>{sessions.set(source,{files,mapping,disabled,statuses});},[source,files,mapping,disabled,statuses]);
+ const rows=statuses.length?statuses:[...report.xrefs.map(x=>({...x,key:source.name+'|'+x.name})),...((report as any).images??[]).map((x:any)=>({name:tr('cad.xref.image',{handle:x.handle}),path:x.path,key:source.name+'|IMAGE:'+x.handle,overlay:false}))];
+ const change=(name:string,v:boolean)=>{onLayer(name,v);refresh(n=>n+1);};
+ async function directory(){setBusy(true);try{const picked=await incomingDrawingPlugin.selectXrefDirectory();const out:File[]=[];let total=0;for(const item of picked.files){const file=await readIncomingDrawingFile(item);total+=file.size;if(total>128*1024*1024)throw Error(TOO_LARGE);Object.defineProperty(file,'webkitRelativePath',{value:item.relativePath});out.push(file);}setFiles(out);setMapping({});setBusy(false);await reload(out,{},true);}catch(e){setMessage(errorText(e));}finally{setBusy(false);}}
+ async function reload(useFiles:File[]=files,useMapping:Record<string,string>=mapping,auto=false){setBusy(true);setMessage(auto?tr('cad.xref.autoBusy'):tr('cad.xref.busy'));try{const key=getParseAudit(source)?.key;await beginParse(source,key?.startsWith('content:')?undefined:key);const result=await assembleXrefs(source,useFiles,useMapping,disabled);setStatuses(result.statuses);onReload(result.file);const ok=result.statuses.filter(s=>/已載入|loaded/i.test(String(s.status))).length;setMessage(auto?tr('cad.xref.autoDone',{ok,total:result.statuses.length}):tr('cad.xref.done'));}catch(e){setMessage(errorText(e));}finally{setBusy(false);}}
+ const remembering=canRememberFolders()&&!Capacitor.isNativePlatform();
+ const pickFiles=(list:FileList|null)=>{const picked=Array.from(list??[]).filter(f=>/\.(dwg|dxf|png|jpe?g)$/i.test(f.name));setFiles(picked);setMapping({});if(picked.length)void reload(picked,{},true);};
+ return <section className="cad-sheet" aria-label={tr('cad.title')}><header><strong>{tr('cad.title')}</strong><button onClick={onClose}>{tr('cad.close')}</button></header><nav>{TABS.map(t=><button aria-pressed={tab===t} key={t} onClick={()=>setTab(t)}>{tr(TAB_KEYS[t])}</button>)}</nav><div className="cad-sheet-body">
+ {tab==='本機字型'?<><p>{tr('cad.fonts.note')}</p><label>{tr('cad.fonts.import')}<input type="file" accept="*/*" multiple aria-label={tr('cad.fonts.import')} disabled={busy} onChange={async e=>{const list=Array.from(e.target.files??[]);setBusy(true);try{for(const f of list)await importCadFont(f);setFonts(await listCadFonts());setMessage(tr('cad.fonts.saved'));}catch(error){setMessage(String(error));}finally{setBusy(false);}}}/></label>{fonts.map(f=><div key={f.name}>{f.name} · {f.data.byteLength} bytes <button disabled={busy} onClick={async()=>{try{await removeCadFont(f.name);setFonts(await listCadFonts());}catch(e){setMessage(String(e));}}}>{tr('cad.fonts.remove',{name:f.name})}</button></div>)}<button disabled={busy} onClick={()=>void reload()}>{tr('cad.fonts.apply')}</button><p role="status">{message}</p></>:null}
+ {tab==='圖層'?<><input aria-label={tr('cad.layers.search')} placeholder={tr('cad.layers.search')} value={query} onChange={e=>setQuery(e.target.value)}/>{isolated?<button onClick={()=>{for(const [n,v] of isolated)change(n,v);setIsolated(null);}}>{tr('cad.layers.unisolate')}</button>:null}<button onClick={()=>report.layers.forEach(l=>change(l.name,l.originalVisible))}>{tr('cad.layers.restore')}</button><button onClick={()=>report.layers.forEach(l=>change(l.name,true))}>{tr('cad.layers.allOn')}</button>{report.layers.filter(l=>l.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())).map(l=><div className="cad-layer" key={l.name}><label><input type="checkbox" checked={l.visible} onChange={e=>change(l.name,e.target.checked)}/><i style={{background:'#'+l.color.toString(16).padStart(6,'0')}}/>{l.name}</label><button onClick={()=>{if(!isolated)setIsolated(new Map(report.layers.map(a=>[a.name,a.visible])));report.layers.forEach(a=>change(a.name,a.name===l.name));}}>{tr('cad.layers.isolate')}</button></div>)}</>:null}
+ {tab==='缺件警告'?<><p>{tr('cad.missing.note')}</p>{audit?<div aria-label={tr('cad.missing.auditLabel')}><p>{tr('cad.missing.version',{v:audit.fingerprint})}</p><p>{tr('cad.missing.thisRun',{state:audit.status==='complete'?tr('cad.missing.fresh'):tr('cad.missing.parsing'),cache:audit.reparseRequired?tr('cad.missing.reparse'):tr('cad.missing.noCache')})}</p><p style={{overflowWrap:'anywhere'}}>{tr('cad.missing.sha',{v:audit.sourceSHA256})}</p><p>{tr('cad.missing.source',{name:source.name,bytes:source.size})}</p><p>{tr('cad.missing.done',{time:audit.completedAt?new Date(audit.completedAt).toLocaleString(locale):tr('cad.missing.notDone')})}</p></div>:null}<button disabled={busy} onClick={()=>void reload()}>{tr('cad.missing.reparseBtn')}</button><p role="status">{message}</p><h3 className="cad-missing-title">{tr('cad.missing.title')}</h3>{split.missing.length?<ul className="cad-missing">{split.missing.map(w=><li key={w}>{w}</li>)}</ul>:<p>{tr('cad.missing.none')}</p>}<details className="cad-notes"><summary>{tr('cad.missing.notes',{N:split.notes.length+1})}</summary><ul>{split.notes.map(w=><li key={w}>{w}</li>)}<li>{tr('cad.missing.build',{ms:report.buildMs.toFixed(0),N:report.entityCount})}</li></ul></details></>:null}
+ {tab==='外部參考'?<><p>{tr('cad.xref.intro',{folders:remembering?tr('cad.xref.introFolders'):''})}</p>{remembering?<div className="cad-xref"><button disabled={busy} onClick={()=>void rememberFolder()}>{tr('cad.xref.remember')}</button>{folders.length?<><p>{tr('cad.xref.remembered',{names:folders.join(tr('cad.listSep'))})}</p><button disabled={busy} onClick={async()=>{const n=await regrantFolders().catch(()=>0);setMessage(tr('cad.xref.regranted',{N:n}));}}>{tr('cad.xref.regrant')}</button>{folders.map(f=><button key={f} disabled={busy} onClick={async()=>{await forgetFolder(f);setFolders(await rememberedFolderNames());}}>{tr('cad.xref.forget',{name:f})}</button>)}</>:null}</div>:null}<label>{tr('cad.xref.pickFiles')}<input aria-label={tr('cad.xref.pickFiles')} type="file" accept="*/*" multiple disabled={busy} onChange={e=>pickFiles(e.target.files)}/></label>{Capacitor.isNativePlatform()?<button disabled={busy} onClick={()=>void directory()}>{tr('cad.xref.pickFolder')}</button>:isAppleMobile()?<p>{tr('cad.xref.noFolderIos')}</p>:<label>{tr('cad.xref.pickFolder')}<input aria-label={tr('cad.xref.pickFolder')} type="file" multiple {...({webkitdirectory:''} as object)} disabled={busy} onChange={e=>pickFiles(e.target.files)}/></label>}
+ {rows.map((x,i)=><div className="cad-xref" key={x.name+i}><strong>{x.name}</strong><p>{x.path} · {x.overlay?tr('cad.xref.overlay'):tr('cad.xref.attach')}</p><label><input type="checkbox" checked={!disabled.has(x.key)} onChange={e=>{const n=new Set(disabled);if(e.target.checked)n.delete(x.key);else n.add(x.key);setDisabled(n);}}/>{tr('cad.xref.load')}</label><select aria-label={tr('cad.xref.mapLabel',{name:x.name})} value={mapping[x.key]??''} onChange={e=>setMapping({...mapping,[x.key]:e.target.value})}><option value="">{tr('cad.xref.mapAuto')}</option>{files.map((f,j)=><option key={j} value={"@"+j}>{j+1} · {f.webkitRelativePath||f.name}</option>)}</select></div>)}
+ <button disabled={busy} onClick={()=>void reload()}>{tr('cad.xref.reapply')}</button><p role="status">{message}</p><ul>{statuses.map((s,i)=><li key={i}>{tr('cad.statusLine',{path:s.path,status:s.status})}</li>)}</ul><p>{tr('cad.xref.note')}</p></>:null}
+ </div></section>;
+}

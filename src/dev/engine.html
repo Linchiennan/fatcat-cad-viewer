@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>引擎測試頁</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b1118; color: #e8eef3; font: 14px "Noto Sans TC", sans-serif; }
+      #shell { position: fixed; inset: 0; }
+      #stage { position: absolute; inset: 0; }
+      #host { width: 100%; height: 100%; }
+      #top { position: absolute; left: 0; right: 0; top: 0; height: 44px; display: flex; gap: 8px; align-items: center; padding: 0 8px; background: rgba(8, 16, 25, 0.85); z-index: 2; }
+      #bar { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: flex; gap: 6px; align-items: center; padding: 0 8px; background: rgba(8, 16, 25, 0.85); z-index: 2; }
+      #layers { position: absolute; right: 0; top: 44px; bottom: 56px; width: 220px; overflow: auto; background: rgba(8, 16, 25, 0.85); z-index: 2; display: none; padding: 6px; }
+      #status { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      button, select { font: inherit; }
+    </style>
+  </head>
+  <body>
+    <div id="shell" data-viewer-shell>
+      <div id="stage"><div id="host"></div></div>
+      <div id="top" data-fit="top"><input id="pick" type="file" accept=".dwg,.dxf,.png,.jpg,.jpeg" /><select id="space"></select><span id="status">選一張圖</span></div>
+      <div id="layers"></div>
+      <div id="bar" data-fit="toolbar">
+        <button data-cmd="fit">全圖</button><button data-cmd="reset">原視角</button><button data-cmd="home">初始</button>
+        <button data-cmd="zoom-in">放大</button><button data-cmd="zoom-out">縮小</button><button id="toggle-layers">圖層</button>
+      </div>
+    </div>
+    <script type="module" src="./engineDev.ts"></script>
+  </body>
+</html>

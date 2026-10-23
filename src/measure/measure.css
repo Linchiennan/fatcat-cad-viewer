@@ -1,0 +1,58 @@
+/* Full measuring panel (T16 2.4). Colours follow the measuring strip. */
+.measure-panel {
+  position: fixed; z-index: 40; box-sizing: border-box;
+  left: 14px; right: 14px; margin: 0 auto; max-width: 480px;
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  max-height: 42vh; overflow-y: auto; scrollbar-width: none;
+  display: flex; flex-direction: column;
+  background: #101e2a; color: #e8f0f4; border: 1px solid #567; border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); font-size: 0.9rem;
+}
+.measure-panel::-webkit-scrollbar { display: none; }
+@media (min-width: 700px) and (min-height: 600px) {
+  .measure-panel { width: 440px; left: 50%; right: auto; margin: 0; transform: translateX(-50%); bottom: calc(100px + env(safe-area-inset-bottom, 0px)); }
+}
+.measure-panel[style*="height"] { max-height: none; }
+.measure-panel.glove {
+  left: 0; right: 0; width: auto; max-width: none; transform: none; margin: 0;
+  bottom: calc(var(--glove-bar-height, 90px) + env(safe-area-inset-bottom, 0px));
+  border-radius: 14px 14px 0 0; border-width: 1px 0 0;
+}
+.measure-head { position: sticky; top: 0; z-index: 1; background: #101e2a; padding: 0 12px 4px; }
+.measure-panel .panel-drag { height: 22px; display: flex; align-items: center; justify-content: center; cursor: ns-resize; touch-action: none; }
+.measure-panel .panel-drag i { display: block; width: 80px; height: 5px; border-radius: 3px; background: #fff; }
+.measure-panel.coarse .panel-drag { height: 30px; }
+.measure-panel.coarse .panel-drag i { width: 100px; height: 6px; }
+.measure-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.measure-close { background: none; border: 0; color: inherit; width: 36px; height: 36px; display: grid; place-items: center; cursor: pointer; }
+.measure-close svg { width: 22px; height: 22px; }
+.measure-body { padding: 4px 12px 8px; display: flex; flex-direction: column; gap: 8px; }
+.measure-modes, .measure-keep-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.measure-modes > * { flex: 1 1 0; min-width: 0; }
+.measure-result { font-variant-numeric: tabular-nums; }
+.measure-value { display: block; font-size: 1.3rem; font-weight: 700; color: #ffd089; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.measure-sub { color: #b8c7cf; font-size: 0.85rem; }
+.measure-clear { border-color: #ff5b5b !important; color: #ff8a8a !important; }
+.measure-kept { margin: 0; padding: 0; list-style: none; max-height: 30vh; overflow-y: auto; font-variant-numeric: tabular-nums; }
+.measure-total { color: #ffd089; font-weight: 700; }
+.measure-howto { margin: 0; color: #b8c7cf; font-size: 0.82rem; }
+.measure-props { margin: 0; display: grid; gap: 2px; font-size: 0.82rem; }
+.measure-props div { display: flex; gap: 8px; }
+.measure-props dt { color: #b8c7cf; min-width: 5.5em; }
+.measure-props dd { margin: 0; word-break: break-all; }
+.measure-settings-toggle {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer;
+  background: #173a2c; color: #7ef0b6; border: 1px solid #2f8f62; border-radius: 10px; font: inherit;
+}
+.measure-settings-toggle svg { width: 20px; height: 20px; }
+.measure-settings-toggle small { margin-left: auto; color: #b8f5d6; }
+.measure-settings-body { display: grid; gap: 8px; padding: 8px 2px 0; }
+.measure-settings-body label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.measure-settings-body select { min-height: 34px; background: #0b1118; color: inherit; border: 1px solid #567; border-radius: 8px; }
+.measure-check { justify-content: flex-start !important; }
+.measure-snap-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
+.measure-snap-kinds button { border-radius: 999px; padding: 5px 12px; border: 1px solid #567; background: transparent; color: #b8c7cf; cursor: pointer; font: inherit; }
+.measure-snap-kinds button.on { background: #1d5a40; border-color: #36d399; color: #fff; }
+.measure-hint { margin: 0; color: #ffc46b; font-size: 0.8rem; }
+.measure-foot { display: flex; align-items: center; gap: 8px; padding: 6px 12px 10px; border-top: 1px solid #23384a; }
+.measure-status { margin-right: auto; color: #b8c7cf; font-size: 0.85rem; }

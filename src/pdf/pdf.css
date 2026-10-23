@@ -1,0 +1,31 @@
+/* PDF viewer (T17 2.1). */
+.pdf-viewer { position: absolute; inset: 0; background: #0b1118; overflow: hidden; }
+.pdf-scroll {
+  position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y;
+  box-sizing: border-box;
+  padding: calc(92px + env(safe-area-inset-top, 0px)) 18px calc(156px + env(safe-area-inset-bottom, 0px));
+}
+.pdf-page { display: block; margin: 0 auto; background: #fff; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+.pdf-pager {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  max-width: calc(100% - 28px); box-sizing: border-box; white-space: nowrap;
+  display: flex; align-items: center; gap: 12px; padding: 7px 12px;
+  background: rgba(16, 26, 36, 0.96); border: 1px solid #2a3d4f; border-radius: 12px;
+  color: #e8f0f4; font-size: 0.72rem;
+}
+.pdf-pager button {
+  min-width: 38px; min-height: 36px; border-radius: 8px; border: 1px solid #3a5163; background: #16283a; color: inherit;
+  font-size: 1.1rem; cursor: pointer;
+}
+.pdf-pager button:disabled { opacity: 0.4; cursor: default; }
+.pdf-pager input {
+  width: 3rem; text-align: center; min-height: 30px; border-radius: 6px; border: 1px solid #3a5163;
+  background: #0b1118; color: inherit; font: inherit; font-variant-numeric: tabular-nums;
+}
+.pdf-zoom { color: #8fa3b1; }
+.pdf-rendering {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(150px + 8px + 52px + env(safe-area-inset-bottom, 0px));
+  padding: 5px 12px; border-radius: 999px; background: rgba(16, 26, 36, 0.92); color: #ffc46b; font-size: 0.78rem;
+  pointer-events: none;
+}

@@ -1,0 +1,20 @@
+/* One-line measuring result above the phone toolbar (T16 2.3); sizes match the previous version. */
+section.measure-strip {
+  padding: 10px 12px; gap: 10px; align-items: center; color: #fff;
+  background: #101e2a; border-top: 1px solid #567; border-radius: 14px 14px 0 0;
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.35);
+}
+section.measure-strip .measure-strip-main {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 10px; row-gap: 0; align-items: baseline; flex: 1 1 0; min-width: 0;
+}
+section.measure-strip .measure-strip-mode { font-size: 15px; font-weight: 700; color: #b8c7cf; }
+section.measure-strip .measure-strip-main strong {
+  font-size: 26px; font-weight: 700; color: #ffd089; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+section.measure-strip .measure-strip-sub { grid-column: 1 / -1; font-size: 14px; line-height: normal; color: #d6e1e6; }
+section.measure-strip .measure-settings-btn {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 52px; height: 52px; min-width: 52px;
+  padding: 0 10px; border: 1.5px solid #36d399; border-radius: 12px; background: #1f6f43; color: #fff; font-size: 15px; font-weight: 700;
+}
+section.measure-strip .measure-settings-btn svg { width: 26px; height: 26px; }

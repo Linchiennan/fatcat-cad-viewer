@@ -1,0 +1,1257 @@
+{
+ "home.formats": {
+  "zh": "DXF · DWG · PDF",
+  "en": "DXF · DWG · PDF",
+  "section": "首頁（8 鍵）"
+ },
+ "home.lead": {
+  "zh": "直接在裝置上開啟 CAD 圖面、PDF 與壓縮檔。",
+  "en": "Open CAD drawings, PDFs and archives right on your device.",
+  "section": "首頁（8 鍵）"
+ },
+ "home.myDrawings": {
+  "zh": "我的圖面",
+  "en": "My drawings",
+  "section": "首頁（8 鍵）"
+ },
+ "home.offline": {
+  "zh": "離線看圖",
+  "en": "Works offline",
+  "section": "首頁（8 鍵）"
+ },
+ "home.privacyLink": {
+  "zh": "隱私與授權告知",
+  "en": "Privacy and licenses",
+  "section": "首頁（8 鍵）"
+ },
+ "home.sourceLink": {
+  "zh": "原始碼說明",
+  "en": "Source code",
+  "section": "首頁（8 鍵）"
+ },
+ "home.tagline": {
+  "zh": "簡單好操作~輕鬆看CAD圖面",
+  "en": "Easy to use, easy to read CAD drawings",
+  "section": "首頁（8 鍵）"
+ },
+ "home.version": {
+  "zh": "版本",
+  "en": "Version",
+  "section": "首頁（8 鍵）"
+ },
+ "action.back": {
+  "zh": "返回",
+  "en": "Back",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.cancel": {
+  "zh": "取消",
+  "en": "Cancel",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.copy": {
+  "zh": "複製",
+  "en": "Copy",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.create": {
+  "zh": "建立",
+  "en": "Create",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.delete": {
+  "zh": "刪除",
+  "en": "Delete",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.move": {
+  "zh": "移動",
+  "en": "Move",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.rename": {
+  "zh": "重新命名",
+  "en": "Rename",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.retry": {
+  "zh": "重試",
+  "en": "Retry",
+  "section": "通用動作（9 鍵）"
+ },
+ "action.save": {
+  "zh": "儲存",
+  "en": "Save",
+  "section": "通用動作（9 鍵）"
+ },
+ "viewer.close": {
+  "zh": "關閉圖面",
+  "en": "Close drawing",
+  "section": "看圖畫面（6 鍵）"
+ },
+ "viewer.controlsLabel": {
+  "zh": "圖面控制",
+  "en": "Drawing controls",
+  "section": "看圖畫面（6 鍵）"
+ },
+ "viewer.fileSize": {
+  "zh": "檔案大小",
+  "en": "File size",
+  "section": "看圖畫面（6 鍵）"
+ },
+ "viewer.fit": {
+  "zh": "符合螢幕",
+  "en": "Zoom extents",
+  "section": "看圖畫面（6 鍵）"
+ },
+ "viewer.librarySaveFailed": {
+  "zh": "檔案已開啟，但無法存入圖面庫，請檢查裝置空間。",
+  "en": "The file opened but couldn't be saved to the library. Check the device storage.",
+  "section": "看圖畫面（6 鍵）"
+ },
+ "viewer.resetView": {
+  "zh": "重設視圖",
+  "en": "Reset view",
+  "section": "看圖畫面（6 鍵）"
+ },
+ "load.opening": {
+  "zh": "正在開啟檔案…",
+  "en": "Opening file…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "load.phase.converting": {
+  "zh": "正在轉換 DWG…",
+  "en": "Converting DWG…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "load.phase.fetch": {
+  "zh": "正在載入檔案…",
+  "en": "Loading file…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "load.phase.font": {
+  "zh": "正在準備文字…",
+  "en": "Preparing text…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "load.phase.parse": {
+  "zh": "正在讀取內容…",
+  "en": "Reading contents…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "load.phase.prepare": {
+  "zh": "正在準備圖面…",
+  "en": "Preparing drawing…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "load.phase.reading": {
+  "zh": "正在讀取檔案…",
+  "en": "Reading file…",
+  "section": "載入畫面（7 鍵）"
+ },
+ "error.archiveOpen": {
+  "zh": "無法讀取壓縮檔，可能損毀或格式不受支援。",
+  "en": "The archive can't be read. It may be damaged or in an unsupported format.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.diag.dwgVersion": {
+  "zh": "DWG 版本",
+  "en": "DWG version",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.diag.engineCode": {
+  "zh": "引擎代碼",
+  "en": "Engine code",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.export": {
+  "zh": "DWG 已讀取，但無法產生可顯示的有效圖面。",
+  "en": "The DWG was read, but no valid drawing could be produced from it.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.generic": {
+  "zh": "這張 DWG 解析時出錯，無法開啟（不是手機記憶體不足）。可在電腦 CAD 開啟後另存新檔再試。",
+  "en": "This DWG hit an error while being read and can't be opened (it is not the phone running out of memory). Open it in desktop CAD, save it as a new file and try again.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.header": {
+  "zh": "無法讀取 DWG 檔頭，檔案可能損毀、不完整或受保護。",
+  "en": "The DWG header can't be read. The file may be damaged, incomplete or protected.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.memory": {
+  "zh": "圖面超過此裝置可供 DWG 引擎使用的記憶體。",
+  "en": "The drawing needs more memory than this device gives the DWG engine.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.parse": {
+  "zh": "DWG 包含目前引擎無法讀取的資料或圖面物件。",
+  "en": "The DWG contains data or objects the engine can't read.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.runtime": {
+  "zh": "此版本缺少離線 DWG 引擎，請重新安裝完整版本。",
+  "en": "This build is missing the offline DWG engine. Reinstall the full version.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.timeout": {
+  "zh": "DWG 轉換時間過長，已停止。",
+  "en": "The DWG conversion took too long and was stopped.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dwg.version": {
+  "zh": "目前繪圖引擎不支援此 DWG 版本。",
+  "en": "This DWG version isn't supported by the drawing engine.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.dxfOpen": {
+  "zh": "無法開啟 DXF 檔案。",
+  "en": "The DXF file can't be opened.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.emptyFile": {
+  "zh": "檔案是空的，請選擇完整檔案。",
+  "en": "The file is empty. Choose a complete file.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.fileRead": {
+  "zh": "無法讀取所選檔案。",
+  "en": "The selected file can't be read.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.pdfOpen": {
+  "zh": "無法開啟或繪製 PDF，檔案可能損毀，或需更新 Android System WebView。",
+  "en": "The PDF can't be opened or drawn. It may be damaged, or Android System WebView may need an update.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.pdfPassword": {
+  "zh": "此版本不支援密碼保護的 PDF，請開啟已解鎖的副本。",
+  "en": "Password-protected PDFs aren't supported. Open an unlocked copy.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.render": {
+  "zh": "此裝置無法繪製圖面。",
+  "en": "This device can't draw the drawing.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.title": {
+  "zh": "無法開啟檔案",
+  "en": "Can't open the file",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.tooLarge": {
+  "zh": "檔案超過 128 MB 安全上限，請開啟較小的圖面。",
+  "en": "The file is over the 128 MB safety limit. Open a smaller drawing.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "error.unsupportedFormat": {
+  "zh": "請選擇 DXF、DWG、PDF、PNG、JPG、ZIP 或 RAR 檔案。",
+  "en": "Choose a DXF, DWG, PDF, PNG, JPG, ZIP or RAR file.",
+  "section": "錯誤畫面（20 鍵）"
+ },
+ "measure.close": {
+  "zh": "關閉量測",
+  "en": "Close measure",
+  "section": "量測（25 鍵）"
+ },
+ "measure.displayUnitLabel": {
+  "zh": "顯示單位",
+  "en": "Display unit",
+  "section": "量測（25 鍵）"
+ },
+ "measure.drawingUnit": {
+  "zh": "圖面單位",
+  "en": "drawing units",
+  "section": "量測（25 鍵）"
+ },
+ "measure.howto.angle": {
+  "zh": "依序點選起點、角度頂點及終點。",
+  "en": "Tap the start point, the vertex, then the end point.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.howto.area": {
+  "zh": "依序點選至少三個邊界點，末點會連回起點。",
+  "en": "Tap at least three boundary points in order; the last one joins back to the first.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.howto.distance": {
+  "zh": "點選兩點；再點會保留這段並量下一段。長按可精確對準。拖曳平移，雙指縮放。",
+  "en": "Tap two points; tap again to keep this one and measure the next. Long-press to aim precisely. Drag to pan, pinch to zoom.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.howto.object": {
+  "zh": "點選幾何物件讀取長度；文字、標註、填充及實體面僅查詢屬性，不以繪製邊界冒充工程數值。",
+  "en": "Tap a geometric object to read its length. Text, dimensions, hatches and solids show properties only, never their drawn outline as an engineering value.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.howto.path": {
+  "zh": "沿路徑依序點選各點，圖上會標出每段長度。長按可精確對準。拖曳平移，雙指縮放。",
+  "en": "Tap the points along the path in order; each segment's length is shown. Long-press to aim precisely. Drag to pan, pinch to zoom.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.mode.angle": {
+  "zh": "角度",
+  "en": "Angle",
+  "section": "量測（25 鍵）"
+ },
+ "measure.mode.area": {
+  "zh": "面積",
+  "en": "Area",
+  "section": "量測（25 鍵）"
+ },
+ "measure.mode.distance": {
+  "zh": "距離",
+  "en": "Distance",
+  "section": "量測（25 鍵）"
+ },
+ "measure.mode.object": {
+  "zh": "物件",
+  "en": "Object",
+  "section": "量測（25 鍵）"
+ },
+ "measure.mode.path": {
+  "zh": "總長度",
+  "en": "Total length",
+  "section": "量測（25 鍵）"
+ },
+ "measure.noObject": {
+  "zh": "附近沒有支援的物件，請放大或使用點選量測。",
+  "en": "No supported object nearby. Zoom in or measure by tapping points.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.perimeter": {
+  "zh": "周長",
+  "en": "Perimeter",
+  "section": "量測（25 鍵）"
+ },
+ "measure.plane": {
+  "zh": "平面量測",
+  "en": "2D measure",
+  "section": "量測（25 鍵）"
+ },
+ "measure.snapLimited": {
+  "zh": "大型圖面的物件鎖點有限制，仍可點選量測。",
+  "en": "Object snap is limited on large drawings; tapping still measures.",
+  "section": "量測（25 鍵）"
+ },
+ "measure.snapToggle": {
+  "zh": "鎖點至幾何物件",
+  "en": "Snap to geometry",
+  "section": "量測（25 鍵）"
+ },
+ "measure.snapped.center": {
+  "zh": "已鎖定圓心",
+  "en": "Snapped to center",
+  "section": "量測（25 鍵）"
+ },
+ "measure.snapped.endpoint": {
+  "zh": "已鎖定端點",
+  "en": "Snapped to endpoint",
+  "section": "量測（25 鍵）"
+ },
+ "measure.snapped.midpoint": {
+  "zh": "已鎖定中點",
+  "en": "Snapped to midpoint",
+  "section": "量測（25 鍵）"
+ },
+ "measure.sourceUnitLabel": {
+  "zh": "1 圖面單位 =",
+  "en": "1 drawing unit =",
+  "section": "量測（25 鍵）"
+ },
+ "measure.title": {
+  "zh": "量測",
+  "en": "Measure",
+  "section": "量測（25 鍵）"
+ },
+ "measure.undoPoint": {
+  "zh": "復原上一點",
+  "en": "Undo last point",
+  "section": "量測（25 鍵）"
+ },
+ "measure.unknownUnit": {
+  "zh": "檔案沒有可辨識的單位，請先選擇繪圖單位，再讀取實際長度。",
+  "en": "The file has no recognizable unit. Choose the drawing unit first to read real lengths.",
+  "section": "量測（25 鍵）"
+ },
+ "pdf.next": {
+  "zh": "下一頁",
+  "en": "Next page",
+  "section": "PDF 檢視（5 鍵）"
+ },
+ "pdf.page": {
+  "zh": "頁",
+  "en": "Page",
+  "section": "PDF 檢視（5 鍵）"
+ },
+ "pdf.prev": {
+  "zh": "上一頁",
+  "en": "Previous page",
+  "section": "PDF 檢視（5 鍵）"
+ },
+ "pdf.rendering": {
+  "zh": "正在繪製頁面…",
+  "en": "Drawing page…",
+  "section": "PDF 檢視（5 鍵）"
+ },
+ "pdf.zoom": {
+  "zh": "縮放",
+  "en": "Zoom",
+  "section": "PDF 檢視（5 鍵）"
+ },
+ "library.addFiles": {
+  "zh": "加入檔案",
+  "en": "Add files",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.chooseDestination": {
+  "zh": "選擇目的資料夾",
+  "en": "Choose a destination folder",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.clearSearch": {
+  "zh": "清除搜尋",
+  "en": "Clear search",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.close": {
+  "zh": "關閉圖面庫",
+  "en": "Close library",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.deleteDrawingBody": {
+  "zh": "此圖面將從應用程式圖面庫移除。",
+  "en": "The drawing will be removed from the app's library.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.deleteFolderBody": {
+  "zh": "此資料夾及其中所有項目都將移除。",
+  "en": "The folder and everything in it will be removed.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.deleteTitle": {
+  "zh": "確定刪除此項目？",
+  "en": "Delete this item?",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.emptyBody": {
+  "zh": "加入 DXF、DWG、PDF、ZIP 或 RAR 檔案。",
+  "en": "Add DXF, DWG, PDF, ZIP or RAR files.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.emptyTitle": {
+  "zh": "這個資料夾是空的",
+  "en": "This folder is empty",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.failed": {
+  "zh": "無法完成操作。",
+  "en": "The operation couldn't be completed.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.invalidDestination": {
+  "zh": "無法使用此目的資料夾。",
+  "en": "This destination folder can't be used.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.invalidFile": {
+  "zh": "檔案為空、無法讀取或格式不受支援。",
+  "en": "The file is empty, unreadable or in an unsupported format.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.invalidName": {
+  "zh": "請使用不含斜線或控制字元的有效名稱。",
+  "en": "Use a valid name without slashes or control characters.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.nameExists": {
+  "zh": "已有同名項目。",
+  "en": "An item with this name already exists.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.notFound": {
+  "zh": "圖面庫中已無此項目，請重新加入圖面。",
+  "en": "This item is no longer in the library. Add the drawing again.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.storageFull": {
+  "zh": "裝置儲存空間不足，無法儲存圖面。",
+  "en": "Not enough storage on this device to save the drawing.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.tooLarge": {
+  "zh": "檔案超過 128 MB 安全上限，請開啟較小的圖面。",
+  "en": "The file is over the 128 MB safety limit. Open a smaller drawing.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.err.unavailable": {
+  "zh": "此裝置無法使用圖面庫。",
+  "en": "The drawing library isn't available on this device.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.failedTitle": {
+  "zh": "無法加入",
+  "en": "Couldn't add",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.filesAndFolders": {
+  "zh": "檔案與資料夾",
+  "en": "Files and folders",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.folderName": {
+  "zh": "資料夾名稱",
+  "en": "Folder name",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.importedTitle": {
+  "zh": "已加入圖面",
+  "en": "Drawings added",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.itemActions": {
+  "zh": "項目操作",
+  "en": "Item actions",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.newFolder": {
+  "zh": "新增資料夾",
+  "en": "New folder",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.noResults": {
+  "zh": "沒有符合的檔案或資料夾",
+  "en": "No matching files or folders",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.recent": {
+  "zh": "最近開啟",
+  "en": "Recent",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.rootFolder": {
+  "zh": "我的圖面",
+  "en": "My drawings",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.search": {
+  "zh": "搜尋此資料夾",
+  "en": "Search this folder",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.sort": {
+  "zh": "排序檔案與資料夾",
+  "en": "Sort files and folders",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.sortLargest": {
+  "zh": "最大優先",
+  "en": "Largest first",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.sortName": {
+  "zh": "名稱",
+  "en": "Name",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.sortNewest": {
+  "zh": "最新優先",
+  "en": "Newest first",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.subtitle": {
+  "zh": "離線圖面、PDF 與壓縮檔",
+  "en": "Offline drawings, PDFs and archives",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.title": {
+  "zh": "圖面庫",
+  "en": "Drawing library",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.toast.copied": {
+  "zh": "已複製項目。",
+  "en": "Item copied.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.toast.deleted": {
+  "zh": "已刪除項目。",
+  "en": "Item deleted.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.toast.folderCreated": {
+  "zh": "已建立資料夾。",
+  "en": "Folder created.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.toast.moved": {
+  "zh": "已移動項目。",
+  "en": "Item moved.",
+  "section": "圖庫（39 鍵）"
+ },
+ "library.toast.renamed": {
+  "zh": "已重新命名。",
+  "en": "Renamed.",
+  "section": "圖庫（39 鍵）"
+ },
+ "archive.body": {
+  "zh": "選擇要解壓縮至圖面庫的圖面與 PDF。",
+  "en": "Choose the drawings and PDFs to extract to the library.",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.err.encrypted": {
+  "zh": "不支援加密或分割壓縮檔，請使用單一且未加密的壓縮檔。",
+  "en": "Encrypted or split archives aren't supported. Use a single, unencrypted archive.",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.err.invalidPath": {
+  "zh": "壓縮檔包含無效路徑，無法匯入。",
+  "en": "The archive contains an invalid path and can't be imported.",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.err.limit": {
+  "zh": "壓縮檔超過檔案數量或解壓縮大小上限，請減少選取項目。",
+  "en": "The archive exceeds the file count or extracted size limit. Select fewer items.",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.extract": {
+  "zh": "解壓縮所選檔案",
+  "en": "Extract selected files",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.imported": {
+  "zh": "已解壓縮至圖面庫",
+  "en": "Extracted to the library",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.importing": {
+  "zh": "正在解壓縮至圖面庫…",
+  "en": "Extracting to the library…",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.loading": {
+  "zh": "正在讀取壓縮檔…",
+  "en": "Reading archive…",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.noneSupported": {
+  "zh": "壓縮檔中沒有 DXF、DWG 或 PDF。",
+  "en": "The archive has no DXF, DWG or PDF files.",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.selectAll": {
+  "zh": "全選",
+  "en": "Select all",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.selectNone": {
+  "zh": "取消全選",
+  "en": "Select none",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.title": {
+  "zh": "壓縮檔內容",
+  "en": "Archive contents",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "archive.unsupportedEntry": {
+  "zh": "無法檢視此檔案類型",
+  "en": "This file type can't be viewed",
+  "section": "壓縮檔（13 鍵）"
+ },
+ "home.brand": {
+  "zh": "大肥貓CAD看圖",
+  "en": "Fat Cat CAD Viewer",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.eyebrow": {
+  "zh": "手機離線 CAD 看圖",
+  "en": "Offline CAD viewer for phones",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.titleLine1": {
+  "zh": "簡單好操作~",
+  "en": "Easy to use,",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.titleLine2": {
+  "zh": "輕鬆看CAD圖面",
+  "en": "easy to read CAD",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.iconAlt": {
+  "zh": "大肥貓CAD看圖兔猻圖示",
+  "en": "Fat Cat CAD Viewer icon",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.privacy": {
+  "zh": "圖檔只在這台裝置處理，不會上傳。",
+  "en": "Drawings are processed only on this device and never uploaded.",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.installHintIos": {
+  "zh": "在 Safari 按「分享」→「加入主畫面」，之後從桌面開啟即可離線使用。",
+  "en": "In Safari tap Share → Add to Home Screen, then open it from the home screen to use it offline.",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.platformWeb": {
+  "zh": "網頁版（蘋果／安卓共用）",
+  "en": "Web (iPhone / Android)",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.platformApk": {
+  "zh": "code{建置序號}",
+  "en": "code{建置序號}",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "home.build": {
+  "zh": "build {識別碼}",
+  "en": "build {識別碼}",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "lang.groupLabel": {
+  "zh": "語言 Language",
+  "en": "語言 Language",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "lang.zh": {
+  "zh": "繁中",
+  "en": "繁中",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "lang.en": {
+  "zh": "EN",
+  "en": "EN",
+  "section": "3.5 程式內直接寫兩種語言的字串（不在字典，但已有英文）"
+ },
+ "error.brand": {
+  "zh": "大肥貓CAD看圖",
+  "en": "Fat Cat CAD Viewer",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.fullNameLabel": {
+  "zh": "完整檔名",
+  "en": "Full file name",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.closeFullName": {
+  "zh": "關閉完整檔名",
+  "en": "Close full file name",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.checkStripLabel": {
+  "zh": "圖面檢查",
+  "en": "Drawing check",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.spaceTitle": {
+  "zh": "切換模型空間或各張配置圖紙",
+  "en": "Switch between model space and layouts",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.spaceSwitching": {
+  "zh": "切換中…",
+  "en": "Switching…",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.spaceModel": {
+  "zh": "模型",
+  "en": "Model",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.spaceSelectLabel": {
+  "zh": "模型／配置",
+  "en": "Model / Layout",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.spaceModelOption": {
+  "zh": "模型（Model）",
+  "en": "Model",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.stripLayers": {
+  "zh": "圖層",
+  "en": "Layers",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.stripMissing": {
+  "zh": "缺件",
+  "en": "Missing",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.stripXrefs": {
+  "zh": "外參",
+  "en": "Xrefs",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.missingCount": {
+  "zh": "{N} 項缺件",
+  "en": "{N} missing items",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "viewer.xrefUnloadedCount": {
+  "zh": "{N} 個外參未載入",
+  "en": "{N} xrefs not loaded",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "close.title": {
+  "zh": "確認關閉目前圖面？",
+  "en": "Close this drawing?",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "close.body": {
+  "zh": "閱讀位置會保留，圖庫原檔不會刪除。",
+  "en": "Your reading position is kept and the file stays in the library.",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "close.keep": {
+  "zh": "取消，繼續看圖",
+  "en": "Cancel, keep viewing",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "close.go": {
+  "zh": "確認關閉圖面",
+  "en": "Close drawing",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "markup.clearAllConfirm": {
+  "zh": "要刪除這張圖紙上的全部標註嗎？",
+  "en": "Delete all markups on this sheet?",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "markup.clearAllOk": {
+  "zh": "刪除全部標註",
+  "en": "Delete all markups",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "share.opened": {
+  "zh": "已開啟分享",
+  "en": "Share sheet opened",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "share.saved": {
+  "zh": "已存成圖片：{檔名}",
+  "en": "Saved as image: {檔名}",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "share.failed": {
+  "zh": "分享失敗：{原因}",
+  "en": "Couldn't share: {原因}",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "share.close": {
+  "zh": "關閉",
+  "en": "Close",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "share.captionModel": {
+  "zh": "模型",
+  "en": "Model",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "measure.clearAllConfirm": {
+  "zh": "要清除全部量測結果（含保留的）嗎？",
+  "en": "Clear all measurements, including kept ones?",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "measure.clearAllOk": {
+  "zh": "全部清除",
+  "en": "Clear all",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "snap.toast.endpoint": {
+  "zh": "已點到端點",
+  "en": "Snapped to endpoint",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "snap.toast.midpoint": {
+  "zh": "已點到中點",
+  "en": "Snapped to midpoint",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "snap.toast.center": {
+  "zh": "已點到圓心",
+  "en": "Snapped to center",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "snap.toast.quadrant": {
+  "zh": "已點到四分點",
+  "en": "Snapped to quadrant",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "snap.toast.intersection": {
+  "zh": "已點到交點",
+  "en": "Snapped to intersection",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "snap.toast.perpendicular": {
+  "zh": "已點到垂足",
+  "en": "Snapped to perpendicular",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "measure.snapped.intersection": {
+  "zh": "交點",
+  "en": "Intersection",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "measure.snapped.perpendicular": {
+  "zh": "垂足",
+  "en": "Perpendicular",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "measure.snapped.quadrant": {
+  "zh": "已鎖定四分點",
+  "en": "Snapped to quadrant",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "diag.notReady": {
+  "zh": "CAD解析與畫面尚未就緒",
+  "en": "The drawing isn't ready yet",
+  "section": "5.1 核心－App 殼與看圖畫面（T10）"
+ },
+ "bar.label": {
+  "zh": "看圖工具",
+  "en": "Viewer tools",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.measureLabel": {
+  "zh": "量測工具",
+  "en": "Measuring tools",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.measure": {
+  "zh": "量測",
+  "en": "Measure",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.measureEnd": {
+  "zh": "結束量測",
+  "en": "End measure",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.end": {
+  "zh": "結束",
+  "en": "End",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.measureTip": {
+  "zh": "點兩點量距離，也能量總長、面積、角度",
+  "en": "Tap two points for a distance; also total length, area and angle",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.measureNoPdf": {
+  "zh": "這個檔案不能量測（PDF 只能看）",
+  "en": "This file can't be measured (PDFs are view-only)",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.markup": {
+  "zh": "標註",
+  "en": "Markup",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.markupEnd": {
+  "zh": "結束標註",
+  "en": "End markup",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.markupTip": {
+  "zh": "用紅筆、框、文字在圖上做記號，可存成圖片",
+  "en": "Mark up the drawing with pen, boxes and text; save it as a picture",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.markupNoPdf": {
+  "zh": "這個檔案不能標註（PDF 只能看）",
+  "en": "This file can't be marked up (PDFs are view-only)",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.home": {
+  "zh": "回到初始畫面",
+  "en": "Back to start view",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.homeShort": {
+  "zh": "初始",
+  "en": "Start",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.homeTip": {
+  "zh": "回到剛打開這張圖時的畫面",
+  "en": "Return to the view this drawing opened with",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.search": {
+  "zh": "搜尋",
+  "en": "Search",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.searchEnd": {
+  "zh": "結束搜尋",
+  "en": "End search",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.searchTip": {
+  "zh": "找圖上的文字，一筆一筆跳過去",
+  "en": "Find text on the drawing and jump through each hit",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.searchNoPdf": {
+  "zh": "這個檔案不能搜尋文字（PDF 只能看）",
+  "en": "This file's text can't be searched (PDFs are view-only)",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.info": {
+  "zh": "資訊",
+  "en": "Info",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.infoEnd": {
+  "zh": "結束資訊",
+  "en": "End info",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.infoTip": {
+  "zh": "點圖上的物件，看圖層、文字、所屬圖塊與屬性",
+  "en": "Tap an object to see its layer, text, blocks and attributes",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.infoNoPdf": {
+  "zh": "這個檔案不能查物件資訊（PDF 只能看）",
+  "en": "Object info isn't available for this file (PDFs are view-only)",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.exitTip": {
+  "zh": "離開量測，回到看圖",
+  "en": "Leave measuring and go back to viewing",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.modeName": {
+  "zh": "量測模式",
+  "en": "Measure mode",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.modeCollapse": {
+  "zh": "收起",
+  "en": "Hide",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.modeTip": {
+  "zh": "切換距離／總長度／面積／角度",
+  "en": "Switch distance / total length / area / angle",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.clearAll": {
+  "zh": "全部清除",
+  "en": "Clear all",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.clearShort": {
+  "zh": "清除",
+  "en": "Clear",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.clearTip": {
+  "zh": "清掉這次量的點和保留的結果（會先問）",
+  "en": "Clear this measurement's points and kept results (asks first)",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.undo": {
+  "zh": "復原",
+  "en": "Undo",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.undoTip": {
+  "zh": "退回上一點；沒有點時收回上一筆保留",
+  "en": "Remove the last point; with none left, take back the last kept result",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.keep": {
+  "zh": "保留這段",
+  "en": "Keep this one",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.keepShort": {
+  "zh": "保留",
+  "en": "Keep",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "bar.keepTip": {
+  "zh": "把這次結果留在圖上，接著量下一段",
+  "en": "Keep this result on the drawing and measure the next",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.fitShort": {
+  "zh": "全圖",
+  "en": "Fit",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.fitTip": {
+  "zh": "整張圖置中放到畫面內",
+  "en": "Fit the whole drawing on screen",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.resetShort": {
+  "zh": "原視角",
+  "en": "Saved view",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.resetTip": {
+  "zh": "回到圖檔在 CAD 存檔時的畫面",
+  "en": "Go back to the view saved in CAD",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.measureTip": {
+  "zh": "點圖面量距離、面積或物件；再按一次結束",
+  "en": "Tap the drawing to measure distance, area or objects; press again to end",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.infoTip": {
+  "zh": "點圖面上的物件，看圖層、文字、所屬圖塊與屬性；再按一次結束",
+  "en": "Tap an object to see its layer, text, blocks and attributes; press again to end",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.markupTip": {
+  "zh": "用紅筆、框、文字在圖上做記號，可存成圖片分享",
+  "en": "Mark up with pen, boxes and text and share it as a picture",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "dock.searchTip": {
+  "zh": "輸入文字，找出這張圖上所有出現的位置並跳過去",
+  "en": "Type text to find every place it appears and jump there",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "tip.joiner": {
+  "zh": "：",
+  "en": ": ",
+  "section": "5.2 核心－底部工具列與 dock（T18）"
+ },
+ "measure.dragLabel": {
+  "zh": "上下拖動調整面板高度",
+  "en": "Drag up or down to resize the panel",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.propertiesOnly": {
+  "zh": "物件屬性查詢；不將繪製邊界當工程長度／面積",
+  "en": "Properties only; the drawn outline isn't used as an engineering length or area",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.parts": {
+  "zh": "水平 {x} ／ 垂直 {y}",
+  "en": "Horizontal {x} / Vertical {y}",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.keepName": {
+  "zh": "保留這段，量下一段",
+  "en": "Keep this one, measure the next",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.clearAllName": {
+  "zh": "全部清除（含保留結果）",
+  "en": "Clear all (including kept results)",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.clearAllTip": {
+  "zh": "清掉這次的點和全部保留的結果（會先問）",
+  "en": "Clear this measurement's points and all kept results (asks first)",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.total": {
+  "zh": "長度合計：{值}",
+  "en": "Total length: {值}",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.settings": {
+  "zh": "設定",
+  "en": "Settings",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.settingsLabel": {
+  "zh": "單位與鎖點設定",
+  "en": "Units and snap settings",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.settingsTitle": {
+  "zh": "單位、鎖點與小數位數",
+  "en": "Units, snap and decimals",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.noUnit": {
+  "zh": "未設單位",
+  "en": "No unit",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.decimals": {
+  "zh": "小數位數",
+  "en": "Decimal places",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.snapKindsLabel": {
+  "zh": "鎖點種類",
+  "en": "Snap types",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.assumedCm": {
+  "zh": "圖檔沒標單位，先當公分（cm）計；若不對，請改「1 圖面單位 =」。",
+  "en": "The file has no unit, so centimeters (cm) are assumed. If that's wrong, change \"1 drawing unit =\".",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "measure.redo": {
+  "zh": "這次重來",
+  "en": "Start this one over",
+  "section": "5.3 核心－完整量測面板（T16 內容，字串在此列出）"
+ },
+ "library.webNote": {
+  "zh": "網頁版：圖面存在這個瀏覽器裡。清除瀏覽器資料，或 iPhone 長期未開啟時，可能被系統刪除；原檔請另外保存。",
+  "en": "Web version: drawings are stored in this browser. Clearing browser data, or not opening it on an iPhone for a long time, may delete them; keep your original files elsewhere.",
+  "section": "5.4 核心－圖庫與 PDF（T11、T17）"
+ },
+ "library.replacePickerLabel": {
+  "zh": "更新原檔選擇器",
+  "en": "Replacement file picker",
+  "section": "5.4 核心－圖庫與 PDF（T11、T17）"
+ },
+ "library.snapshotNote": {
+  "zh": "圖面庫是匯入快照，不能自動同步外部檔案。「重新命名／重新解析」不會讀取外部新版。",
+  "en": "The library keeps a snapshot of each import and can't sync outside files. Rename or re-parse won't read a newer outside version.",
+  "section": "5.4 核心－圖庫與 PDF（T11、T17）"
+ },
+ "library.replace": {
+  "zh": "更新原檔",
+  "en": "Replace file",
+  "section": "5.4 核心－圖庫與 PDF（T11、T17）"
+ },
+ "library.replaceNote": {
+  "zh": "選擇同格式新版後替換此項內容並重解析；保留圖庫名稱、其他圖面與閱讀偏好。",
+  "en": "Choose a newer file of the same format to replace this item and re-parse it; the library name, other drawings and reading preferences are kept.",
+  "section": "5.4 核心－圖庫與 PDF（T11、T17）"
+ },
+ "canvas.notReady": {
+  "zh": "圖面尚未就緒",
+  "en": "The drawing isn't ready yet",
+  "section": "5.6 核心－畫布（T15）"
+ },
+ "canvas.imageFailed": {
+  "zh": "無法產生圖片",
+  "en": "Couldn't create the image",
+  "section": "5.6 核心－畫布（T15）"
+ },
+ "library.recentPages": {
+  "zh": "最近開啟頁數",
+  "en": "Recent pages",
+  "section": "D 組新增（協調者授權：圖庫字串、待決 A-6／A-7）"
+ },
+ "library.page": {
+  "zh": "第 {n} 頁",
+  "en": "Page {n}",
+  "section": "D 組新增（協調者授權：圖庫字串、待決 A-6／A-7）"
+ },
+ "archive.folder": {
+  "zh": "資料夾",
+  "en": "Folder",
+  "section": "D 組新增（協調者授權：圖庫字串、待決 A-6／A-7）"
+ },
+ "archive.err.tooLarge": {
+  "zh": "壓縮檔超過 64 MB 安全上限，請使用較小的壓縮檔。",
+  "en": "The archive is over the 64 MB safety limit. Use a smaller archive.",
+  "section": "D 組新增（協調者授權：圖庫字串、待決 A-6／A-7）"
+ }
+}

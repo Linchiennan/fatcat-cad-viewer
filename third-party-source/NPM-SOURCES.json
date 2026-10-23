@@ -1,0 +1,1479 @@
+[
+  {
+    "name": "@capacitor/android",
+    "version": "8.4.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/ionic-team/capacitor.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@capacitor/android/-/android-8.4.3.tgz",
+    "integrity": "sha512-VICd1+E2u5uPvCb5hseoZr84u7/wi334BqayKyXvSLeqURn/iw7nCFEWK29RQNW2rxiW5l1vTVHQ2K6tAJkpTQ==",
+    "license_texts": [
+      "licenses/npm-capacitor--android-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@capacitor/browser",
+    "version": "8.0.4",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/ionic-team/capacitor-plugins"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@capacitor/browser/-/browser-8.0.4.tgz",
+    "integrity": "sha512-ORZ4u/y+7aMuu6yVuk6SP529fUZyqcbnuHB1q5McpA3o2SYfVoi28iB8rsQjI2ad1qlKJd29ZUuGtspXLBDlWg==",
+    "license_texts": [
+      "licenses/npm-capacitor--browser-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@capacitor/core",
+    "version": "8.4.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/ionic-team/capacitor.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@capacitor/core/-/core-8.4.3.tgz",
+    "integrity": "sha512-5S04bZa2I9RabRaqhmwynR54Xkj9x/cKW8R6nXT5ZYg/3JkuOzyIEijIrb18Jra5bMT+f6HX7KonCyvNob6+0g==",
+    "license_texts": [
+      "licenses/npm-capacitor--core-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@firebase/ai",
+    "version": "3.0.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/ai",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/ai/-/ai-3.0.0.tgz",
+    "integrity": "sha512-66jJAi6JUmyXna89xaDONmfvupO1wNc3f2BegPwUImagbbpKdVeycE3kMqbU4jiDLL14N5PHzadovvxpaqD2hw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/analytics",
+    "version": "0.10.25",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/analytics",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/analytics/-/analytics-0.10.25.tgz",
+    "integrity": "sha512-oDagV3PHeNXBdxemksZCdj+GmUT19eCnTOcLdQePIIovFXlm3zWy3Gjeaokt9Nqx24kc4ljK8lU0XGcGmmKZ1A==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/analytics-compat",
+    "version": "0.2.31",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/analytics-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/analytics-compat/-/analytics-compat-0.2.31.tgz",
+    "integrity": "sha512-msTlG9REujk5rjtOHNLngiuPmvaWGQte8ugL4/F6ZCMb+92Ue7SgjSEpNxINkM8ZtTrbGS83j5SZkt0r+M1Tjw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/analytics-types",
+    "version": "0.8.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/analytics-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/analytics-types/-/analytics-types-0.8.5.tgz",
+    "integrity": "sha512-kdnooE7Bis2jEnsqcerRwn/UQpH5D3uvHpku7OdUM9TJN3omlu6iYtbyAQ6XkAJRgJtO0aNf9OOkW8J6D59oCA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app",
+    "version": "0.16.4",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app/-/app-0.16.4.tgz",
+    "integrity": "sha512-eW9MgxKQFNif18lOGor/dqVm4tb5lySwxkid1nbU6ymS6hSVh7r/MREf9zmnGhHQ6ZGC4KJye6PCT+C//9R+hQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app-check",
+    "version": "0.13.1",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app-check",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app-check/-/app-check-0.13.1.tgz",
+    "integrity": "sha512-l8y3dmnhodXks/APAwx4tWqRl3tk8b9874KF1FJyKg1DIU+kMD0l52iz7S9/MW+eK8k6cjJg0G0iJ5KQAsQpow==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app-check-compat",
+    "version": "0.4.7",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app-check",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app-check-compat/-/app-check-compat-0.4.7.tgz",
+    "integrity": "sha512-fBb/xSMyIKv1nDmccfzz3IAGBzx/cQOxmZai66rJzifb1hMMkztf824Xx7LhpTUe7HNUbXwY90IvJ66fi8q6yg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app-check-interop-types",
+    "version": "0.3.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app-check-interop-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app-check-interop-types/-/app-check-interop-types-0.3.5.tgz",
+    "integrity": "sha512-qId34pVZ2CXTmtu4ofW5leiI93DvnOvIcr/5GT7MZPw5WXAi6nZoU+g9cNRgl7K90UJSbK0cXxten4meYMPyZg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app-check-types",
+    "version": "0.5.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app-check-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app-check-types/-/app-check-types-0.5.5.tgz",
+    "integrity": "sha512-+DF4gzFrlwGFyky38o4T/YN/r51l70yCtJ2HTkwmRj8FCMwPjm4hLH4fQbj6BUvzkiFqliBkitFsRpf1/YZkWA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app-compat",
+    "version": "0.5.20",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app-compat/-/app-compat-0.5.20.tgz",
+    "integrity": "sha512-LHB8/Vuviximj7SxERlr58AhbKM7DVnFFg0DCOjETJREUDx84wOjdPkPPcpsG2/KlXUN6m+EKtKwIr2/gD/7lw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/app-types",
+    "version": "0.9.6",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/app-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/app-types/-/app-types-0.9.6.tgz",
+    "integrity": "sha512-yPLahy7Esfu2w/yme3msVK4xTkDXQqq6szfQn8yVOQpCKiT5GVFjqNpLbuz6NkX0WuTwUidkmPewW3r4xkvpeg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/auth",
+    "version": "1.13.8",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/auth",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/auth/-/auth-1.13.8.tgz",
+    "integrity": "sha512-JPW7S7Hwp5qhn8VwEEHWfI1P2kqCqpKbJVTWlKT5UWl1NNbVjrYOGKTZHCVqUeVhLs7BjMWWkCnkoa8tzUjSjQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/auth-compat",
+    "version": "0.6.13",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/auth-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/auth-compat/-/auth-compat-0.6.13.tgz",
+    "integrity": "sha512-LqX9fIm3ToeSVbjoGn0jOy2j0M8J8IV20qEVksaqnAejERxgKXeUWHG/xUDa58gqC/2lClZav/9MYLj1VQiZ8w==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/auth-interop-types",
+    "version": "0.2.6",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/auth-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/auth-interop-types/-/auth-interop-types-0.2.6.tgz",
+    "integrity": "sha512-FgwZqDrBqgK0BHI70QTv1v/5wmuDF9f8fsJFvKSxoRlK2PPfSQtZAk2jhXu4pe9BZzFi/e4UYusU/bEQHdf6Qg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/auth-types",
+    "version": "0.13.2",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/auth-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/auth-types/-/auth-types-0.13.2.tgz",
+    "integrity": "sha512-OU+miuoSxIWYN7GT291d2ylVJBL3k/OePo7/JDSoQtkFQoEiGBc4AHuMjj/seqFIsHrqnjrAfRCk4pfufoJolQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/component",
+    "version": "0.7.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/component",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/component/-/component-0.7.5.tgz",
+    "integrity": "sha512-vuFDcL91Q+2ZuBJkyOh86T4q0B4ffNTDjc/A38tybO56odQABxRTFLTIowCWqAKeIcgo37GowWMVgFF73gD8Qw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/data-connect",
+    "version": "0.7.4",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/data-connect",
+      "type": "git",
+      "url": "https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/data-connect/-/data-connect-0.7.4.tgz",
+    "integrity": "sha512-su1aGWlzhxb+xtggCUSsufJn1FDa06SBDK71y+fpQ+g2zMhMExik6FUv/odkKzOF/xfWVjabCbWBcjJY3MceDA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/database",
+    "version": "1.1.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/database",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/database/-/database-1.1.5.tgz",
+    "integrity": "sha512-/JGpvszLoNXNgzilRXocigGfFF4hbcPA9wN1i1kjJx6oKkXgkHteZYl3lQs1lJX3ETDf6bv7zI15lPMVUp4sAQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/database-compat",
+    "version": "2.1.7",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/database-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/database-compat/-/database-compat-2.1.7.tgz",
+    "integrity": "sha512-lBq9sJm8MnJINKJnkAKSOj2MbC66xGoSVCcGkPtstl+lkoKEBtD46qHLbuDgW/WbLPoKVm17RIN8BxHj+Z2F2w==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/database-types",
+    "version": "1.0.22",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/database-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/database-types/-/database-types-1.0.22.tgz",
+    "integrity": "sha512-YAZNXsjY9EQQ+pKw/3ax8n5FgolHC7Qew7EY5RceYdl0R2ZP+kCv1O0DkKlcceue8uQCOreHCNN7PWVFpY1Nug==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/firestore",
+    "version": "4.19.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/firestore",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/firestore/-/firestore-4.19.0.tgz",
+    "integrity": "sha512-PH+lpkZldrNd1XLypP/xq0SS/CCKuCVykvWdbFpR8euwJnysE7vMlYMhtRckizrwCsshUyEPP5cel7McHFfJ6w==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/firestore-compat",
+    "version": "0.4.16",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/firestore-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/firestore-compat/-/firestore-compat-0.4.16.tgz",
+    "integrity": "sha512-ffI0xU10be9ykgzU4OsCH5uarMfB1gR3HuNYRiQgNAs8NGcPObh/YMeuQne4zbA9gZakppGwQz3smyra8ZFnDA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/firestore-types",
+    "version": "3.0.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/firestore-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/firestore-types/-/firestore-types-3.0.5.tgz",
+    "integrity": "sha512-dbdMAQkMd5dwWc48eupz/Y6/E9ruat3+gY5lhVKscvvT/HnDBEEMzJW38zdKhgdnglZHGk2vUsJMOHAphMHGMA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/functions",
+    "version": "0.14.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/functions",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/functions/-/functions-0.14.0.tgz",
+    "integrity": "sha512-DhuYFr0eMhp+s/PNEk6SiMsYkc00+XVOUeKbrl8MOzQNZI3SKQpqoDR1d+keNDAutwmHRWTUAdXBoVPD+xxVUw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/functions-compat",
+    "version": "0.5.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/functions-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/functions-compat/-/functions-compat-0.5.0.tgz",
+    "integrity": "sha512-T3BDIToESZUHt7438wyKYMkRjKg3m1xAIux5fVpNvTRQlDOFLukWniQWBDhJ2znpU9kxMTR6+e31TVo8P15PZw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/functions-types",
+    "version": "0.6.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/functions-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/functions-types/-/functions-types-0.6.5.tgz",
+    "integrity": "sha512-Zc0pURjthHXzSj54ZivCkzKDSV1r/wIpnmHdhq82q2yFFPVoncG/ZJjnVMiANvQfeww/QnElhzODpfwUucVwdA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/installations",
+    "version": "0.6.24",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/installations",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/installations/-/installations-0.6.24.tgz",
+    "integrity": "sha512-Ui52ey8wHoWqkBbXRKJEKYWylI0JZogZmoLS+o8Anh1bxWtK27ZYjLla1UJAAdC5DCKLJ2qAp0VpJOjg8VOX1g==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/installations-compat",
+    "version": "0.2.24",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/installations-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/installations-compat/-/installations-compat-0.2.24.tgz",
+    "integrity": "sha512-8M5nlcWwYt881x83COP2odq5vgf+NgwJh+RMd4LRSv8JI1pxwDfgrDJOERrjTgfC9J5Z0vnQX4b1pdN914e0Zw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/installations-types",
+    "version": "0.5.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/installations-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/installations-types/-/installations-types-0.5.5.tgz",
+    "integrity": "sha512-e9UYcju3puDl1vdrcKIi5dExzHLameOT/Tc61Q48PYwxtsM1NzZh/ikGbdBQTsbRgg0EMZqdPr0/m5ODUBobrg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/logger",
+    "version": "0.5.2",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/logger",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/logger/-/logger-0.5.2.tgz",
+    "integrity": "sha512-J2VO4NFTc0xQFrxV1B/lm5balicm9cwuX2acR9Yn41fN8KgUeQFo+VJV222IqW2FPSXKDu9uo5WdQFWf9TPbYg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/messaging",
+    "version": "0.13.3",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/messaging",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/messaging/-/messaging-0.13.3.tgz",
+    "integrity": "sha512-nRXPAp+z0kA3KziJtRY9kktHECvRwaaONzHvislFgllhCwJMscW7icWNQA5IjyP8Uc2+GS/4px8Uz6rx6ftTag==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/messaging-compat",
+    "version": "0.2.30",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/messaging",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/messaging-compat/-/messaging-compat-0.2.30.tgz",
+    "integrity": "sha512-m1DPT2ET5x0qYqXLoHwKMAyf1mgZZOhuoE6H6/H4OPsp8zSxMIDEFPaW7MaffPJsCA5J7kHzo+BHVNXK4ZoV+w==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/messaging-interop-types",
+    "version": "0.2.6",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/messaging-interop-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/messaging-interop-types/-/messaging-interop-types-0.2.6.tgz",
+    "integrity": "sha512-MVzvkKe2V4H2dHu5oOxRfeKQcfTwWmCgnzsC4V1q3ixun5iiL8riCZ2qI35rDhCL4glPGiu0jHxDbpVNuTKfow==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/performance",
+    "version": "0.7.14",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/performance",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/performance/-/performance-0.7.14.tgz",
+    "integrity": "sha512-9PH1XEZVHErxGdbXluvGz4Uyjw4W955H8v7Mv9rHIybRrg5F2Ac2tvf5+mSf5EtnxWNmxrD2WLnvMFaZP4sMrQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/performance-compat",
+    "version": "0.2.27",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/performance-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/performance-compat/-/performance-compat-0.2.27.tgz",
+    "integrity": "sha512-O/ozTf/EbChN94Pk7bd1eUC0PAC36726AwsaiJyC0bZzSBWfLGSWASGPH5pebUWXQPJtGxIJYRkkbX5l0Qa+Hw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/performance-types",
+    "version": "0.2.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/performance-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/performance-types/-/performance-types-0.2.5.tgz",
+    "integrity": "sha512-PRzOgB+/M+6AKlEkY8a9xy5Ff5SfZPIh4iShXhn2WAcL/euSbK7bdLqWysHduunNJhGFsXa22Ag3ixqL6rQtYg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/remote-config",
+    "version": "0.9.3",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/remote-config",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/remote-config/-/remote-config-0.9.3.tgz",
+    "integrity": "sha512-9DbuFNAFeUbVJQZmwLZfdoLRNFWV43V4UqaRpDkaSIdTmVWhzctPeISGkWe4sKTsqpoyldRumquS0gqWZg05fQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/remote-config-compat",
+    "version": "0.2.30",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/remote-config-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/remote-config-compat/-/remote-config-compat-0.2.30.tgz",
+    "integrity": "sha512-Q4sQKhQ8TPEMOcCUvUBfGeAP1DfcG7FGBfA9yFUn/XRr4vSToY0DTmK28Nh7lgLQYzs6D5Ng6knSoXH+aGn1Tg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/remote-config-types",
+    "version": "0.5.2",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/remote-config-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/remote-config-types/-/remote-config-types-0.5.2.tgz",
+    "integrity": "sha512-i8k1omVfoAnaT1ZPv2FFjxMZrATYsO/GnFgHEj5+7fAJLzi8wLnGGv1WK06oEAD6ltrWXSO1HzeNyajn/NjMWw==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/storage",
+    "version": "0.14.6",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/storage",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/storage/-/storage-0.14.6.tgz",
+    "integrity": "sha512-9WjohxpjbfcySjCp8kIbd1ZhtmCQFQLqPtDQ+wmZ5PVXimTDjDsSx/RZjwwK89MjCTXB9fCdmvZkJxplZn4W1A==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/storage-compat",
+    "version": "0.4.6",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/storage-compat",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/storage-compat/-/storage-compat-0.4.6.tgz",
+    "integrity": "sha512-te0IsqX1bM+OZCJF7jNSKXcMqCA2yYmpshRHjX4axy0lI/P9ZP9GLjEZMVL8wrjUWF4e3cZxMZTbck3Zd5E1hA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/storage-types",
+    "version": "0.8.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/storage-types",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/storage-types/-/storage-types-0.8.5.tgz",
+    "integrity": "sha512-GEDs5P+rNUfNcS+wxIdOLAHficife2YXtvTJnyi3ssrX11AAtBg+nDUdbYh8vuBzWehVQZPmztGUUnud4L+4yg==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/util",
+    "version": "1.15.3",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/util",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/util/-/util-1.15.3.tgz",
+    "integrity": "sha512-c/z/gaIlaaLZEuGbE6sLUuJ61tskg1JghvhcNQzW948ASBinbVBBRnZTC4b4yt4LaEtJQkYlyzqLHcutFwEIvA==",
+    "license_texts": []
+  },
+  {
+    "name": "@firebase/webchannel-wrapper",
+    "version": "1.0.7",
+    "license": "Apache-2.0",
+    "repository": {
+      "directory": "packages/webchannel-wrapper",
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@firebase/webchannel-wrapper/-/webchannel-wrapper-1.0.7.tgz",
+    "integrity": "sha512-phBFwieDLvkZGYN9CE9ZFNEIoBVksprzsnCzQejCmCHtgwCXReeuRpoEGN9C4EbhONztv8NRV1tau6Rb9pONwQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@grpc/grpc-js",
+    "version": "1.14.6",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/grpc/grpc-node/tree/master/packages/grpc-js",
+    "package_source_tarball": "https://registry.npmjs.org/@grpc/grpc-js/-/grpc-js-1.14.6.tgz",
+    "integrity": "sha512-SgC/B3/VZ8lTyOZ4Cwk6f1skWhmkNAaVfiX90qd5u1rRXGKk1//8FTUEN9GvOUq7rfWIqAYkA3CoyumYVpOS6g==",
+    "license_texts": [
+      "licenses/npm-grpc--grpc-js-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@grpc/proto-loader",
+    "version": "0.8.1",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/grpc/grpc-node.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@grpc/proto-loader/-/proto-loader-0.8.1.tgz",
+    "integrity": "sha512-wtF6h+DY6M3YaDBPAmvuuA6jV8Sif9MjtOI5euKFWRgCDl5PeDpPsHR9u2l6St5ceY8AZgoNDww5+HvEsXFsGg==",
+    "license_texts": [
+      "licenses/npm-grpc--proto-loader-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@grpc/proto-loader",
+    "version": "0.7.15",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/grpc/grpc-node.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@grpc/proto-loader/-/proto-loader-0.7.15.tgz",
+    "integrity": "sha512-tMXdRCfYVixjuFK+Hk0Q1s38gV9zDiDJfWL3h1rv4Qc39oILCu1TRTDt7+fGUI8K4G1Fj125Hx/ru3azECWTyQ==",
+    "license_texts": [
+      "licenses/npm-grpc--proto-loader-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@js-sdsl/ordered-map",
+    "version": "4.4.2",
+    "license": "MIT",
+    "repository": {
+      "type": "github",
+      "url": "https://github.com/js-sdsl/js-sdsl.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@js-sdsl/ordered-map/-/ordered-map-4.4.2.tgz",
+    "integrity": "sha512-iUKgm52T8HOE/makSxjqoWhe95ZJA1/G1sYsGev2JDKUSS14KAgg1LHb+Ba+IPow0xflbnSkOsZcO08C7w1gYw==",
+    "license_texts": [
+      "licenses/npm-js-sdsl--ordered-map-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@mlightcad/libredwg-web",
+    "version": "0.7.9",
+    "license": "GPL-3.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mlightcad/libredwg-web"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@mlightcad/libredwg-web/-/libredwg-web-0.7.9.tgz",
+    "integrity": "sha512-tqjx0eCiR0CNI3TyO3LVYzl4ptuzSFm7asGn/C1YiJaEk7Vneto+lRrVUco85qw+PZDihaFLwWqdYIEse1swbA==",
+    "license_texts": []
+  },
+  {
+    "name": "@mlightcad/shx-parser",
+    "version": "1.4.5",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mlightcad/shx-parser"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@mlightcad/shx-parser/-/shx-parser-1.4.5.tgz",
+    "integrity": "sha512-wFY0X7vnuq1IYdP6JRggb7LHcKho1P8zmcWGtXa6XYthwyKZCUoZCswTXr7J26pbzyhBB7KsiCcCL48iwIevdQ==",
+    "license_texts": [
+      "licenses/npm-mlightcad--shx-parser-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@napi-rs/canvas",
+    "version": "1.0.13",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/Brooooooklyn/canvas.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@napi-rs/canvas/-/canvas-1.0.13.tgz",
+    "integrity": "sha512-b87ugZpQ5ViwqVBkjervxpwa0GmJPsKHLBNoZN6GpjWeHzTbDUGryriq+2DYW2XbB+xCqSIINQysC0/I87nPbw==",
+    "license_texts": [
+      "licenses/npm-napi-rs--canvas-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@napi-rs/canvas-win32-x64-msvc",
+    "version": "1.0.13",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/Brooooooklyn/canvas.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@napi-rs/canvas-win32-x64-msvc/-/canvas-win32-x64-msvc-1.0.13.tgz",
+    "integrity": "sha512-DUlW3lZPz63kYsf8mxgyyZuevhlH0T3/BGP9l+NazhB0F1+gL6D4hqZdnhZpw24DlWmTpATDcyYSZlJOi+DdfQ==",
+    "license_texts": []
+  },
+  {
+    "name": "@pdf-lib/standard-fonts",
+    "version": "1.0.0",
+    "license": "MIT",
+    "repository": "https://github.com/Hopding/standard-fonts.git",
+    "package_source_tarball": "https://registry.npmjs.org/@pdf-lib/standard-fonts/-/standard-fonts-1.0.0.tgz",
+    "integrity": "sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==",
+    "license_texts": [
+      "licenses/npm-pdf-lib--standard-fonts-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "@pdf-lib/upng",
+    "version": "1.0.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Hopding/upng"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@pdf-lib/upng/-/upng-1.0.1.tgz",
+    "integrity": "sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==",
+    "license_texts": [
+      "licenses/npm-pdf-lib--upng-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/aspromise",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/aspromise/-/aspromise-1.1.2.tgz",
+    "integrity": "sha512-j+gKExEuLmKwvz3OgROXtrJ2UG2x8Ch2YZUxahh+s1F2HZ+wAceUNLkvy6zKCPVRkU++ZWQrdxsUeQXmcg4uoQ==",
+    "license_texts": [
+      "licenses/npm-protobufjs--aspromise-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/base64",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/base64/-/base64-1.1.2.tgz",
+    "integrity": "sha512-AZkcAA5vnN/v4PDqKyMR5lx7hZttPDgClv83E//FMNhR2TMcLUhfRUBHCmSl0oi9zMgDDqRUJkSxO3wm85+XLg==",
+    "license_texts": [
+      "licenses/npm-protobufjs--base64-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/codegen",
+    "version": "2.0.5",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/codegen/-/codegen-2.0.5.tgz",
+    "integrity": "sha512-zgXFLzW3Ap33e6d0Wlj4MGIm6Ce8O89n/apUaGNB/jx+hw+ruWEp7EwGUshdLKVRCxZW12fp9r40E1mQrf/34g==",
+    "license_texts": [
+      "licenses/npm-protobufjs--codegen-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/eventemitter",
+    "version": "1.1.1",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/eventemitter/-/eventemitter-1.1.1.tgz",
+    "integrity": "sha512-vW1GmwMZNnL+gMRaovlh9yZX74kc+TTU3FObkkurpMaRtBfLP3ldjS9KQWlwZgraRE0+dheEEoAxdzcJQ8eXZg==",
+    "license_texts": [
+      "licenses/npm-protobufjs--eventemitter-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/fetch",
+    "version": "1.1.1",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/fetch/-/fetch-1.1.1.tgz",
+    "integrity": "sha512-GpptLrs57adMSuHi3VNj0mAF8dwh36LMaYF6XyJ6JMWlVsc+t42tm1HSEDmOs3A8fC9yyeisgLhsTVQokOZ0zw==",
+    "license_texts": [
+      "licenses/npm-protobufjs--fetch-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/float",
+    "version": "1.0.2",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/float/-/float-1.0.2.tgz",
+    "integrity": "sha512-Ddb+kVXlXst9d+R9PfTIxh1EdNkgoRe5tOX6t01f1lYWOvJnSPDBlG241QLzcyPdoNTsblLUdujGSE4RzrTZGQ==",
+    "license_texts": [
+      "licenses/npm-protobufjs--float-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/path",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/path/-/path-1.1.2.tgz",
+    "integrity": "sha512-6JOcJ5Tm08dOHAbdR3GrvP+yUUfkjG5ePsHYczMFLq3ZmMkAD98cDgcT2iA1lJ9NVwFd4tH/iSSoe44YWkltEA==",
+    "license_texts": [
+      "licenses/npm-protobufjs--path-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/pool",
+    "version": "1.1.0",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/pool/-/pool-1.1.0.tgz",
+    "integrity": "sha512-0kELaGSIDBKvcgS4zkjz1PeddatrjYcmMWOlAuAPwAeccUrPHdUqo/J6LiymHHEiJT5NrF1UVwxY14f+fy4WQw==",
+    "license_texts": [
+      "licenses/npm-protobufjs--pool-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@protobufjs/utf8",
+    "version": "1.1.2",
+    "license": "BSD-3-Clause",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/protobufjs/protobuf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@protobufjs/utf8/-/utf8-1.1.2.tgz",
+    "integrity": "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==",
+    "license_texts": [
+      "licenses/npm-protobufjs--utf8-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "@types/node",
+    "version": "24.7.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+      "directory": "types/node"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/@types/node/-/node-24.7.0.tgz",
+    "integrity": "sha512-IbKooQVqUBrlzWTi79E8Fw78l8k1RNtlDDNWsFZs7XonuQSJ8oNYfEeclhprUldXISRMLzBpILuKgPlIxm+/Yw==",
+    "license_texts": [
+      "licenses/npm-types--node-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "ansi-regex",
+    "version": "5.0.1",
+    "license": "MIT",
+    "repository": "chalk/ansi-regex",
+    "package_source_tarball": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-5.0.1.tgz",
+    "integrity": "sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==",
+    "license_texts": [
+      "licenses/npm-ansi-regex-license.txt"
+    ]
+  },
+  {
+    "name": "ansi-styles",
+    "version": "4.3.0",
+    "license": "MIT",
+    "repository": "chalk/ansi-styles",
+    "package_source_tarball": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-4.3.0.tgz",
+    "integrity": "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==",
+    "license_texts": [
+      "licenses/npm-ansi-styles-license.txt"
+    ]
+  },
+  {
+    "name": "cliui",
+    "version": "8.0.1",
+    "license": "ISC",
+    "repository": "yargs/cliui",
+    "package_source_tarball": "https://registry.npmjs.org/cliui/-/cliui-8.0.1.tgz",
+    "integrity": "sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==",
+    "license_texts": [
+      "licenses/npm-cliui-LICENSE.txt.txt"
+    ]
+  },
+  {
+    "name": "color-convert",
+    "version": "2.0.1",
+    "license": "MIT",
+    "repository": "Qix-/color-convert",
+    "package_source_tarball": "https://registry.npmjs.org/color-convert/-/color-convert-2.0.1.tgz",
+    "integrity": "sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==",
+    "license_texts": [
+      "licenses/npm-color-convert-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "color-name",
+    "version": "1.1.4",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git@github.com:colorjs/color-name.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/color-name/-/color-name-1.1.4.tgz",
+    "integrity": "sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==",
+    "license_texts": [
+      "licenses/npm-color-name-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "dxf-viewer",
+    "version": "1.0.48",
+    "license": "MPL-2.0",
+    "repository": "https://github.com/vagran/dxf-viewer",
+    "package_source_tarball": "https://registry.npmjs.org/dxf-viewer/-/dxf-viewer-1.0.48.tgz",
+    "integrity": "sha512-VDzemAMzLvCCr379ntb8r81G0omCN96Oy4m+9psfKBi1KTrs7QV2DzDl1ft2+QDkz/KFIhM9tLDY2hVzPETYnw==",
+    "license_texts": [
+      "licenses/npm-dxf-viewer-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "earcut",
+    "version": "3.2.4",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/mapbox/earcut.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/earcut/-/earcut-3.2.4.tgz",
+    "integrity": "sha512-FHc6yNpnTORB0tM5kmZ03iD2mDuNakDE2lvf4Hw1XkfxtEHIGVi01B/GqUSwx+NcC1WGjidAfpTXzeALtPtfpg==",
+    "license_texts": [
+      "licenses/npm-earcut-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "emoji-regex",
+    "version": "8.0.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mathiasbynens/emoji-regex.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-8.0.0.tgz",
+    "integrity": "sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==",
+    "license_texts": [
+      "licenses/npm-emoji-regex-LICENSE-MIT.txt.txt"
+    ]
+  },
+  {
+    "name": "escalade",
+    "version": "3.2.0",
+    "license": "MIT",
+    "repository": "lukeed/escalade",
+    "package_source_tarball": "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz",
+    "integrity": "sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==",
+    "license_texts": [
+      "licenses/npm-escalade-license.txt"
+    ]
+  },
+  {
+    "name": "faye-websocket",
+    "version": "0.11.4",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/faye/faye-websocket-node.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.11.4.tgz",
+    "integrity": "sha512-CzbClwlXAuiRQAlUyfqPgvPoNKTckTPGfwZV4ZdAhVcP2lh9KUxJg2b5GkE7XbjKQ3YJnQ9z6D9ntLAlB+tP8g==",
+    "license_texts": [
+      "licenses/npm-faye-websocket-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "fflate",
+    "version": "0.8.3",
+    "license": "MIT",
+    "repository": "https://github.com/101arrowz/fflate",
+    "package_source_tarball": "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz",
+    "integrity": "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==",
+    "license_texts": [
+      "licenses/npm-fflate-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "firebase",
+    "version": "13.1.0",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/firebase/firebase-js-sdk.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/firebase/-/firebase-13.1.0.tgz",
+    "integrity": "sha512-II/6P63vYzWdS6gTM9+OaMZD6XaCHJdI/9OVa8Z+bEs18t3CR2JlSwCI12KYMramNqTkywJocjSpGePaVPng+A==",
+    "license_texts": []
+  },
+  {
+    "name": "get-caller-file",
+    "version": "2.0.5",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/stefanpenner/get-caller-file.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/get-caller-file/-/get-caller-file-2.0.5.tgz",
+    "integrity": "sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==",
+    "license_texts": [
+      "licenses/npm-get-caller-file-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "http-parser-js",
+    "version": "0.5.10",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/creationix/http-parser-js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.5.10.tgz",
+    "integrity": "sha512-Pysuw9XpUq5dVc/2SMHpuTY01RFl8fttgcyunjL7eEMhGM3cI4eOmiCycJDVCo/7O7ClfQD3SaI6ftDzqOXYMA==",
+    "license_texts": [
+      "licenses/npm-http-parser-js-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "idb",
+    "version": "7.1.1",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/jakearchibald/idb.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/idb/-/idb-7.1.1.tgz",
+    "integrity": "sha512-gchesWBzyvGHRO9W8tzUWFDycow5gwjvFKfyV9FF32Y7F50yZMp7mP+T2mJIWFx49zicqyC4uefHM17o6xKIVQ==",
+    "license_texts": [
+      "licenses/npm-idb-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "is-fullwidth-code-point",
+    "version": "3.0.0",
+    "license": "MIT",
+    "repository": "sindresorhus/is-fullwidth-code-point",
+    "package_source_tarball": "https://registry.npmjs.org/is-fullwidth-code-point/-/is-fullwidth-code-point-3.0.0.tgz",
+    "integrity": "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==",
+    "license_texts": [
+      "licenses/npm-is-fullwidth-code-point-license.txt"
+    ]
+  },
+  {
+    "name": "libarchive-wasm",
+    "version": "1.2.0",
+    "license": "MIT",
+    "repository": "ofk/libarchive-wasm",
+    "package_source_tarball": "https://registry.npmjs.org/libarchive-wasm/-/libarchive-wasm-1.2.0.tgz",
+    "integrity": "sha512-aunFn8oL9VwGRj+brRvdOv8BRUD4Ea1WxJW45IdiuXE2Vp/m/X+M1UxSU+yPzXfc1mPPC8AARaflg/CtF11u8g==",
+    "license_texts": []
+  },
+  {
+    "name": "lodash.camelcase",
+    "version": "4.3.0",
+    "license": "MIT",
+    "repository": "lodash/lodash",
+    "package_source_tarball": "https://registry.npmjs.org/lodash.camelcase/-/lodash.camelcase-4.3.0.tgz",
+    "integrity": "sha512-TwuEnCnxbc3rAvhf/LbG7tJUDzhqXyFnv3dtzLOPgCG/hODL7WFnsbwktkD7yUV0RrreP/l1PALq/YSg6VvjlA==",
+    "license_texts": [
+      "licenses/npm-lodash.camelcase-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "loglevel",
+    "version": "1.9.2",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/pimterry/loglevel.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/loglevel/-/loglevel-1.9.2.tgz",
+    "integrity": "sha512-HgMmCqIJSAKqo68l0rS2AanEWfkxaZ5wNiEFb5ggm08lDs9Xl2KxBlX3PTcaD2chBM1gXAYf491/M2Rv8Jwayg==",
+    "license_texts": [
+      "licenses/npm-loglevel-LICENSE-MIT.txt"
+    ]
+  },
+  {
+    "name": "long",
+    "version": "5.3.2",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/dcodeIO/long.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/long/-/long-5.3.2.tgz",
+    "integrity": "sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==",
+    "license_texts": [
+      "licenses/npm-long-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "opentype.js",
+    "version": "1.3.4",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/opentypejs/opentype.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/opentype.js/-/opentype.js-1.3.4.tgz",
+    "integrity": "sha512-d2JE9RP/6uagpQAVtJoF0pJJA/fgai89Cc50Yp0EJHk+eLp6QQ7gBoblsnubRULNY132I0J1QKMJ+JTbMqz4sw==",
+    "license_texts": [
+      "licenses/npm-opentype.js-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "pako",
+    "version": "1.0.11",
+    "license": "(MIT AND Zlib)",
+    "repository": "nodeca/pako",
+    "package_source_tarball": "https://registry.npmjs.org/pako/-/pako-1.0.11.tgz",
+    "integrity": "sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==",
+    "license_texts": [
+      "licenses/npm-pako-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "pdf-lib",
+    "version": "1.17.1",
+    "license": "MIT",
+    "repository": "git+https://github.com/Hopding/pdf-lib.git",
+    "package_source_tarball": "https://registry.npmjs.org/pdf-lib/-/pdf-lib-1.17.1.tgz",
+    "integrity": "sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==",
+    "license_texts": [
+      "licenses/npm-pdf-lib-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "tslib",
+    "version": "1.14.1",
+    "license": "0BSD",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Microsoft/tslib.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/tslib/-/tslib-1.14.1.tgz",
+    "integrity": "sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==",
+    "license_texts": [
+      "licenses/npm-tslib-LICENSE.txt.txt"
+    ]
+  },
+  {
+    "name": "pdfjs-dist",
+    "version": "6.4.299",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/mozilla/pdf.js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-6.4.299.tgz",
+    "integrity": "sha512-AVl138zALtfaAPvADulE0PZThbYzCBS79nL4pOSL/6Sm/4AH5A21BD9VHt97OlCuzJuCpmeZtAtkinisF4Vb1g==",
+    "license_texts": [
+      "licenses/npm-pdfjs-dist-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "protobufjs",
+    "version": "7.6.6",
+    "license": "BSD-3-Clause",
+    "repository": "protobufjs/protobuf.js",
+    "package_source_tarball": "https://registry.npmjs.org/protobufjs/-/protobufjs-7.6.6.tgz",
+    "integrity": "sha512-dYDWdjSl5RNb7SgPxGQcRU+GtvP7s2fpkrY0r432PcOIaZ0/rBcxEZnQN67iJhFuQiVw754JDoPruPCNdGsbjg==",
+    "license_texts": [
+      "licenses/npm-protobufjs-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "re2js",
+    "version": "2.9.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/le0pard/re2js.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/re2js/-/re2js-2.9.0.tgz",
+    "integrity": "sha512-rZpqkd4ETP3GrQ5mDLzADr14OleeKdb/40lG84WE8absRfsVLJpWt2ifjtYYeoPqeouIkcxhTlurxIXfR5kR5Q==",
+    "license_texts": [
+      "licenses/npm-re2js-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "react",
+    "version": "19.1.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/facebook/react.git",
+      "directory": "packages/react"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/react/-/react-19.1.1.tgz",
+    "integrity": "sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ==",
+    "license_texts": [
+      "licenses/npm-react-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "react-dom",
+    "version": "19.1.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/facebook/react.git",
+      "directory": "packages/react-dom"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/react-dom/-/react-dom-19.1.1.tgz",
+    "integrity": "sha512-Dlq/5LAZgF0Gaz6yiqZCf6VCcZs1ghAJyrsu84Q/GT0gV+mCxbfmKNoGRKBYMJ8IEdGPqu49YWXD02GCknEDkw==",
+    "license_texts": [
+      "licenses/npm-react-dom-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "require-directory",
+    "version": "2.1.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/troygoode/node-require-directory.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/require-directory/-/require-directory-2.1.1.tgz",
+    "integrity": "sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==",
+    "license_texts": [
+      "licenses/npm-require-directory-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "safe-buffer",
+    "version": "5.2.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/feross/safe-buffer.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
+    "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
+    "license_texts": [
+      "licenses/npm-safe-buffer-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "scheduler",
+    "version": "0.26.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/facebook/react.git",
+      "directory": "packages/scheduler"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/scheduler/-/scheduler-0.26.0.tgz",
+    "integrity": "sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==",
+    "license_texts": [
+      "licenses/npm-scheduler-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "string-width",
+    "version": "4.2.3",
+    "license": "MIT",
+    "repository": "sindresorhus/string-width",
+    "package_source_tarball": "https://registry.npmjs.org/string-width/-/string-width-4.2.3.tgz",
+    "integrity": "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==",
+    "license_texts": [
+      "licenses/npm-string-width-license.txt"
+    ]
+  },
+  {
+    "name": "string.prototype.codepointat",
+    "version": "0.2.1",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mathiasbynens/String.prototype.codePointAt.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/string.prototype.codepointat/-/string.prototype.codepointat-0.2.1.tgz",
+    "integrity": "sha512-2cBVCj6I4IOvEnjgO/hWqXjqBGsY+zwPmHl12Srk9IXSZ56Jwwmy+66XO5Iut/oQVR7t5ihYdLB0GMa4alEUcg==",
+    "license_texts": [
+      "licenses/npm-string.prototype.codepointat-LICENSE-MIT.txt.txt"
+    ]
+  },
+  {
+    "name": "strip-ansi",
+    "version": "6.0.1",
+    "license": "MIT",
+    "repository": "chalk/strip-ansi",
+    "package_source_tarball": "https://registry.npmjs.org/strip-ansi/-/strip-ansi-6.0.1.tgz",
+    "integrity": "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==",
+    "license_texts": [
+      "licenses/npm-strip-ansi-license.txt"
+    ]
+  },
+  {
+    "name": "three",
+    "version": "0.161.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/mrdoob/three.js"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/three/-/three-0.161.0.tgz",
+    "integrity": "sha512-LC28VFtjbOyEu5b93K0bNRLw1rQlMJ85lilKsYj6dgTu+7i17W+JCCEbvrpmNHF1F3NAUqDSWq50UD7w9H2xQw==",
+    "license_texts": [
+      "licenses/npm-three-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "tiny-inflate",
+    "version": "1.0.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/devongovett/tiny-inflate.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/tiny-inflate/-/tiny-inflate-1.0.3.tgz",
+    "integrity": "sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw==",
+    "license_texts": [
+      "licenses/npm-tiny-inflate-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "tslib",
+    "version": "2.8.1",
+    "license": "0BSD",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Microsoft/tslib.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz",
+    "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
+    "license_texts": [
+      "licenses/npm-tslib-LICENSE.txt.txt"
+    ]
+  },
+  {
+    "name": "undici-types",
+    "version": "7.14.0",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/nodejs/undici.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/undici-types/-/undici-types-7.14.0.tgz",
+    "integrity": "sha512-QQiYxHuyZ9gQUIrmPo3IA+hUl4KYk8uSA7cHrcKd/l3p1OTpZcM0Tbp9x7FAtXdAYhlasd60ncPpgu6ihG6TOA==",
+    "license_texts": [
+      "licenses/npm-undici-types-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "web-vitals",
+    "version": "4.2.4",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/GoogleChrome/web-vitals.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/web-vitals/-/web-vitals-4.2.4.tgz",
+    "integrity": "sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==",
+    "license_texts": [
+      "licenses/npm-web-vitals-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "websocket-driver",
+    "version": "0.7.5",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/faye/websocket-driver-node.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.7.5.tgz",
+    "integrity": "sha512-ZL2+3c7kMBdIRCMz6l8jQMHyGVxj+UL+xVk74Ombiciboca8rHa15L86B19E5oh1pL9Ii/uj54gtsIrZGMo6zA==",
+    "license_texts": [
+      "licenses/npm-websocket-driver-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "websocket-extensions",
+    "version": "0.1.4",
+    "license": "Apache-2.0",
+    "repository": {
+      "type": "git",
+      "url": "git://github.com/faye/websocket-extensions-node.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.4.tgz",
+    "integrity": "sha512-OqedPIGOfsDlo31UNwYbCFMSaO9m9G/0faIHj5/dZFDMFqPTcx6UwqyOy3COEaEOg/9VsGIpdqn62W5KhoKSpg==",
+    "license_texts": [
+      "licenses/npm-websocket-extensions-LICENSE.md.txt"
+    ]
+  },
+  {
+    "name": "wrap-ansi",
+    "version": "7.0.0",
+    "license": "MIT",
+    "repository": "chalk/wrap-ansi",
+    "package_source_tarball": "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-7.0.0.tgz",
+    "integrity": "sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==",
+    "license_texts": [
+      "licenses/npm-wrap-ansi-license.txt"
+    ]
+  },
+  {
+    "name": "y18n",
+    "version": "5.0.8",
+    "license": "ISC",
+    "repository": "yargs/y18n",
+    "package_source_tarball": "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz",
+    "integrity": "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==",
+    "license_texts": [
+      "licenses/npm-y18n-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "yargs",
+    "version": "17.7.3",
+    "license": "MIT",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/yargs/yargs.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/yargs/-/yargs-17.7.3.tgz",
+    "integrity": "sha512-GZtjxm/J/4TSxuL3FNYjCmLktBTnIw/rVmKSIyKeYAZpmJB2ig9VauCC5xsa82GNKVKDAqpOn3KVzNt0zmrU0g==",
+    "license_texts": [
+      "licenses/npm-yargs-LICENSE.txt"
+    ]
+  },
+  {
+    "name": "yargs-parser",
+    "version": "21.1.1",
+    "license": "ISC",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/yargs/yargs-parser.git"
+    },
+    "package_source_tarball": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-21.1.1.tgz",
+    "integrity": "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw==",
+    "license_texts": [
+      "licenses/npm-yargs-parser-LICENSE.txt.txt"
+    ]
+  }
+]

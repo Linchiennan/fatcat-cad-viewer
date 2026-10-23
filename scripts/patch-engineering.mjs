@@ -1,0 +1,33 @@
+import fs from 'node:fs';
+const root='node_modules/dxf-viewer/src/';
+function patch(file,old,next){const p=root+file;let s=fs.readFileSync(p,'utf8');if(s.includes(next))return;if(!s.includes(old))throw Error('版本錨點不符 '+file);fs.writeFileSync(p,s.replace(old,next));}
+patch('parser/ParseHelpers.js','entity.color = getAcadColor(Math.abs(curr.value));','if (entity.trueColor === undefined) entity.color = getAcadColor(Math.abs(curr.value));');
+patch('parser/ParseHelpers.js','entity.color = curr.value;','entity.trueColor = curr.value; entity.color = curr.value;');
+patch('parser/DxfParser.js','layer.color = curr.value;','layer.trueColor = curr.value; layer.color = curr.value;');
+patch('parser/DxfParser.js','case 62: // color, visibility','case 6: layer.lineType = curr.value; curr = scanner.next(); break;\n                case 370: layer.lineweight = curr.value; curr = scanner.next(); break;\n                case 62: // color, visibility');
+patch('DxfScene.js','_GetEntityColor(entity, blockCtx = null) {','_GetEntityColor(entity, blockCtx = null) {\n        if (Number.isInteger(entity.trueColor)) return entity.trueColor;');
+patch('parser/DxfParser.js',"DxfParser.prototype.parseSync = function(source) {","DxfParser.prototype.parseSync = function(source) {\n    if (typeof source === 'string' && source.startsWith('FATCAT-DXF-JSON\\n')) { const d=JSON.parse(source.slice(16)); if (!Array.isArray(d.entities)) throw Error('外參圖面格式錯誤'); return d; }");
+patch('parser/DxfParser.js',"log.warn('Unhandled entity ' + curr.value);","dxf.cadUnsupported ??= {}; dxf.cadUnsupported[curr.value] = (dxf.cadUnsupported[curr.value] || 0) + 1; log.warn('Unhandled entity ' + curr.value);");
+patch('DxfViewer.js','m.uniforms.color = { value: new three.Color(color) }\n        return m','m.uniforms.color = { value: new three.Color().setHex(color, three.LinearSRGBColorSpace) }\n        return m');
+patch('DxfViewer.js','m.uniforms.color = { value: new three.Color(color) }\n        m.uniforms.size','m.uniforms.color = { value: new three.Color().setHex(color, three.LinearSRGBColorSpace) }\n        m.uniforms.size');
+patch('DxfViewer.js','        function CreateObject(vertices, indices) {','        const cadLineweight = this.key.lineType >= 1000 ? this.key.lineType - 1000 : 0;\n        function CreateObject(vertices, indices) {');
+patch('DxfViewer.js','            obj._dxfViewerLayer = layer','            obj.userData.cadLineweight = cadLineweight;\n            obj._dxfViewerLayer = layer');
+patch('parser/DxfParser.js','layer.color = getAcadColor(layer.colorIndex);','if (layer.trueColor === undefined) layer.color = getAcadColor(layer.colorIndex);');
+// Upgrade older candidate patch, then apply the same anchored patch to pristine 1.0.48.
+{const p=root+'parser/DxfParser.js';let s=fs.readFileSync(p,'utf8');const old='case 74: ltype.complex = ltype.complex || curr.value !== 0; curr = scanner.next(); break;\n                ';if(s.includes(old))fs.writeFileSync(p,s.replace(old,''));}
+patch('parser/DxfParser.js','case 49:\n                    ltype.pattern.push(curr.value);',`case 74:
+                    ltype.complex = ltype.complex || curr.value !== 0;
+                    if(ltype.elements?.length)ltype.elements.at(-1).flags=curr.value;
+                    curr=scanner.next();break;
+                case 75: case 340: case 46: case 50: case 44: case 45: case 9:
+                    if(ltype.elements?.length)ltype.elements.at(-1)[({75:'shape',340:'styleHandle',46:'scale',50:'rotation',44:'x',45:'y',9:'text'})[curr.code]]=curr.value;
+                    curr=scanner.next();break;
+                case 49:
+                    ltype.elements??=[];ltype.elements.push({length:curr.value,flags:0});
+                    ltype.pattern.push(curr.value);`);
+patch('parser/DxfParser.js','var parseStyles = function () {','var parseStyles = function () { /* fatcat-style-handles */');
+{const p=root+'parser/DxfParser.js';let s=fs.readFileSync(p,'utf8');const start=s.indexOf('var parseStyles = function () {'),end=s.indexOf('var tableDefinitions =',start);let section=s.slice(start,end);if(!section.includes('case 5: style.handle')){section=section.replace('case 100:', 'case 5: style.handle=curr.value;curr=scanner.next();break;\n                case 100:');fs.writeFileSync(p,s.slice(0,start)+section+s.slice(end));}}
+patch('parser/entities/text.js','case 50: // Rotation in degrees','case 51: entity.obliqueAngle=curr.value;break;\n        case 71: entity.textGenerationFlag=curr.value;break;\n        case 50: // Rotation in degrees');
+console.log('工程parser/原色/線寬修補已套用');
+// Nested block references skipped _FilterEntity, so hidden entities and frozen layers inside nested blocks still drew.
+patch('DxfScene.js','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    if (!this._FilterEntity(entity)) continue /* fatcat nested filter */\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }');
