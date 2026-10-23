@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../i18n/translations";
 import { DEFAULT_CHOICE, exportRequest, loadExportChoice, normaliseBox, saveExportChoice } from "./exportFlow";
 import { ExportNote, ExportSheet } from "../components/ExportSheet";
-import { FileBar } from "./ViewerChrome";
+import { CheckStrip, FileBar } from "./ViewerChrome";
 
 const noop = () => {};
 class MemoryStorage { m = new Map<string, string>(); getItem(k: string) { return this.m.get(k) ?? null; } setItem(k: string, v: string) { this.m.set(k, v); } removeItem(k: string) { this.m.delete(k); } }
@@ -49,10 +49,14 @@ describe("export screens", () => {
     expect(renderToStaticMarkup(<ExportNote note={{ kind: "working" }} onShare={noop} onOpen={noop} onClose={noop} />)).toContain("正在輸出…");
   });
 
-  it("file bar shows the 輸出 tile only when export is offered", () => {
-    const withExport = renderToStaticMarkup(<FileBar name="a.dwg" size={10} cardOpen={false} onCard={noop} onLibrary={noop} onClose={noop} onExport={noop} />);
-    expect(withExport).toContain('aria-label="輸出"');
-    expect(withExport).toContain("<span>輸出</span>");
-    expect(renderToStaticMarkup(<FileBar name="a.pdf" size={10} cardOpen={false} onCard={noop} onLibrary={noop} onClose={noop} />)).not.toContain('aria-label="輸出"');
+  it("moves export out of the file bar and immediately before xrefs", () => {
+    const file = renderToStaticMarkup(<FileBar name="a.dwg" size={10} cardOpen={false} onCard={noop} onLibrary={noop} onClose={noop} />);
+    expect(file).not.toContain('aria-label="輸出"');
+    const strip = renderToStaticMarkup(<CheckStrip spaces={[]} space="Model" switching={false} missing={0} xrefsUnloaded={0} onSpace={noop} onTab={noop} onExport={noop} />);
+    expect(strip).toContain('aria-label="輸出"');
+    expect(strip).toMatch(/>輸出<\/button><button[^>]*>外參<\/button>/);
+    expect(strip.indexOf('>缺件<')).toBeLessThan(strip.indexOf('aria-label="輸出"'));
+    const unavailable = renderToStaticMarkup(<CheckStrip spaces={[]} space="Model" switching={false} missing={0} xrefsUnloaded={0} onSpace={noop} onTab={noop} />);
+    expect(unavailable).not.toContain('aria-label="輸出"');
   });
 });

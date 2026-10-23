@@ -615,11 +615,11 @@ export function App() {
         {screen === "viewing" && last ? (
           <>
             <FileBar name={last.file.name} size={last.file.size} cardOpen={nameCard} onCard={setNameCard}
-              onLibrary={openLibrary} onClose={() => setCloseConfirm(true)} onExport={isPdf ? undefined : openExport} />
+              onLibrary={openLibrary} onClose={() => setCloseConfirm(true)} />
             {showStrip ? (
               <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded}
                 onSpace={(name) => { setSwitching(true); canvasRef.current?.switchSpace(name); }}
-                onTab={(tab) => { setSearchOpen(false); setCadTab(tab); }} />
+                onTab={(tab) => { setSearchOpen(false); setCadTab(tab); }} onExport={openExport} />
             ) : null}
 
             {marking ? (
