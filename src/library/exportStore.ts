@@ -19,6 +19,8 @@ export type ExportEntry = {
   size: number;
   /** Bytes of the stored preview. */
   thumbnailSize: number;
+  pageCount?: number;
+  previewVersion?: number;
   widthPx: number;
   heightPx: number;
   dpi: number;
@@ -180,6 +182,17 @@ export async function readExportThumbnails(ids: readonly string[]): Promise<Map<
       if (content?.thumbnail) out.set(id, content.thumbnail);
     }
     return out;
+  });
+}
+
+/** Rename; the extension (format) can't change and names stay unique. */
+export async function cacheExportPreview(id: string, thumbnail: Blob, pageCount?: number): Promise<void> {
+  await withStores('readwrite', async (meta, files) => {
+    const entry = await req(meta.get(id)) as ExportEntry | undefined;
+    const content = await req(files.get(id)) as ExportContent | undefined;
+    if (!entry || !content) return; // A late render must never resurrect a deleted output.
+    await req(files.put({...content, thumbnail}));
+    await req(meta.put({...entry, thumbnailSize: thumbnail.size, pageCount, previewVersion: 1}));
   });
 }
 

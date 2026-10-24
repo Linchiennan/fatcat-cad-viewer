@@ -267,11 +267,22 @@ button { cursor: pointer; }
   .check-strip-page > button { font-weight: 600; }
 }
 
-/* One row: model/layout, layers and share. Keep fit bounds unchanged. */
-.check-strip-page { display: flex; flex: 1; min-width: 0; height: 100%; }
-.check-strip-page > button { padding: 0 4px; gap: 3px; line-height: 1.1; overflow: hidden; }
+/* Two whole pages; keep --strip-h/data-fit unchanged for the drawing fit bounds. */
+.check-strip-viewport { flex: 1; min-width: 0; overflow: hidden; touch-action: pan-y; user-select: none; }
+.check-strip-track { display: flex; height: 100%; width: 100%; transition: transform 160ms ease-out; }
+.check-strip[data-dragging] .check-strip-track { transition: none; }
+.check-strip-page { display: flex; flex: 0 0 100%; min-width: 0; height: 100%; }
+.check-strip:not([data-dragging]) .check-strip-page[inert] { visibility: hidden; }
+.check-strip-page > button { padding: 0 4px; gap: 3px; flex-wrap: wrap; align-content: center; line-height: 1.1; overflow: hidden; }
+.check-strip-page > button em { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .check-strip .space-switch { flex: 1 1 0; max-width: 50%; padding: 0 5px; gap: 3px; }
 .check-strip .space-switch svg { width: 15px; height: 15px; }
+.check-strip-dots { flex: 0 0 44px; display: flex; border-left: 1px solid var(--line); }
+.check-strip-dots button { display: grid; place-items: center; width: 22px; padding: 0; border: 0; background: none; }
+.check-strip-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); opacity: .45; }
+.check-strip-dots [aria-pressed="true"] span { background: var(--accent-hi); opacity: 1; }
+.check-strip-dots button:focus-visible { outline: 1px solid var(--accent-hi); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { .check-strip-track { transition: none; } }
 @media (max-width: 360px) { .check-strip .check-strip-page { font-size: .8rem; } }
 
 /* ---------- glove bar (T18 2.1-2.3) ---------- */

@@ -2,10 +2,13 @@
 // Upstream skips \H and lays out every chunk at the entity height; AutoCAD/ZWCAD apply it per scope.
 // Anchored and idempotent like patch-engineering.mjs: refuses to run against an unexpected version.
 import fs from 'node:fs';
+import {beforeWidth, applyWidth} from './patch-mtext-width.mjs';
+import {beforeFont, applyFont} from './patch-mtext-font.mjs';
+import {applyParagraph} from './patch-mtext-paragraph.mjs';
 const root = 'node_modules/dxf-viewer/src/';
 function patch(file, old, next) {
   const p = root + file; const s = fs.readFileSync(p, 'utf8');
-  if (s.includes(next)) return;
+  if (s.includes(next) || beforeWidth(file, beforeFont(file, s)).includes(next)) return;
   if (!s.includes(old)) throw Error('版本錨點不符 ' + file + '：' + old.slice(0, 60));
   fs.writeFileSync(p, s.replace(old, next));
 }
@@ -44,3 +47,8 @@ patch('TextRenderer.js',
 patch('TextRenderer.js',
   '                                                  color, layer)\n                    }\n                }\n                y -= lineHeight\n            }',
   '                                                  color, layer)\n                    }\n                }\n                top -= advance(size)\n            }');
+
+// Keep all existing build/pretest callers on the same ordered text patches.
+applyWidth();
+applyFont();
+applyParagraph();

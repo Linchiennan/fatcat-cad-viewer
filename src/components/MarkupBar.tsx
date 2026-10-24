@@ -3,7 +3,7 @@ import type { ComponentType, SVGProps } from "react";
 import { MARK_COLORS, type MarkTool } from "../viewer/markup";
 import { useI18n, type TranslationKey } from "../i18n/translations";
 import { IconTile } from "./IconTile";
-import { ArrowIcon, ArrowLeftIcon, CheckIcon, CircleIcon, EllipseIcon, HandIcon, LineIcon, PenIcon, RectIcon, ShareIcon, TextBoxIcon, TextIcon, TrashIcon } from "./Icons";
+import { ArrowIcon, ArrowLeftIcon, CheckIcon, CircleIcon, EllipseIcon, HandIcon, LineIcon, PenIcon, RectIcon, ShareIcon, TextBoxIcon, TextIcon } from "./Icons";
 
 type ToolFace = { tool: MarkTool; Icon: ComponentType<SVGProps<SVGSVGElement>> };
 // Each slot holds one tool or a pair; tapping the pressed slot again switches to its other tool.
@@ -21,9 +21,9 @@ const COLOR_KEYS: Record<string, TranslationKey> = {
 const COLORS_PER_PAGE = 3;
 
 /** Markup tools under the header, icon-first: tools and colours on top, actions below. */
-export function MarkupBar({ tool, color, count, sharing, onTool, onColor, onUndo, onClear, onShare, onDone }: {
+export function MarkupBar({ tool, color, count, sharing, onTool, onColor, onUndo, onShare, onDone }: {
   tool: MarkTool; color: string; count: number; sharing: boolean;
-  onTool(t: MarkTool): void; onColor(c: string): void; onUndo(): void; onClear(): void; onShare(): void; onDone(): void;
+  onTool(t: MarkTool): void; onColor(c: string): void; onUndo(): void; onShare(): void; onDone(): void;
 }) {
   const { t } = useI18n();
   const toolText = (tool: MarkTool, part: "" | "Short" | "Tip") => t(`markup.tool.${tool}${part}` as TranslationKey);
@@ -47,7 +47,7 @@ export function MarkupBar({ tool, color, count, sharing, onTool, onColor, onUndo
       </div>
       <div className="markup-row">
         <IconTile name={t("markup.undo")} label={t("markup.undoShort")} tip={t("markup.undoTip")} disabled={!count} onClick={onUndo}><ArrowLeftIcon /></IconTile>
-        <IconTile name={t("markup.clear")} label={t("markup.clearShort")} tip={t("markup.clearTip")} disabled={!count} onClick={onClear}><TrashIcon /></IconTile>
+
         <IconTile name={t("markup.share")} label={sharing ? t("markup.sharing") : t("markup.shareShort")} tip={t("markup.shareTip")} className="icon-tile markup-share" disabled={sharing} onClick={onShare}><ShareIcon /></IconTile>
         <IconTile name={t("markup.done")} label={t("markup.doneShort")} tip={t("markup.doneTip")} onClick={onDone}><CheckIcon /></IconTile>
       </div>

@@ -52,7 +52,7 @@ describe("export screens", () => {
   it("shares through the existing output callback on the same row", () => {
     const strip = renderToStaticMarkup(<CheckStrip spaces={[]} space="Model" switching={false} missing={0} xrefsUnloaded={0} onSpace={noop} onTab={noop} onExport={noop} />);
     expect(strip).toContain('aria-label="分享"');
-    expect(strip).not.toContain('data-check-page="2"');
-    expect(strip).not.toContain('check-strip-dots');
+    expect(strip).toContain('data-check-page="2"');
+    expect(strip).toContain('check-strip-dots');
   });
 });

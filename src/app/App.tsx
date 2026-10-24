@@ -612,9 +612,11 @@ export function App() {
     canClearAll: hasAnything(settings),
   } : undefined;
 
+  const askClearMarks = () => setConfirm({ message: t("markup.clearAllConfirm"), okLabel: t("markup.clearAllOk"), onOk: () => canvasRef.current?.clearMarks() });
   const toolbarProps = {
     onCommand: viewCommand, canMeasure: !isPdf, onMeasure: toggleMeasure, onMarkup: toggleMarkup, onSearch: toggleSearch,
     onInspect: toggleInspect, measuring, marking, searching, inspecting, measureTools,
+    onClearMarks: askClearMarks, canClearMarks: markCount > 0,
   };
 
   return (
@@ -643,7 +645,6 @@ export function App() {
             {marking ? (
               <MarkupBar tool={markTool} color={markColor} count={markCount} sharing={sharing}
                 onTool={setMarkTool} onColor={setMarkColor} onUndo={() => canvasRef.current?.undoMark()}
-                onClear={() => setConfirm({ message: t("markup.clearAllConfirm"), okLabel: t("markup.clearAllOk"), onOk: () => canvasRef.current?.clearMarks() })}
                 onShare={() => void share()} onDone={endMarkup} />
             ) : null}
             {marking && textDialog ? (

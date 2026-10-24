@@ -123,7 +123,7 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     expect(m.onClose).not.toHaveBeenCalled();
   });
 
-  it("long press opens the menu; share, rename and delete work; tap opens the file", async () => {
+  it("context menu retains share, rename and delete; tap opens the file", async () => {
     const actions = await import("./exportFileActions");
     const shareFile = vi.fn(async () => {});
     const openFile = vi.fn(async () => {});
@@ -139,8 +139,7 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     await act(async () => row().click());
     await m.settle();
     expect(openFile).toHaveBeenCalledTimes(1);
-    await act(async () => { row().dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 5, clientY: 5 })); });
-    await act(async () => { await new Promise((r) => setTimeout(r, 700)); });
+    await act(async () => { row().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
     const menu = () => m.host.querySelector(".lib-sheet");
     expect(menu()?.textContent).toContain("plan.png");
     const tile = (label: string) => Array.from(menu()!.querySelectorAll<HTMLButtonElement>("button")).find((b) => b.textContent?.includes(label))!;

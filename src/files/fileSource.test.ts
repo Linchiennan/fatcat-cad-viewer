@@ -26,5 +26,5 @@ it('uses browser relative path, otherwise admits path unavailable',async()=>{
 it('resolves real nested library metadata without inventing a filesystem path',async()=>{
  const a=await createLibraryFolder('root','工程');const b=await createLibraryFolder(a.id,'結構');const f=new File(['123'],'a.dwg');
  const e=await importDrawingToLibrary(f,b.id);
- expect(await resolveFileSource(f,e.id)).toEqual({kind:'library',path:'工程 / 結構 / a.dwg'});
+ expect(await resolveFileSource(f,e.id)).toEqual({kind:'import',path:''});
 });

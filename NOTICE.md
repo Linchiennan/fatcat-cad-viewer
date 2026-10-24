@@ -30,7 +30,8 @@ Copyright (C) 2026 大肥貓
 ## 修改過的第三方檔案
 
 建置時以 `scripts/patch-cjk-fonts.mjs`、`scripts/patch-engineering.mjs`、`scripts/patch-mtext-height.mjs`
-修補 dxf-viewer 的部分原始檔（中文字型、工程物件、多行文字高度）。依 MPL-2.0，這些修改後的檔案以 MPL-2.0 提供，
+及其匯入的 `scripts/patch-mtext-width.mjs`、`scripts/patch-mtext-font.mjs`、`scripts/patch-mtext-paragraph.mjs`
+修補 dxf-viewer 的部分原始檔（中文字型、工程物件、多行文字高度、寬度、行內字型與段落縮排）。依 MPL-2.0，這些修改後的檔案以 MPL-2.0 提供，
 修補內容即上述腳本，隨本專案原始碼一併公開。
 
 ## 名稱與圖示

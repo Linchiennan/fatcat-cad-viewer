@@ -17,14 +17,14 @@ export function fileSource(file: File): FileSource {
 export async function resolveFileSource(file: File, entryId?: string): Promise<FileSource> {
   const known = fileSource(file);
   if (known.kind === 'path') return known;
-  // A reopened library File is a stored snapshot; report its real library location.
+  // Provenance is not the snapshot's location inside the app library.
   if (entryId) {
     try {
-      const {listLibraryDrawings, libraryBreadcrumb} = await import('../library/drawingLibrary');
+      const {listLibraryDrawings} = await import('../library/drawingLibrary');
       const entry = (await listLibraryDrawings()).find(e => e.id === entryId);
       if (entry) {
-        const folders = await libraryBreadcrumb(entry.parentId);
-        return {kind:'library', path:[...folders.map(f => f.name), entry.name].join(' / ')};
+        const path = safeSourcePath(entry.originalSourcePath || '');
+        return {kind: path ? 'path' : 'import', path};
       }
     } catch { /* A metadata read failure must not prevent viewing the drawing. */ }
   }

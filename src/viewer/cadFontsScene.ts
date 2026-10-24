@@ -16,7 +16,9 @@ export function installCadFontScene(ctor:Any):void {
  if(!rendererPrototype.fatcatPitchWrapped){
   // While a fallback SHX big font style renders, full-width glyphs advance by that big font's pitch.
   const get=rendererPrototype._GetCharShape;
-  rendererPrototype._GetCharShape=function(char:string){const shape=get.call(this,char),metrics=this.fatcatPitch;if(!metrics||!shape)return shape;const cache=(this.fatcatPitched??=new Map()),key=metrics.key+'|'+char;let out=cache.get(key);if(!out){out=fittedShape(char,shape,metrics);cache.set(key,out);}return out;};
+  // Inline outline fonts override a STYLE's SHX advances, including whitespace.
+  // Unknown outline faces still use bundled glyphs, not unrelated SHX layout metrics.
+  rendererPrototype._GetCharShape=function(char:string,inlineFont?:string|null){const shape=get.call(this,char),metrics=inlineFont ? (/\.shx$/i.test(inlineFont)?fallbackMetrics({font:inlineFont}):null) : this.fatcatPitch;if(!metrics||!shape)return shape;const cache=(this.fatcatPitched??=new Map()),key=metrics.key+'|'+char;let out=cache.get(key);if(!out){out=fittedShape(char,shape,metrics);cache.set(key,out);}return out;};
   rendererPrototype.fatcatPitchWrapped=true;
  }
  const p=ctor.prototype,build=p.Build;

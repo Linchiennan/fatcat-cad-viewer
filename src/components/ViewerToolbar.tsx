@@ -37,6 +37,8 @@ export type ToolbarProps = {
   onInspect(): void;
   measuring?: boolean;
   marking?: boolean;
+  onClearMarks?(): void;
+  canClearMarks?: boolean;
   searching?: boolean;
   inspecting?: boolean;
   measureTools?: MeasureTools;
@@ -139,7 +141,8 @@ export function GloveBar(props: ToolbarProps) {
         key: "markup", name: props.marking ? tr("bar.markupEnd") : tr("bar.markup"), label: props.marking ? tr("bar.end") : tr("bar.markup"),
         tip: pdf ? tr("bar.markupNoPdf") : tr("bar.markupTip"), Icon: PenIcon, pressed: !!props.marking, disabled: pdf, onClick: props.onMarkup,
       },
-      { key: "home", name: tr("bar.home"), label: tr("bar.homeShort"), tip: tr("bar.homeTip"), Icon: HomeIcon, onClick: () => props.onCommand("home") },
+      props.marking ? { key: "clearMarks", name: tr("markup.clear"), label: tr("markup.clearShort"), tip: tr("markup.clearTip"), Icon: TrashIcon, disabled: !props.canClearMarks, onClick: () => props.onClearMarks?.() }
+        : { key: "home", name: tr("bar.home"), label: tr("bar.homeShort"), tip: tr("bar.homeTip"), Icon: HomeIcon, onClick: () => props.onCommand("home") },
       {
         key: "search", name: props.searching ? tr("bar.searchEnd") : tr("bar.search"), label: props.searching ? tr("bar.end") : tr("bar.search"),
         tip: pdf ? tr("bar.searchNoPdf") : tr("bar.searchTip"), Icon: SearchIcon, pressed: !!props.searching, disabled: pdf, onClick: props.onSearch,
@@ -201,6 +204,7 @@ export function ViewerDock(props: ToolbarProps & { spaces?: { name: string }[]; 
   return (
     <nav className="viewer-dock" aria-label={t("viewer.controlsLabel")} data-fit="toolbar">
       {view.map(item)}
+      {props.marking ? <button type="button" className="dock-item" aria-label={t("markup.clear")} title={t("markup.clearTip")} disabled={!props.canClearMarks} onClick={props.onClearMarks}><span className="dock-tile"><TrashIcon /></span><span className="dock-caption">{t("markup.clearShort")}</span></button> : null}
       {tools.length ? <span className="dock-sep" aria-hidden="true" /> : null}
       {tools.map(item)}
     </nav>

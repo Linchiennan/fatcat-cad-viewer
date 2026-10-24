@@ -5,6 +5,7 @@ import { ARCHIVE_LIMITS, buildArchiveList, normalizeArchivePath, archivePathKey,
 import { detectDrawingFormat, formatSizeLimit, hasForbiddenNameCharacter, isArchiveFormat, tooLargeMessage, type DrawingFormat } from "../files/fileTypes";
 import { drawingIdentity, loadPosition, savePosition } from "../viewer/readingPosition";
 import { diagnosticError, recordDiagnostic } from "../viewer/parseAudit";
+import { fileSource, rememberFileSource } from "../files/fileSource";
 
 /** New database name. The old one is only read once by migrateLegacyLibrary (T11 7.1). */
 export const LIBRARY_DB_NAME = "fatcat-drawing-library";
@@ -23,6 +24,8 @@ export type LibraryDrawingEntry = EntryBase & {
   lastModified: number;
   /** Changes on every content replacement, including same-millisecond writes. */
   contentRevision?: string;
+  /** Sanitized original URI / relative path; never the app's library location. */
+  originalSourcePath?: string;
   /** 0 = never opened (not in the recent list). */
   lastOpenedAt: number;
 };
@@ -261,7 +264,9 @@ function checkedBlob(entry: LibraryDrawingEntry, content: ContentRecord | undefi
 }
 
 function asFile(entry: LibraryDrawingEntry, blob: Blob): File {
-  return new File([blob], entry.name, { type: entry.mimeType, lastModified: entry.lastModified });
+  const file = new File([blob], entry.name, { type: entry.mimeType, lastModified: entry.lastModified });
+  rememberFileSource(file, entry.originalSourcePath || '');
+  return file;
 }
 
 function checkIncomingFile(file: File): DrawingFormat {
@@ -295,6 +300,7 @@ export async function importDrawingWithDecision(file: File, parentId: string, de
   checkIncomingFile(file);
   // Freeze source bytes before asking. A filesystem-backed File can become unreadable if changed.
   const frozen = new File([await file.arrayBuffer()], file.name, { type: file.type, lastModified: sourceDate(file.lastModified) });
+  rememberFileSource(frozen, fileSource(file).path);
   const sourceHash = await fullHash(frozen);
   const existing = (await listLibraryChildren(parentId)).find((e): e is LibraryDrawingEntry => e.kind === "drawing" && libraryNameKey(e.name) === libraryNameKey(file.name));
   const guard: ImportGuard = { parentId, name: file.name, expected: existing };
@@ -333,6 +339,7 @@ export async function importDrawingToLibrary(file: File, parentId: string = ROOT
       id: newId(), kind: "drawing", parentId, name: uniqueLibraryName(file.name, await takenNames(tx, parentId), true),
       createdAt: now, updatedAt: now, format, mimeType, size: file.size,
       lastModified: sourceDate(file.lastModified), lastOpenedAt: now, contentRevision: newId(),
+      originalSourcePath: fileSource(file).path,
     };
     await req(entriesOf(tx).add(entry));
     await req(contentsOf(tx).add({ id: entry.id, blob } satisfies ContentRecord));
@@ -531,6 +538,7 @@ export async function replaceLibraryDrawing(id: string, file: File, guard?: Impo
       const next: LibraryDrawingEntry = {
         ...entry, size: file.size, mimeType, updatedAt: now,
         lastModified: sourceDate(file.lastModified), contentRevision: newId(),
+        originalSourcePath: fileSource(file).path,
       };
       await req(entriesOf(tx).put(next));
       await req(contentsOf(tx).put({ id, blob } satisfies ContentRecord));
@@ -608,6 +616,7 @@ export async function importArchiveToLibrary(
       const entry: LibraryDrawingEntry = {
         id: newId(), kind: "drawing", parentId: parent, name: p.name, createdAt: now, updatedAt: now,
         format: p.format, mimeType, size: p.file.size, lastModified: sourceDate(p.file.lastModified), lastOpenedAt: 0,
+        originalSourcePath: fileSource(p.file).path || `${archiveName} / ${p.path}`,
       };
       await req(entriesOf(tx).add(entry));
       await req(contentsOf(tx).add({ id: entry.id, blob: p.file.slice(0, p.file.size, mimeType) } satisfies ContentRecord));

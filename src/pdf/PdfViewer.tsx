@@ -12,12 +12,12 @@ type PdfJs = typeof import("pdfjs-dist");
 let pdfjsModule: Promise<PdfJs> | null = null;
 
 /** Where the pdf.js worker and its data live (copied into public/runtime/pdfjs at build time). */
-function runtimeUrl(path: string): string {
+export function runtimeUrl(path: string): string {
   const base = typeof document !== "undefined" ? document.baseURI : "http://localhost/";
   return new URL(`${import.meta.env.BASE_URL ?? "./"}runtime/pdfjs/${path}`, base).href;
 }
 
-function loadPdfJs(): Promise<PdfJs> {
+export function loadPdfJs(): Promise<PdfJs> {
   pdfjsModule ??= import("pdfjs-dist/legacy/build/pdf.mjs").then((m) => {
     const lib = m as unknown as PdfJs;
     lib.GlobalWorkerOptions.workerSrc = runtimeUrl("pdf.worker.min.mjs");
