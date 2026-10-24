@@ -8,6 +8,7 @@ function valid(value: unknown): value is KeptMeasurement {
   const r = value as KeptMeasurement;
   if (!['distance','path','area','angle','object'].includes(r.mode) || !Array.isArray(r.points) || !r.points.length || r.points.length > 600_000) return false;
   if (!r.points.every(p=>p && Number.isFinite(p.x) && Number.isFinite(p.y))) return false;
+  if (!r.points.every(p=>!p.perpendicularFrom || (Number.isFinite(p.perpendicularFrom.x) && Number.isFinite(p.perpendicularFrom.y)))) return false;
   if (r.mode === 'object' && (!r.object || !Number.isFinite(r.object.length) || r.object.length < 0 || (r.object.area !== undefined && !Number.isFinite(r.object.area)) || typeof r.object.approximate !== 'boolean')) return false;
   return isComplete(r);
 }

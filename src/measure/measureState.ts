@@ -93,7 +93,9 @@ function pick(state: MeasureState, p: MeasurePick): MeasureState {
     return { ...state, entity: p.entity, status: p.entity ? "plane" : "noObject" };
   }
   if (!Number.isFinite(p.point.x) || !Number.isFinite(p.point.y)) return state;
-  const point = { x: p.point.x, y: p.point.y };
+  const restarting = (s.mode === 'distance' && s.points.length >= 2) || (s.mode === 'angle' && s.points.length >= 3);
+  const anchor = !restarting ? s.points.at(-1) : undefined;
+  const point = { x: p.point.x, y: p.point.y, ...(p.snap === 'perpendicular' && anchor ? { perpendicularFrom: { x: anchor.x, y: anchor.y } } : {}) };
   let points = s.points, kept = s.kept;
   if (s.mode === "distance" || s.mode === "angle") {
     const full = s.mode === "distance" ? 2 : 3;

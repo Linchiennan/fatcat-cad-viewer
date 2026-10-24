@@ -5,7 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { phonePreview, PREVIEW_CHANGE } from './devicePreview';
 import { MODEL_SPACE, type CadSpace, type EngineReport, type LoadStage } from "../types/drawing";
 import { AppError, type AppErrorCode } from "../types/errors";
-import type { DrawingCanvasHandle, MeasurePick, ViewerHandle } from "../types/engine";
+import type { DrawingCanvasHandle, MeasurePick, MeasurePreview, ViewerHandle } from "../types/engine";
 import type { ExportCapable } from "../export/types";
 import { useI18n, type TranslationKey } from "../i18n/translations";
 import { nativeErrorText } from "../i18n/nativeErrors";
@@ -42,6 +42,8 @@ import { MeasureStrip } from "../components/MeasureStrip";
 import { SearchPanel, SearchStepper } from "../components/SearchPanel";
 import { SnapToast } from "../components/SnapToast";
 import { GloveBar, ViewerDock, type MeasureTools } from "../components/ViewerToolbar";
+import { SelectionBar } from '../components/SelectionBar';
+import { removeSelected } from '../canvas/selection';
 import { CloseIcon } from "../components/Icons";
 import { backStack, decideBack, registerBackHandler, type ShellBackState, type ShellScreen } from "./backDispatch";
 import { HomeScreen } from "./HomeScreen";
@@ -143,6 +145,7 @@ export function App() {
 
   // Working modes: measuring / info state lives in group C's reducer
   const [measure, setMeasure] = useState<MeasureState>(initialMeasureState);
+  const [measurePreview, setMeasurePreview] = useState<MeasurePreview>(null);
   const measureRef = useRef(measure);
   const measurementKey = useRef("");
   const [measureSaveFailed, setMeasureSaveFailed] = useState(false);
@@ -160,6 +163,9 @@ export function App() {
   const [units, setUnits] = useState<SheetUnits>(DEFAULT_UNITS);
   const [decimals, setDecimals] = useState(loadDecimals);
   const [marking, setMarking] = useState(false);
+  const [selecting, setSelecting] = useState(false);
+  const [selectionTool, setSelectionTool] = useState<'single' | 'box'>('single');
+  const [selectionCount, setSelectionCount] = useState(0);
   const [markTool, setMarkTool] = useState<MarkTool>("pen");
   const [markColor, setMarkColor] = useState(MARK_RED);
   const [markCount, setMarkCount] = useState(0);
@@ -178,6 +184,7 @@ export function App() {
   const settings = measure.settings;
   const measuring = settings.enabled && !settings.info;
   const inspecting = settings.info;
+  useEffect(() => { setMeasurePreview(null); }, [settings.enabled, settings.snap, settings.mode, settings.info, drawable]);
 
   const canvasRef = useRef<DrawingCanvasHandle | null>(null);
   const pdfRef = useRef<ViewerHandle | null>(null);
@@ -194,6 +201,7 @@ export function App() {
 
   // ---- resetting --------------------------------------------------------------------------------------
   const resetDrawingState = useCallback(() => {
+    setSelecting(false); setSelectionCount(0);
     measurementKey.current = ""; setMeasureSaveFailed(false);
     setSaveFailed(false); setReport(null); setSpaces([]); setSpace(MODEL_SPACE); setSwitching(false); setIndex(null);
     setCadTab(null); dispatch({ type: "reset" }); setMeasureDetail(false); setCardPlace(null); setUnits(DEFAULT_UNITS);
@@ -359,6 +367,7 @@ export function App() {
   const clearSearch = useCallback(() => { setSearch(null); canvasRef.current?.clearSearchHit(); }, []);
 
   const toggleMeasure = useCallback(() => {
+    setSelecting(false);
     setCadTab(null); setSearchOpen(false); endMarkup();
     if (measuring) setMeasureDetail(false);
     setCardPlace(null);
@@ -366,12 +375,14 @@ export function App() {
   }, [measuring, endMarkup, dispatch]);
 
   const toggleInspect = useCallback(() => {
+    setSelecting(false);
     if (isPdf) return;
     setCadTab(null); setSearchOpen(false); endMarkup(); setMeasureDetail(false); setCardPlace(null);
     dispatch({ type: "toggle-info" });
   }, [isPdf, endMarkup, dispatch]);
 
   const toggleMarkup = useCallback(() => {
+    setSelecting(false);
     if (isPdf) return;
     setCadTab(null); setSearchOpen(false); endMeasure(); setShareNote(null); setTextDialog(null);
     if (marking) { setMarking(false); return; }
@@ -379,6 +390,7 @@ export function App() {
   }, [isPdf, marking, endMeasure]);
 
   const toggleSearch = useCallback(() => {
+    setSelecting(false);
     if (isPdf) return;
     setCadTab(null); endMarkup(); endMeasure();
     if (searchOpen || search) { setSearchOpen(false); clearSearch(); return; }
@@ -388,6 +400,16 @@ export function App() {
   const viewCommand = useCallback((command: Parameters<ViewerHandle["command"]>[0]) => {
     (isPdf ? pdfRef.current : canvasRef.current)?.command(command);
   }, [isPdf]);
+
+  const toggleSelect = () => {
+    if (isPdf) return;
+    endMarkup(); endMeasure(); clearSearch(); setSearchOpen(false); setCadTab(null);
+    setSelectionTool('single'); setSelectionCount(0); setSelecting(!selecting);
+  };
+  const askDeleteSelection = () => {
+    if (!selectionCount) return;
+    setConfirm({ message: t('select.confirm', { N: selectionCount }), okLabel: t('select.confirmOk'), onOk: () => canvasRef.current?.deleteSelection?.() });
+  };
 
   const onPick = useCallback((pick: MeasurePick) => {
     if (inspecting) setCardPlace(infoPlacement(pick.screenY, pick.canvasHeight));
@@ -496,7 +518,7 @@ export function App() {
   // ---- Back / Esc (T10 4.3) -------------------------------------------------------------------------------
   const backState: ShellBackState = {
     screen, closeConfirmOpen: closeConfirm, confirmOpen: !!confirm, exportOpen: !!exportStage || (!!exportNote && exportNote.kind !== "working"), markupTextOpen: !!textDialog, marking,
-    searchPanelOpen: searchOpen, hasSearchResults: !!search, libraryOpen, cadPanelOpen: !!cadTab, measuring, inspecting, nativeApp,
+    searchPanelOpen: searchOpen, hasSearchResults: !!search, libraryOpen, cadPanelOpen: !!cadTab, measuring, inspecting, selecting, nativeApp,
   };
   const backRef = useRef(backState);
   backRef.current = backState;
@@ -510,6 +532,7 @@ export function App() {
       case "close-export": closeExport(); break;
       case "close-markup-text": setTextDialog(null); break;
       case "end-markup": endMarkup(); break;
+      case "end-selection": setSelecting(false); break;
       case "close-search-panel": setSearchOpen(false); break;
       case "clear-search": clearSearch(); break;
       case "close-library": closeLibrary(); break;
@@ -580,7 +603,7 @@ export function App() {
   const blocked = libraryOpen || closeConfirm;
   const missingCount = report ? splitCadWarnings(report.warnings).missing.length : 0;
   const xrefsUnloaded = report ? report.xrefs.filter((x) => !x.loaded && !x.disabled).length : 0;
-  const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking;
+  const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking && !selecting;
   const searching = searchOpen || !!search;
 
   let viewer: ReactNode = null;
@@ -590,11 +613,13 @@ export function App() {
     } else if (cad) {
       viewer = (
         <cad.Canvas ref={canvasRef} file={drawable} createEngine={cad.createEngine} measurement={settings}
+          selectionTool={selecting ? selectionTool : null} onSelectionCount={setSelectionCount}
+          onDeleteMeasurements={indices => { const current = measureRef.current; applyMeasure({ ...current, settings: { ...current.settings, kept: removeSelected(current.settings.kept, indices) } }); }}
           markup={marking ? { tool: markTool, color: markColor, editingIndex: textDialog?.kind === "edit" ? textDialog.index : undefined, textAnchor: textDialog?.kind === "new" ? { at: textDialog.at, width: textDialog.width } : null } : null}
           onMarkText={(at, width) => setTextDialog({ kind: "new", at, width })}
           onEditMarkText={(i, initial, color) => { if (!marking) return; setMarkColor(color); setTextDialog({ kind: "edit", index: i, initial }); }}
           onEngine={(engine) => { engineRef.current = engine; }}
-          onProgress={onProgress} onReady={onReady} onError={onViewerError} onPick={onPick}
+          onProgress={onProgress} onReady={onReady} onError={onViewerError} onPick={onPick} onPreview={setMeasurePreview}
           onMeasurementIndex={onMeasurementIndex} onSpaces={onSpaces} onMarkCount={setMarkCount} onReport={setReport} />
       );
     }
@@ -615,7 +640,7 @@ export function App() {
   const askClearMarks = () => setConfirm({ message: t("markup.clearAllConfirm"), okLabel: t("markup.clearAllOk"), onOk: () => canvasRef.current?.clearMarks() });
   const toolbarProps = {
     onCommand: viewCommand, canMeasure: !isPdf, onMeasure: toggleMeasure, onMarkup: toggleMarkup, onSearch: toggleSearch,
-    onInspect: toggleInspect, measuring, marking, searching, inspecting, measureTools,
+    onInspect: toggleInspect, onSelect: toggleSelect, selecting, measuring, marking, searching, inspecting, measureTools,
     onClearMarks: askClearMarks, canClearMarks: markCount > 0,
   };
 
@@ -639,9 +664,10 @@ export function App() {
             {showStrip ? (
               <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded}
                 onSpace={(name) => { setSwitching(true); canvasRef.current?.switchSpace(name); }}
-                onTab={(tab) => { setSearchOpen(false); setCadTab(tab); }} onExport={openExport} />
+                onTab={(tab) => { setSearchOpen(false); setCadTab(tab); }} onExport={openExport} onInspect={toggleInspect} />
             ) : null}
 
+            {selecting ? <SelectionBar tool={selectionTool} count={selectionCount} onTool={setSelectionTool} onDelete={askDeleteSelection} /> : null}
             {marking ? (
               <MarkupBar tool={markTool} color={markColor} count={markCount} sharing={sharing}
                 onTool={setMarkTool} onColor={setMarkColor} onUndo={() => canvasRef.current?.undoMark()}
@@ -700,7 +726,8 @@ export function App() {
                 onClearAll={askClearAll} onClose={() => (glove ? setMeasureDetail(false) : endMeasure())} />
             ) : null}
 
-            <SnapToast text={measure.toast ? t(toastKey(measure.toast.kind)) : null} serial={measure.toast?.serial ?? 0} />
+            <SnapToast text={measuring && settings.snap && measure.toast ? t(toastKey(measure.toast.kind)) : null} serial={measure.toast?.serial ?? 0}
+              previewText={measuring && settings.snap && measurePreview ? (measurePreview.snap ? t(`canvas.snap.${measurePreview.snap}` as TranslationKey) : null) : undefined} />
 
             {shareNote ? (
               <div className={`share-note${shareNote.error ? " is-error" : ""}`} role="status">

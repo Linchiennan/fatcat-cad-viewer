@@ -16,6 +16,9 @@ export type DrawingCanvasProps = DrawingCanvasEvents & {
   createEngine?(host: HTMLDivElement): CadEngine;
   /** Measuring / info state; `enabled` false when neither is on. */
   measurement: MeasurementSettings;
+  selectionTool?: 'single' | 'box' | null;
+  onSelectionCount?(count: number): void;
+  onDeleteMeasurements?(indices: number[]): void;
   /** Markup tool and colour while marking, else null; `textAnchor` is the spot being typed into. */
   markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: { at: DrawingPoint; width?: number } | null } | null;
   /** A text tool tapped a spot (or dragged a box) → the App asks for the text, then calls addTextMark. */

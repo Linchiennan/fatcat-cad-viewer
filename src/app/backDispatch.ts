@@ -13,6 +13,7 @@ export type ShellBackState = {
   exportOpen: boolean;
   markupTextOpen: boolean;
   marking: boolean;
+  selecting?: boolean;
   searchPanelOpen: boolean;
   hasSearchResults: boolean;
   libraryOpen: boolean;
@@ -26,7 +27,7 @@ export type ShellBackState = {
 export type BackAction =
   | "close-close-confirm" | "close-confirm" | "close-export" | "close-markup-text" | "end-markup"
   | "close-search-panel" | "clear-search" | "close-library" | "close-cad-panel" | "end-measure"
-  | "ask-close-drawing" | "go-home" | "exit-app" | "none";
+  | "end-selection" | "ask-close-drawing" | "go-home" | "exit-app" | "none";
 
 /**
  * First matching rule wins: close-confirm, general confirm, export, markup text, markup mode, search panel,
@@ -43,6 +44,7 @@ export function decideBack(state: ShellBackState): BackAction {
   if (state.hasSearchResults) return "clear-search";
   if (state.libraryOpen) return "close-library";
   if (state.cadPanelOpen) return "close-cad-panel";
+  if (state.selecting) return "end-selection";
   if (state.measuring || state.inspecting) return "end-measure";
   if (state.screen === "error") return "go-home";
   if (state.screen !== "home") return "ask-close-drawing";

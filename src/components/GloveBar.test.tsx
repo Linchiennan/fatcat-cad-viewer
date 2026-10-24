@@ -12,9 +12,9 @@ const inOrder = (html: string, wanted: string[]) => {
 };
 
 describe("glove bar for site use", () => {
-  it("shows five icon buttons: 量測｜註記｜回到初始畫面 (center)｜搜尋｜資訊", () => {
+  it("shows five icon buttons: 量測｜註記｜回到初始畫面 (center)｜搜尋｜選取", () => {
     const html = renderToStaticMarkup(<GloveBar {...base} />);
-    expect(names(html)).toEqual(["量測", "註記", "回到初始畫面", "搜尋", "資訊"]);
+    expect(names(html)).toEqual(["量測", "註記", "回到初始畫面", "搜尋", "選取"]);
   });
 
   it("keeps every caption to two characters", () => {
@@ -27,8 +27,8 @@ describe("glove bar for site use", () => {
     expect(names(renderToStaticMarkup(<GloveBar {...base} measuring />))).toContain("結束量測");
     const marking = renderToStaticMarkup(<GloveBar {...base} marking />);
     expect(names(marking)).toContain("結束註記");
-    expect(names(marking)).toContain("資訊");
-    expect(names(renderToStaticMarkup(<GloveBar {...base} inspecting />))).toContain("結束資訊");
+    expect(names(marking)).toContain("選取");
+    expect(names(renderToStaticMarkup(<GloveBar {...base} selecting />))).toContain("結束選取");
   });
 });
 

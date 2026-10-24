@@ -65,6 +65,7 @@ export interface DrawingCanvasHandle extends ViewerHandle {
   editTextMark(index: number, text: string, color?: string): void;
   undoMark(): void;
   clearMarks(): void;
+  deleteSelection?(): void;
   shareImage(caption: string): Promise<Blob>;
   /** Zoom to a search hit and draw the red box (textHeight and `at` 0..1 optional). */
   showSearchHit(bounds: DrawingBounds, textHeight?: number, at?: number): void;

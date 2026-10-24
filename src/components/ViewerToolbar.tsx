@@ -6,9 +6,13 @@ import type { MeasurementMode } from "../viewer/measurementGeometry";
 import { useI18n, type TranslationKey } from "../i18n/translations";
 import { IconTile } from "./IconTile";
 import {
-  AngleIcon, AreaIcon, ArrowLeftIcon, DistanceIcon, ExitIcon, FitIcon, HomeIcon, InfoIcon, PathIcon, PenIcon, PlusIcon,
+  AngleIcon, AreaIcon, ArrowLeftIcon, DistanceIcon, ExitIcon, FitIcon, HomeIcon, PathIcon, PenIcon, PlusIcon,
   ResetIcon, RulerIcon, SearchIcon, TrashIcon, type IconProps,
 } from "./Icons";
+
+export function SelectionIcon(props: IconProps) {
+  return <svg {...props} viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 3l14 10-7 1-3 7z" /></svg>;
+}
 
 /** Tools that replace the five buttons while measuring (T18 2.3). */
 export type MeasureTools = {
@@ -35,6 +39,8 @@ export type ToolbarProps = {
   onMarkup(): void;
   onSearch(): void;
   onInspect(): void;
+  onSelect?(): void;
+  selecting?: boolean;
   measuring?: boolean;
   marking?: boolean;
   onClearMarks?(): void;
@@ -148,8 +154,8 @@ export function GloveBar(props: ToolbarProps) {
         tip: pdf ? tr("bar.searchNoPdf") : tr("bar.searchTip"), Icon: SearchIcon, pressed: !!props.searching, disabled: pdf, onClick: props.onSearch,
       },
       {
-        key: "info", name: props.inspecting ? tr("bar.infoEnd") : tr("bar.info"), label: props.inspecting ? tr("bar.end") : tr("bar.info"),
-        tip: pdf ? tr("bar.infoNoPdf") : tr("bar.infoTip"), Icon: InfoIcon, pressed: !!props.inspecting, disabled: pdf, onClick: props.onInspect,
+        key: "select", name: t(props.selecting ? 'select.end' : 'select.title'), label: t('select.title'),
+        tip: t('select.tip'), Icon: SelectionIcon, pressed: !!props.selecting, disabled: pdf, onClick: () => props.onSelect?.(),
       },
     ];
   }
@@ -189,7 +195,7 @@ export function ViewerDock(props: ToolbarProps & { spaces?: { name: string }[]; 
   ];
   const tools: DockItem[] = props.canMeasure ? [
     { key: "measure", name: props.measuring ? t("bar.measureEnd") : t("bar.measure"), short: t("bar.measure"), tip: t("dock.measureTip"), Icon: RulerIcon, pressed: !!props.measuring, onClick: props.onMeasure },
-    { key: "info", name: props.inspecting ? t("bar.infoEnd") : t("bar.info"), short: t("bar.info"), tip: t("dock.infoTip"), Icon: InfoIcon, pressed: !!props.inspecting, onClick: props.onInspect },
+    { key: "select", name: t(props.selecting ? 'select.end' : 'select.title'), short: t('select.title'), tip: t('select.tip'), Icon: SelectionIcon, pressed: !!props.selecting, onClick: () => props.onSelect?.() },
     { key: "markup", name: props.marking ? t("bar.markupEnd") : t("bar.markup"), short: t("bar.markup"), tip: t("dock.markupTip"), Icon: PenIcon, pressed: !!props.marking, onClick: props.onMarkup },
     { key: "search", name: props.searching ? t("bar.searchEnd") : t("bar.search"), short: t("bar.search"), tip: t("dock.searchTip"), Icon: SearchIcon, pressed: !!props.searching, onClick: props.onSearch },
   ] : [];

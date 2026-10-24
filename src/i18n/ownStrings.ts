@@ -10,6 +10,19 @@ import { EXPORT_STRINGS } from "./exportStrings";
 export type Pair = { zh: string; en: string };
 
 export const OWN_STRINGS = {
+  "select.title": { zh: "選取", en: "Select" },
+  "select.end": { zh: "結束選取", en: "End selection" },
+  "select.tip": { zh: "選取註記與已完成量測；不改原圖", en: "Select markups and completed measurements, never original CAD" },
+  "select.tools": { zh: "選取工具", en: "Selection tools" },
+  "select.single": { zh: "單獨選", en: "Single" },
+  "select.singleTip": { zh: "點選一件；空白解除，可拖動畫面", en: "Tap one object; tap empty to clear; drag to pan" },
+  "select.box": { zh: "框選", en: "Window" },
+  "select.boxTip": { zh: "拖框只選完全落框的整件；雙指取消框選", en: "Fully enclosed objects only; two fingers cancel the window" },
+  "select.delete": { zh: "刪除", en: "Delete" },
+  "select.deleteTip": { zh: "確認後只刪選取件，不動原圖", en: "Confirm deletion of selected objects only" },
+  "select.count": { zh: "已選 {N} 件", en: "{N} selected" },
+  "select.confirm": { zh: "刪除選取的 {N} 件註記／量測？原始圖面不會變更。", en: "Delete {N} selected markups/measurements? Original CAD is unchanged." },
+  "select.confirmOk": { zh: "刪除選取", en: "Delete selected" },
   ...PANEL_STRINGS,
   ...LEGAL_STRINGS,
   ...EXPORT_STRINGS,

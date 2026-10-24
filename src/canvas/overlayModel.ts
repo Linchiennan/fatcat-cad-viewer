@@ -10,7 +10,7 @@ export const LABEL_MAX_PX = 400;
 export const SEARCH_PAD_PX = 6;
 
 export type OverlayLabel = { x: number; y: number; text: string; size: number; stroke: number };
-export type OverlayShape = { points: DrawingPoint[]; closed: boolean; labels: OverlayLabel[]; dots: DrawingPoint[] };
+export type OverlayShape = { points: DrawingPoint[]; closed: boolean; labels: OverlayLabel[]; dots: DrawingPoint[]; rightAngles?: DrawingPoint[][] };
 export type OverlayModel = {
   current: OverlayShape | null;
   kept: OverlayShape[];
@@ -19,6 +19,14 @@ export type OverlayModel = {
 };
 
 type Project = (points: readonly DrawingPoint[]) => DrawingPoint[];
+
+/** A three-vertex L at a true perpendicular foot. Screen-normalized arms stay 10 CSS px. */
+export function rightAngleCue(foot: DrawingPoint, from: DrawingPoint, size = 10): DrawingPoint[] {
+  const dx = from.x - foot.x, dy = from.y - foot.y, length = Math.hypot(dx, dy);
+  if (!Number.isFinite(length) || length < 1e-8) return [];
+  const ux = dx / length * size, uy = dy / length * size, vx = -uy, vy = ux;
+  return [{ x: foot.x + ux, y: foot.y + uy }, { x: foot.x + ux + vx, y: foot.y + uy + vy }, { x: foot.x + vx, y: foot.y + vy }];
+}
 
 /** Label size: measurement label height (drawing units) × px per unit, kept within 14–400 px; 14 px without a height. */
 export function labelSize(labelHeight: number | null, pixelsPerUnit: number): number {
@@ -41,7 +49,13 @@ function shape(result: KeptMeasurement, project: Project, size: number, label: (
     labels.push({ x: at.x, y: at.y + size * 1.4, text, size, stroke: Math.max(2,size/5) });
     if (mode === "object" && result.object?.area !== undefined) labels.push({ x: at.x, y: at.y + size * 2.8, text: `${result.object.approximate ? '≈ ' : ''}面積 ${label(result.object.area,true)}`, size, stroke: Math.max(2,size/5) });
   }
-  return { points: screen, closed, labels, dots: screen };
+  const rightAngles = points.flatMap(p => {
+    if (!p.perpendicularFrom) return [];
+    const [foot, from] = project([p, p.perpendicularFrom]);
+    const cue = rightAngleCue(foot, from);
+    return cue.length ? [cue] : [];
+  });
+  return { points: screen, closed, labels, dots: screen, ...(rightAngles.length ? { rightAngles } : {}) };
 }
 
 export function overlayModel(args: {

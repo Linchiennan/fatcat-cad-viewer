@@ -177,6 +177,7 @@ export class DxfCadEngine implements FatcatCadEngine {
     this.listen(this.canvas, "webglcontextlost", (e) => this.onContextLost(e));
     this.listen(this.canvas, "pointerdown", (e) => this.onPointerDown(e as PointerEvent));
     this.listen(this.canvas, "pointermove", (e) => this.onPointerMove(e as PointerEvent));
+    this.listen(this.canvas, "pointerleave", () => { if (!this.aiming) this.emitPreview(null); });
     this.listen(this.canvas, "pointerup", (e) => this.onPointerUp(e as PointerEvent));
     this.listen(this.canvas, "pointercancel", (e) => this.onPointerCancel(e as PointerEvent));
     this.listen(this.canvas, "wheel", () => this.cancelRecenter(), { passive: true });
@@ -612,6 +613,10 @@ export class DxfCadEngine implements FatcatCadEngine {
   }
 
   private onPointerMove(e: PointerEvent): void {
+    if (e.pointerType === "mouse" && !e.buttons && !this.pointers.size && this.measuring()) {
+      this.previewAt(this.local(e), false);
+      return;
+    }
     if (!this.pointers.has(e.pointerId)) return;
     const at = this.local(e);
     this.pointers.set(e.pointerId, at);

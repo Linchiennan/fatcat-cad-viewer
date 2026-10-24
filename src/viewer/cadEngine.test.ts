@@ -302,6 +302,19 @@ describe("CAD engine", () => {
     expect(workers).toHaveLength(2);
   });
 
+  it("previews mouse hover without committing and clears it on leave", async () => {
+    engine = make();
+    const load = engine.load(jsonFile(), () => {});
+    await until(() => viewer.pending.length === 1); viewer.finish(); await load;
+    const previews: Any[] = [], picks: Any[] = [];
+    engine.onPreview(p => previews.push(p)); engine.onPick(p => picks.push(p));
+    engine.setMeasurement({ enabled: true, mode: "distance", points: [], snap: true, snapKinds: [], info: false, kept: [] });
+    viewer.canvas.dispatchEvent(pointer("pointermove", { clientX: 400, clientY: 300, buttons: 0 }));
+    expect(previews.at(-1)?.point).toBeDefined(); expect(picks).toHaveLength(0);
+    viewer.canvas.dispatchEvent(pointer("pointerleave", {}));
+    expect(previews.at(-1)).toBeNull();
+  });
+
   it("turns a tap into drawing coordinates; drags and two fingers are not taps", async () => {
     engine = make();
     const load = engine.load(jsonFile(), () => {});

@@ -58,13 +58,15 @@ export type MeasurementGeometry = {
 export type MeasurementIndex = MeasurementGeometry & { report?: EngineReport; viewKey?: string };
 
 /** A finished measurement kept on screen (same shape as measureResults.MeasureResult). */
-export type KeptMeasurement = { mode: MeasurementMode; points: DrawingPoint[]; object?: Pick<MeasurableEntity, "length" | "area" | "approximate"> };
+/** Anchor direction is recorded only when the resolver actually reported a perpendicular snap. */
+export type MeasurementPoint = DrawingPoint & { perpendicularFrom?: DrawingPoint };
+export type KeptMeasurement = { mode: MeasurementMode; points: MeasurementPoint[]; object?: Pick<MeasurableEntity, "length" | "area" | "approximate"> };
 
 /** Measuring state the App passes to the engine and to MeasureStrip (T14 8.4). */
 export type MeasurementSettings = {
   enabled: boolean;
   mode: MeasurementMode;
-  points: DrawingPoint[];
+  points: MeasurementPoint[];
   snap: boolean;
   snapKinds: SnapKind[];
   /** Info mode: pick objects only, no measuring lines. */
@@ -356,6 +358,8 @@ class IndexBuilder {
   completeBounds = true;
   private pointCount = 0;
   private visits = 0;
+  // A refused outline must not suppress unrelated later lines or basic snaps.
+  private stopped = false;
   private topBounds: DrawingBounds | null = null;
   private readonly layers: Record<string, Any>;
   private readonly blocks: Record<string, Any>;
@@ -393,7 +397,7 @@ class IndexBuilder {
   build(): MeasurementGeometry {
     const root: Context = { m: IDENTITY, layer: "0", chain: [], clips: [], stack: [] };
     for (const e of this.doc?.entities ?? []) {
-      if (this.limited) break;
+      if (this.stopped) break;
       this.topBounds = null;
       // An attribute belongs to its INSERT: list that block in its chain.
       const owner = e?.type === "ATTRIB" && e.ownerHandle !== undefined ? this.ownerRef(String(e.ownerHandle)) : null;
@@ -425,8 +429,8 @@ class IndexBuilder {
   }
 
   private visit(e: Any, ctx: Context): void {
-    if (!e || typeof e !== "object" || this.limited) return;
-    if (++this.visits > MEASUREMENT_LIMITS.visits) { this.limited = true; return; }
+    if (!e || typeof e !== "object" || this.stopped) return;
+    if (++this.visits > MEASUREMENT_LIMITS.visits) { this.limited = this.stopped = true; return; }
     if (e.hidden) return;
     if (e.inPaperSpace && this.options.skipPaperSpace) return;
     const ext = e.extrusionDirection;
@@ -472,7 +476,7 @@ class IndexBuilder {
   }
 
   private snap(p: DrawingPoint, kind: SnapKind, layer: string, ctx: Context): void {
-    if (!finite(p) || this.limited) return;
+    if (!finite(p) || this.stopped) return;
     if (ctx.dimension && kind !== "endpoint" && kind !== "midpoint") return;
     for (const clip of ctx.clips) if (!insidePolygon(clip, p)) return;
     if (this.snaps.length >= MEASUREMENT_LIMITS.snaps) { this.limited = true; return; }
@@ -492,14 +496,15 @@ class IndexBuilder {
   }
 
   private add(entity: MeasurableEntity, ctx: Context, curveBounds?: DrawingBounds): void {
-    if (this.limited) return;
+    if (this.stopped) return;
     const all = [...entity.points];
     for (const s of entity.hit?.segments ?? []) all.push(s[0], s[1]);
     for (const t of entity.hit?.triangles ?? []) all.push(t[0], t[1], t[2]);
     if (!all.length || !all.every(finite)) return;
     if (ctx.clips.length && !this.insideClips(all, ctx, curveBounds)) { this.completeBounds = false; return; }
+    if (this.entities.length >= MEASUREMENT_LIMITS.entities) { this.limited = this.stopped = true; return; }
+    if (this.pointCount + all.length > MEASUREMENT_LIMITS.points) { this.limited = true; return; }
     this.pointCount += all.length;
-    if (this.entities.length >= MEASUREMENT_LIMITS.entities || this.pointCount > MEASUREMENT_LIMITS.points) { this.limited = true; return; }
     if (ctx.chain.length) entity.blockChain = ctx.chain;
     if (ctx.dimension) {
       // Dimension parts: properties of the dimension only, no length and no advanced-snap primitives.
@@ -642,7 +647,7 @@ class IndexBuilder {
       : [...ctx.chain, { name, layer, attributes: e.handle !== undefined ? this.attribs.get(String(e.handle)) ?? [] : [] }];
     const child: Context = { ...ctx, m, layer, clips, chain, stack: [...ctx.stack, e.name] };
     for (const c of block.entities ?? []) {
-      if (this.limited) return;
+      if (this.stopped) return;
       if (c?.type === "ATTDEF") continue; // definitions are replaced by the INSERT's attributes
       this.visit(c, child);
     }
@@ -661,7 +666,7 @@ class IndexBuilder {
     }
     const child: Context = { ...ctx, m, layer, dimension: props, stack: [...ctx.stack, e.block] };
     for (const c of block.entities ?? []) {
-      if (this.limited) return;
+      if (this.stopped) return;
       this.visit(c, child);
     }
   }
@@ -691,8 +696,13 @@ class IndexBuilder {
     } else if (e.type === "SPLINE" && segments.length) {
       points = [segments[0][0], ...segments.map((s) => s[1])];
     } else points = rectPoints(boundsOf(all));
+    // A continuous spline's sampled outline already contains every drawn segment, exactly.
+    // Keeping hit.segments too stores/tests the same polyline twice and charges each interior
+    // vertex three times against the point budget. Keep disjoint segment sets unchanged.
+    const outlineCoversSegments = e.type === "SPLINE" && segments.length > 0
+      && segments.every((s, i) => i === 0 || (s[0].x === segments[i - 1][1].x && s[0].y === segments[i - 1][1].y));
     this.add({ kind: e.type, layer, points, bounds: boundsOf(all), length: 0, approximate: false, propertiesOnly: true,
-      properties, hit: { segments, triangles } }, ctx);
+      properties, hit: { segments: outlineCoversSegments ? [] : segments, triangles } }, ctx);
   }
 }
 

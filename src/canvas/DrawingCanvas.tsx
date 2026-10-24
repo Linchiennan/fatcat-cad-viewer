@@ -18,12 +18,17 @@ import { applyMarkEdit } from "./marks";
 import { exportDrawing } from "../export/exportDrawing";
 import { ExportError, type ExportCapable, type ExportEngine, type ExportRequest, type ExportResult } from "../export/types";
 import "./canvas.css";
+import { SelectionOverlay, emptySelection, type Selection } from './SelectionOverlay';
+import { removeSelected } from './selection';
 
 type CanvasCommon = DrawingCanvasEvents & {
   /** Drawable file (DXF, converted DWG or the xref-assembled file). A new File object = load again. */
   file: File;
   /** Measuring / info state; `enabled` false when neither is on. */
   measurement: MeasurementSettings;
+  selectionTool?: 'single' | 'box' | null;
+  onSelectionCount?(count: number): void;
+  onDeleteMeasurements?(indices: number[]): void;
   /** Long-press aiming preview (optional). */
   onPreview?(preview: MeasurePreview): void;
 };
@@ -76,6 +81,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const [marks, setMarks] = useState<Mark[]>([]);
   const marksRef = useRef(marks);
   marksRef.current = marks;
+  const [selection, setSelection] = useState<Selection>(emptySelection);
+  const selectionRef = useRef(selection); selectionRef.current = selection;
+  const changeSelection = useCallback((next: Selection) => {
+    selectionRef.current = next; setSelection(next);
+    events.current.onSelectionCount?.(next.marks.length + next.measures.length);
+  }, []);
+  useEffect(() => { changeSelection(emptySelection()); }, [props.selectionTool, props.file, marks, props.measurement.kept, changeSelection]);
   const [preview, setPreview] = useState<MeasurePreview>(null);
   /** Last object pick, for the outline when the App does not pass pickedEntity. */
   const [picked, setPicked] = useState<MeasurableEntity | null>(null);
@@ -176,6 +188,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     },
     undoMark() { if (marksRef.current.length) updateMarks(marksRef.current.slice(0, -1)); },
     clearMarks() { if (marksRef.current.length) updateMarks([]); },
+    deleteSelection() {
+      if (!events.current.selectionTool) return;
+      const s = selectionRef.current;
+      if (s.marks.length) updateMarks(removeSelected(marksRef.current, s.marks));
+      if (s.measures.length) events.current.onDeleteMeasurements?.(s.measures);
+      changeSelection(emptySelection());
+    },
     async shareImage(caption) {
       // 標註「存成圖片／分享」goes through the output engine (005 定案 8): view, PNG, markups only (待決 B-13).
       const r = await runExport({ range: "view", format: "png", title: caption, sheet: "" });
@@ -212,7 +231,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       }).catch((err) => { if (engine.current === e && !isAbort(err)) events.current.onError(err); });
     },
     captureDiagnostics: () => engine.current?.captureDiagnostics() ?? null,
-  }), [sheetReady, updateMarks, runExport]);
+  }), [sheetReady, updateMarks, runExport, changeSelection]);
 
   const e = ready ? engine.current : null;
   const project = useCallback((pts: readonly DrawingPoint[]) => (engine.current ? engine.current.project(pts) : pts.map(() => ({ x: NaN, y: NaN }))), []);
@@ -221,7 +240,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const index = e?.measurementIndex() ?? null;
 
   let model = null;
-  let aim: DrawingPoint | null = null, snapAt: (DrawingPoint & { kind: SnapKind }) | null = null;
+  let aim: DrawingPoint | null = null, snapAt: (DrawingPoint & { kind: SnapKind; perpendicularFrom?: DrawingPoint }) | null = null;
   if (e && (m.enabled || m.kept.length)) {
     // Without units / decimals from the App they are read here, so a panel change shows at once.
     const units = "units" in props ? props.units : sheetUnits(viewKey.current, index?.unit ?? "drawing");
@@ -235,7 +254,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         const hidden = new Set((e.report()?.layers ?? []).filter((l) => !l.visible).map((l) => l.name));
         const r = resolveMeasurePick(index, m, preview.point, toleranceFor(ppu), hidden);
         const [p] = project([r?.snap?.kind === preview.snap ? r.snap : preview.point]);
-        snapAt = { x: p.x, y: p.y, kind: preview.snap };
+        const anchor = m.points.at(-1);
+        snapAt = { x: p.x, y: p.y, kind: preview.snap, ...(preview.snap === 'perpendicular' && anchor ? { perpendicularFrom: project([anchor])[0] } : {}) };
       }
     }
   }
@@ -262,6 +282,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           onAdd={(mark) => updateMarks([...marksRef.current, mark])} onText={askText} onEditText={askEdit}
           onPan={(dx, dy) => { if (ppu > 0) engine.current?.panBy(dx, dy); }} textAnchor={textAnchor} />
       ) : null}
+      {e && props.selectionTool ? <SelectionOverlay tool={props.selectionTool} marks={marks} model={model} project={project} ppu={ppu} selected={selection} onChange={changeSelection} /> : null}
       {box ? <div key={searchHit?.serial} className="search-hit-box" style={{ left: box.left, top: box.top, width: box.width, height: box.height }} /> : null}
     </div>
   );

@@ -106,7 +106,7 @@ describe("bottom tools (T18)", () => {
   });
   it("English captions stay short", () => {
     const html = en(<GloveBar {...base} />);
-    for (const s of ["Measure", "Markup", "Start", "Search", "Info"]) expect(html).toContain(`<span>${s}</span>`);
+    for (const s of ["Measure", "Markup", "Start", "Search", "Select"]) expect(html).toContain(`<span>${s}</span>`);
   });
   it("dock: fit, reset, separator and four tools; PDF only fit and reset; no start button", () => {
     const html = renderToStaticMarkup(<ViewerDock {...base} />);

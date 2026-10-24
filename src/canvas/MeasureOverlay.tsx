@@ -2,10 +2,14 @@
 // labels; kept results in grey; the long-press crosshair with the snap marker. Never takes touches.
 import type { DrawingPoint } from "../types/drawing";
 import type { SnapKind } from "../viewer/measurementGeometry";
-import { snapMarkPath, SNAP_MARK_NAMES, type OverlayModel, type OverlayShape } from "./overlayModel";
+import { rightAngleCue, snapMarkPath, SNAP_MARK_NAMES, type OverlayModel, type OverlayShape } from "./overlayModel";
 
 const AMBER = "#ffb547", RED = "#ff1f1f", DARK = "#081019", GREY = "#8a979f", GREY_TEXT = "#a7b4bd", GREEN = "#36d399";
 const pointsAttr = (pts: readonly DrawingPoint[]) => pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+
+function RightAngle({ points }: { points: DrawingPoint[] }) {
+  return points.length ? <polyline className="measure-right-angle" points={pointsAttr(points)} fill="none" stroke="#a0a8b0" strokeWidth={2} strokeLinejoin="miter" pointerEvents="none" /> : null;
+}
 
 function Shape({ s, kept }: { s: OverlayShape; kept: boolean }) {
   const color = kept ? GREY : AMBER;
@@ -15,6 +19,7 @@ function Shape({ s, kept }: { s: OverlayShape; kept: boolean }) {
   return (
     <g className={kept ? "measure-kept-shape" : "measure-current-shape"}>
       {s.points.length > 1 ? line : null}
+      {s.rightAngles?.map((points, i) => <RightAngle key={`r${i}`} points={points} />)}
       {s.labels.map((l, i) => (
         <text key={`l${i}`} className="measure-length-label" x={l.x} y={l.y} fontSize={l.size} fontWeight={700} textAnchor="middle"
           fill={kept ? GREY_TEXT : RED} stroke={DARK} strokeWidth={l.stroke} paintOrder="stroke" strokeLinejoin="round">{l.text}</text>
@@ -34,7 +39,7 @@ export function MeasureOverlay({ model, aim, snapAt }: {
   /** Long-press crosshair position (canvas px), or null. */
   aim: DrawingPoint | null;
   /** Snap the aim would take: where and which kind. */
-  snapAt: (DrawingPoint & { kind: SnapKind }) | null;
+  snapAt: (DrawingPoint & { kind: SnapKind; perpendicularFrom?: DrawingPoint }) | null;
 }) {
   return (
     <svg className="measure-overlay" aria-hidden="true">
@@ -49,7 +54,7 @@ export function MeasureOverlay({ model, aim, snapAt }: {
       ) : null}
       {aim && snapAt ? (
         <g className="measure-snap-mark">
-          <path d={snapMarkPath(snapAt.kind, snapAt.x, snapAt.y)} fill="none" stroke={GREEN} strokeWidth={2.5} />
+          {snapAt.kind === 'perpendicular' ? (snapAt.perpendicularFrom ? <RightAngle points={rightAngleCue(snapAt, snapAt.perpendicularFrom)} /> : null) : <path d={snapMarkPath(snapAt.kind, snapAt.x, snapAt.y)} fill="none" stroke={GREEN} strokeWidth={2.5} />}
           <text x={snapAt.x + 13} y={snapAt.y - 9} fontSize={12} fontWeight={800} fill={GREEN} stroke={DARK} strokeWidth={3} paintOrder="stroke">{SNAP_MARK_NAMES[snapAt.kind]}</text>
         </g>
       ) : null}

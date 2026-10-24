@@ -77,7 +77,7 @@ export function FileBar({ name, size, source, file, entryId, cardOpen, onCard, o
 
 export type StripTab = "layers" | "missing" | "xrefs";
 
-export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, onSpace, onTab, onExport }: {
+export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, onSpace, onTab, onExport, onInspect }: {
   spaces: CadSpace[];
   space: string;
   switching: boolean;
@@ -86,6 +86,7 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
   onSpace(name: string): void;
   onTab(tab: StripTab): void;
   onExport?(): void;
+  onInspect?(): void;
 }) {
   const { t, locale } = useI18n();
   const [page, setPage] = useState(0);
@@ -179,6 +180,7 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
       <button type="button" aria-label={xrefsUnloaded > 0 ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefUnloadedCount", { N: xrefsUnloaded })}` : undefined} onClick={() => onTab("xrefs")}>
         {t("viewer.stripXrefs")}{xrefsUnloaded > 0 ? <em>{t("viewer.stripWarn", { N: xrefsUnloaded })}</em> : null}
       </button>
+      {onInspect ? <button type="button" onClick={onInspect}>{t("bar.info")}</button> : null}
         </div>
         </div>
       </div>
