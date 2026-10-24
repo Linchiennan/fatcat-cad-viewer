@@ -3,6 +3,7 @@
 import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { assertFileSize, detectDrawingFormat, formatSizeLimit } from "../files/fileTypes";
 import { AppError } from "../types/errors";
+import { rememberFileSource } from "../files/fileSource";
 
 export const INCOMING_PLUGIN_NAME = "IncomingDrawing";
 
@@ -112,5 +113,7 @@ export async function readIncomingDrawingFile(drawing: IncomingDrawing, signal?:
   if (declared > 0 && total !== declared) throw readFailed(`Incoming file size changed: declared ${declared}, read ${total}`);
 
   const type = drawing.mimeType || response.headers.get("content-type") || "application/octet-stream";
-  return new File(chunks, drawing.name, { type, lastModified: Date.now() });
+  const file = new File(chunks, drawing.name, { type, lastModified: Date.now() });
+  rememberFileSource(file, drawing.relativePath || drawing.uri);
+  return file;
 }

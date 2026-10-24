@@ -208,8 +208,18 @@ button { cursor: pointer; }
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
 }
 .file-name { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: none; padding: 0; text-align: left; }
-.file-name strong { display: block; max-width: min(52vw, 480px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.88rem; font-weight: 700; }
-.file-name small { color: var(--muted); font-size: 0.62rem; }
+.file-scroll { display: block; width: 100%; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: clip; }
+.file-scroll-content { display: block; width: max-content; min-width: 100%; }
+.file-title { font-size: 0.88rem; font-weight: 700; line-height: 18px; }
+.file-source { color: var(--muted); font-size: 0.67rem; line-height: 14px; }
+.file-name small { color: var(--muted); font-size: 0.62rem; line-height: 12px; }
+.file-scroll[data-overflow="true"] > .file-scroll-content { animation: file-scroll var(--file-duration) linear infinite alternate; }
+@keyframes file-scroll { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(var(--file-travel)); } }
+@media (prefers-reduced-motion: reduce) {
+  .file-scroll[data-overflow="true"] { overflow-x: auto; scrollbar-width: none; }
+  .file-scroll::-webkit-scrollbar { display: none; }
+  .file-scroll[data-overflow="true"] > .file-scroll-content { animation: none; transform: none; }
+}
 .file-actions { flex: none; display: flex; align-items: center; gap: 8px; }
 .file-library {
   display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 16px; border: 0; border-radius: 12px;

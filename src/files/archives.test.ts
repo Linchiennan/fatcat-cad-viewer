@@ -198,6 +198,7 @@ describe("archive session (T12 3.7)", () => {
     expect(progress).toEqual([[1, 1]]);
     expect(files.map((f) => [f.path, f.file.name, f.file.type])).toEqual([["Floor 1/notes.pdf", "notes.pdf", "application/pdf"]]);
     expect(await files[0].file.text()).toBe("%PDF-1.4 notes");
+    expect(files[0].file.lastModified).toBe(0); // no source date provided by the archive worker
     const dwg = await session.extract(["Floor 1/plan.dwg"]);
     expect(dwg[0].file.type).toBe("application/octet-stream");
     session.close();

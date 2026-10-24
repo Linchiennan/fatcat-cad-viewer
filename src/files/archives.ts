@@ -140,7 +140,7 @@ class WorkerSession implements ArchiveSession {
   async extract(paths: readonly string[], signal?: AbortSignal, onProgress?: (done: number, total: number) => void): Promise<ExtractedArchiveFile[]> {
     const reply = await this.request({ id: this.nextId++, type: "extract", paths: [...paths] }, signal, onProgress);
     if (reply.type !== "extracted") throw new LibraryError("ARCHIVE_UNREADABLE", "unexpected reply");
-    return reply.files.map((f) => ({ path: f.path, file: new File([f.bytes], f.name, { type: f.type }) }));
+    return reply.files.map((f) => ({ path: f.path, file: new File([f.bytes], f.name, { type: f.type, lastModified: 0 }) }));
   }
 }
 

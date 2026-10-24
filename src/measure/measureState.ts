@@ -74,6 +74,18 @@ function withSettings(state: MeasureState, patch: Partial<MeasurementSettings>, 
   return { ...state, ...extra, settings: { ...state.settings, ...patch } };
 }
 
+/** End input, commit only a complete result, and discard unfinished points. */
+function finish(state: MeasureState): MeasureState {
+  const s = state.settings;
+  let r = current(s);
+  if (s.mode === "object" && state.entity && !state.entity.propertiesOnly && state.entity.points.length) {
+    const e = state.entity;
+    r = { mode: "object", points: e.points.map(p => ({ x: p.x, y: p.y })), object: { length: e.length, area: e.area, approximate: e.approximate } };
+  }
+  const kept = !s.info && s.enabled && r && isComplete(r) ? keepOne(s.kept, r) : s.kept;
+  return withSettings(state, { enabled: false, info: false, points: [], kept, mode: s.info ? state.beforeInfo : s.mode }, { entity: null, status: "plane", toast: null });
+}
+
 function pick(state: MeasureState, p: MeasurePick): MeasureState {
   const s = state.settings;
   if (!s.enabled) return state;
@@ -101,14 +113,15 @@ export function measureReducer(state: MeasureState, action: MeasureAction): Meas
   switch (action.type) {
     case "toggle-measure":
       if (s.info) return withSettings(state, { enabled: true, info: false, mode: "distance", points: [] }, { entity: null, status: "plane" });
+      if (s.enabled) return finish(state);
       return withSettings(state, { enabled: !s.enabled, info: false }, { status: "plane" });
     case "toggle-info":
       if (s.info) return withSettings(state, { enabled: false, info: false, mode: state.beforeInfo }, { entity: null, status: "plane" });
-      return withSettings(state, { enabled: true, info: true, mode: "object", points: [] },
+      return withSettings(finish(state), { enabled: true, info: true, mode: "object", points: [] },
         { entity: null, status: "plane", beforeInfo: s.mode });
     case "close":
       if (!s.enabled && !s.info) return state;
-      return withSettings(state, { enabled: false, info: false, mode: s.info ? state.beforeInfo : s.mode }, { entity: s.info ? null : state.entity, status: "plane" });
+      return finish(state);
     case "mode":
       if (action.mode === s.mode) return state;
       return withSettings(state, { mode: action.mode, points: [] }, { entity: null, status: "plane" });

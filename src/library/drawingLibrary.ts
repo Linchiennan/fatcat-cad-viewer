@@ -21,6 +21,8 @@ export type LibraryDrawingEntry = EntryBase & {
   mimeType: string;
   size: number;
   lastModified: number;
+  /** Changes on every content replacement, including same-millisecond writes. */
+  contentRevision?: string;
   /** 0 = never opened (not in the recent list). */
   lastOpenedAt: number;
 };
@@ -272,19 +274,65 @@ function checkIncomingFile(file: File): DrawingFormat {
 
 // ---- public API ----------------------------------------------------------------------------------------
 
+export type ImportChoice = "update" | "copy" | "cancel";
+type ImportGuard = { parentId: string; name: string; expected?: LibraryDrawingEntry };
+const sourceDate = (date: number) => Number.isFinite(date) && date > 0 ? date : 0;
+async function fullHash(blob: Blob): Promise<string> {
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", await blob.arrayBuffer())), b => b.toString(16).padStart(2, "0")).join("");
+}
+async function assertImportGuard(tx: IDBTransaction, guard: ImportGuard): Promise<void> {
+  await assertFolder(tx, guard.parentId);
+  const actual = (await childrenOf(tx, guard.parentId)).find(e => e.kind === "drawing" && libraryNameKey(e.name) === libraryNameKey(guard.name));
+  const token = (e?: LibraryEntry) => e ? JSON.stringify({ ...e, lastOpenedAt: 0 }) : "";
+  if (token(actual) !== token(guard.expected)) throw fail("DUPLICATE_NAME", "library changed; select the file again");
+}
+export type ImportConflict = { existing: LibraryDrawingEntry; incoming: File; reasons: string[] };
+export type ImportResult = { status: "saved" | "same"; entry: LibraryDrawingEntry } | { status: "cancelled" };
+
+/** User-facing import: compare only the selected destination, never another project. */
+export async function importDrawingWithDecision(file: File, parentId: string, decide: (conflict: ImportConflict) => Promise<ImportChoice>): Promise<ImportResult> {
+  if (!isValidLibraryName(file.name)) throw fail("INVALID_NAME", "invalid name");
+  checkIncomingFile(file);
+  // Freeze source bytes before asking. A filesystem-backed File can become unreadable if changed.
+  const frozen = new File([await file.arrayBuffer()], file.name, { type: file.type, lastModified: sourceDate(file.lastModified) });
+  const sourceHash = await fullHash(frozen);
+  const existing = (await listLibraryChildren(parentId)).find((e): e is LibraryDrawingEntry => e.kind === "drawing" && libraryNameKey(e.name) === libraryNameKey(file.name));
+  const guard: ImportGuard = { parentId, name: file.name, expected: existing };
+  if (existing) {
+    const reasons: string[] = [];
+    if (existing.size !== file.size) reasons.push("大小不同");
+    if (!sourceDate(existing.lastModified) || !sourceDate(file.lastModified)) reasons.push("來源修改日期無法確認");
+    else if (existing.lastModified !== file.lastModified) reasons.push("修改日期不同");
+    if (!reasons.length) {
+      const same = await fullHash(await readLibraryDrawing(existing.id)) === sourceHash;
+      if (same) {
+        await transact("readonly", ["entries"], tx => assertImportGuard(tx, guard));
+        return { status: "same", entry: existing };
+      }
+      reasons.push("內容不同");
+    }
+    const choice = await decide({ existing, incoming: frozen, reasons });
+    if (choice === "cancel") return { status: "cancelled" };
+    if (await fullHash(file) !== sourceHash || sourceDate(file.lastModified) !== frozen.lastModified) throw fail("DUPLICATE_NAME", "source changed; select the file again");
+    if (choice === "update") return { status: "saved", entry: await replaceLibraryDrawing(existing.id, frozen, guard) };
+  }
+  return { status: "saved", entry: await importDrawingToLibrary(frozen, parentId, guard) };
+}
+
 /** Add a file (name de-duplicated as "name (2).ext"); lastOpenedAt = now. */
-export async function importDrawingToLibrary(file: File, parentId: string = ROOT_ID): Promise<LibraryDrawingEntry> {
+export async function importDrawingToLibrary(file: File, parentId: string = ROOT_ID, guard?: ImportGuard): Promise<LibraryDrawingEntry> {
   if (!isValidLibraryName(file.name)) throw fail("INVALID_NAME", "invalid name");
   const format = checkIncomingFile(file);
   const mimeType = file.type || "application/octet-stream";
   const blob = file.slice(0, file.size, mimeType);
   return transact("readwrite", ["entries", "contents"], async (tx) => {
     await assertFolder(tx, parentId);
+    if (guard) await assertImportGuard(tx, guard);
     const now = Date.now();
     const entry: LibraryDrawingEntry = {
       id: newId(), kind: "drawing", parentId, name: uniqueLibraryName(file.name, await takenNames(tx, parentId), true),
       createdAt: now, updatedAt: now, format, mimeType, size: file.size,
-      lastModified: Number.isFinite(file.lastModified) && file.lastModified > 0 ? file.lastModified : now, lastOpenedAt: now,
+      lastModified: sourceDate(file.lastModified), lastOpenedAt: now, contentRevision: newId(),
     };
     await req(entriesOf(tx).add(entry));
     await req(contentsOf(tx).add({ id: entry.id, blob } satisfies ContentRecord));
@@ -456,9 +504,9 @@ export async function deleteLibraryEntry(id: string): Promise<void> {
 }
 
 /** Replace a drawing's contents in place (same id, name, parent, createdAt, lastOpenedAt). */
-export async function replaceLibraryDrawing(id: string, file: File): Promise<LibraryDrawingEntry> {
+export async function replaceLibraryDrawing(id: string, file: File, guard?: ImportGuard): Promise<LibraryDrawingEntry> {
   const format = detectDrawingFormat(normalizeLibraryName(file.name));
-  if (!format || isArchiveFormat(format)) throw fail("INVALID_FILE", "unsupported replacement");
+  if (!format || (isArchiveFormat(format) && !guard)) throw fail("INVALID_FILE", "unsupported replacement");
   checkIncomingFile(file);
   recordDiagnostic("library.replace.start", { key: id, name: file.name, bytes: file.size });
   try {
@@ -475,13 +523,14 @@ export async function replaceLibraryDrawing(id: string, file: File): Promise<Lib
     const mimeType = file.type || "application/octet-stream";
     const blob = file.slice(0, file.size, mimeType);
     const updated = await transact("readwrite", ["entries", "contents"], async (tx) => {
+      if (guard) await assertImportGuard(tx, guard);
       const entry = await getEntry(tx, id);
       if (!entry || entry.kind !== "drawing") throw fail("NOT_FOUND", "no such drawing");
-      if (isArchiveFormat(entry.format) || entry.format !== format) throw fail("INVALID_FILE", "format differs");
+      if ((isArchiveFormat(entry.format) && !guard) || entry.format !== format) throw fail("INVALID_FILE", "format differs");
       const now = Date.now();
       const next: LibraryDrawingEntry = {
         ...entry, size: file.size, mimeType, updatedAt: now,
-        lastModified: Number.isFinite(file.lastModified) && file.lastModified > 0 ? file.lastModified : now,
+        lastModified: sourceDate(file.lastModified), contentRevision: newId(),
       };
       await req(entriesOf(tx).put(next));
       await req(contentsOf(tx).put({ id, blob } satisfies ContentRecord));
@@ -558,7 +607,7 @@ export async function importArchiveToLibrary(
       const mimeType = p.file.type || "application/octet-stream";
       const entry: LibraryDrawingEntry = {
         id: newId(), kind: "drawing", parentId: parent, name: p.name, createdAt: now, updatedAt: now,
-        format: p.format, mimeType, size: p.file.size, lastModified: now, lastOpenedAt: 0,
+        format: p.format, mimeType, size: p.file.size, lastModified: sourceDate(p.file.lastModified), lastOpenedAt: 0,
       };
       await req(entriesOf(tx).add(entry));
       await req(contentsOf(tx).add({ id: entry.id, blob: p.file.slice(0, p.file.size, mimeType) } satisfies ContentRecord));

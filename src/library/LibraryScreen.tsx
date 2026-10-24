@@ -22,6 +22,8 @@ import {
   progressPercent, setLibraryBackHandler, sortLibraryEntries, type LibrarySort,
 } from "./libraryView";
 import { Dialog } from "./LibraryDialog";
+import { ImportVersionDialog } from "./ImportVersionDialog";
+import { importDrawingWithDecision, type ImportConflict, type ImportChoice } from "./drawingLibrary";
 import { ExportsView, type ExportPopup } from "./ExportsView";
 import "./library.css";
 
@@ -73,12 +75,26 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   const [exportsOpen, setExportsOpen] = useState(false);
   const [exportPopup, setExportPopup] = useState<ExportPopup>(null);
   const busyRef = useRef(false);
+  const [importConflict, setImportConflict] = useState<ImportConflict | null>(null);
+  const choiceRef = useRef<((choice: ImportChoice) => void) | null>(null);
+  const chooseImport = useCallback((choice: ImportChoice) => {
+    const resolve = choiceRef.current;
+    choiceRef.current = null;
+    setImportConflict(null);
+    resolve?.(choice);
+  }, []);
+  const decideImport = (conflict: ImportConflict) => new Promise<ImportChoice>(resolve => {
+    choiceRef.current = resolve;
+    setImportConflict(conflict);
+  });
+  useEffect(() => () => { choiceRef.current?.('cancel'); choiceRef.current = null; }, []);
   const addInput = useRef<HTMLInputElement>(null);
   const replaceInput = useRef<HTMLInputElement>(null);
   const replaceTarget = useRef<LibraryDrawingEntry | null>(null);
   const archiveRun = useRef<{ token: number; controller: AbortController; session: ArchiveSession | null; file: File | null }>({ token: 0, controller: new AbortController(), session: null, file: null });
 
   const message = useCallback((error: unknown) => {
+    if (error instanceof Error && error.message.endsWith('select the file again')) return '檔案或圖庫在確認期間已變更，未儲存；請重新加入檔案。';
     const m = libraryErrorMessage(error);
     return "key" in m ? t(m.key) : libraryText(locale, m.own);
   }, [t, locale]);
@@ -242,7 +258,10 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
     if (files.length === 0) return;
     void runBusy(async () => {
       if (files.length === 1) {
-        const entry = await importDrawingToLibrary(files[0], folderId);
+        const result = await importDrawingWithDecision(files[0], folderId, decideImport);
+        if (result.status === 'cancelled') return;
+        if (result.status === 'same') { setNotice({ text: '圖庫已有相同檔案', error: false }); return; }
+        const entry = result.entry;
         const snapshot = await openLibraryDrawing(entry.id);
         refresh();
         if (isArchiveFormat(entry.format)) void startArchive(snapshot, false);
@@ -250,18 +269,20 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         return;
       }
       let added = 0;
+      let skipped = 0;
       let firstError: unknown = null;
       for (const f of files) {
         try {
-          await importDrawingToLibrary(f, folderId);
-          added++;
+          const result = await importDrawingWithDecision(f, folderId, decideImport);
+          if (result.status === 'saved') added++;
+          else skipped++;
         } catch (e) {
           firstError ??= e;
         }
       }
       refresh();
-      const failed = files.length - added;
-      if (failed === 0) setNotice({ text: `${t("library.importedTitle")}: ${added}`, error: false });
+      const failed = files.length - added - skipped;
+      if (failed === 0) setNotice({ text: `${t("library.importedTitle")}: ${added} · 已略過（取消／圖庫已有相同檔案）: ${skipped}`, error: false });
       else setNotice({ text: `${t("library.importedTitle")}: ${added} · ${t("library.failedTitle")}: ${failed}. ${message(firstError)}`, error: true });
     });
   };
@@ -282,6 +303,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
 
   // ---- back key / Esc (T11 4.2) ----
   const back = useCallback(() => {
+    if (choiceRef.current) { chooseImport('cancel'); return; }
     const action = decideLibraryBack({
       archiveOpen: archive !== null, busy: busyRef.current, textDialogOpen: popup?.kind === "text",
       destinationOpen: popup?.kind === "destination", deleteOpen: popup?.kind === "delete",
@@ -298,7 +320,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
       case "close-library": onClose(); break;
       default: break;
     }
-  }, [archive, popup, exportPopup, exportsOpen, searchText, folderId, crumbs, cancelArchive, onClose]);
+  }, [archive, popup, exportPopup, exportsOpen, searchText, folderId, crumbs, cancelArchive, onClose, chooseImport]);
 
   useEffect(() => {
     setLibraryBackHandler(back);
@@ -315,7 +337,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   // ---- derived ----
   const visible = useMemo(() => sortLibraryEntries(filterLibraryEntries(children, searchText, locale), sortMode, locale), [children, searchText, sortMode, locale]);
   const showRecent = folderId === ROOT_ID && searchText.trim() === "" && recent.length > 0;
-  const blocked = popup !== null || archive !== null || exportPopup !== null;
+  const blocked = popup !== null || archive !== null || exportPopup !== null || importConflict !== null;
   const describe = (entry: LibraryEntry) => entry.kind === "folder"
     ? formatLibraryDate(entry.updatedAt, locale)
     : `${entry.format.toUpperCase()} · ${formatLibrarySize(entry.size, locale)} · ${formatLibraryDate(entry.updatedAt, locale)}`;
@@ -545,7 +567,8 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         </div>
       ) : null}
 
-      {busy ? <div className="lib-busy" aria-hidden="true"><span className="lib-spinner" /></div> : null}
+      {busy && !importConflict ? <div className="lib-busy" aria-hidden="true"><span className="lib-spinner" /></div> : null}
+      {importConflict ? <ImportVersionDialog conflict={importConflict} onChoose={chooseImport} /> : null}
     </div>
   );
 }

@@ -7,10 +7,10 @@ import type { MeasurableEntity, MeasurementSettings, SnapKind } from "../viewer/
 import { MarkupLayer, type TextSpot } from "../components/MarkupLayer";
 import { loadMarks, saveMarks, TEXT_PX, type Mark, type MarkTool } from "../viewer/markup";
 import { hitView } from "../viewer/textSearch";
-import { formatLabel, sheetUnits, type SheetUnits } from "../measure/measureUnits";
+import { formatLabel, formatResult, sheetUnits, type SheetUnits } from "../measure/measureUnits";
 import { resolveMeasurePick, toleranceFor } from "../measure/resolvePick";
 import { publishPickStatus, statusForPick } from "../measure/pickStatus";
-import { loadDecimals } from "../viewer/measureFormat";
+import { fixedNumber, loadDecimals } from "../viewer/measureFormat";
 import { createCadEngine } from "../viewer/cadEngine";
 import { MeasureOverlay } from "./MeasureOverlay";
 import { labelSize, overlayModel, searchBox } from "./overlayModel";
@@ -222,14 +222,14 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
 
   let model = null;
   let aim: DrawingPoint | null = null, snapAt: (DrawingPoint & { kind: SnapKind }) | null = null;
-  if (e && m.enabled) {
+  if (e && (m.enabled || m.kept.length)) {
     // Without units / decimals from the App they are read here, so a panel change shows at once.
     const units = "units" in props ? props.units : sheetUnits(viewKey.current, index?.unit ?? "drawing");
     const decimals = "decimals" in props ? props.decimals : loadDecimals();
     const entity = "pickedEntity" in props && props.pickedEntity !== undefined ? props.pickedEntity : picked;
-    model = overlayModel({ settings: m, entity, project, labelPx: labelSize(e.measureLabelHeight(), ppu), label: (length) => formatLabel(length, units, decimals) });
+    model = overlayModel({ settings: m, entity, project, labelPx: labelSize(e.measureLabelHeight(), ppu), label: (value, area) => area ? formatResult(units, decimals)(value, true) : formatLabel(value, units, decimals), angle: value => `${fixedNumber(value, decimals)}°` });
     // Long-press aim: crosshair at the aim, snap marker on the snap itself (T15 2.2-7).
-    if (preview) {
+    if (m.enabled && preview) {
       [aim] = project([preview.point]);
       if (preview.snap) {
         const hidden = new Set((e.report()?.layers ?? []).filter((l) => !l.visible).map((l) => l.name));

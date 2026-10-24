@@ -29,6 +29,7 @@ import { savePosition } from "../viewer/readingPosition";
 import type { TextHit } from "../viewer/textSearch";
 import { splitCadWarnings } from "../viewer/cadWarnings";
 import { canKeep, hasAnything, initialMeasureState, measureReducer, toastKey, type MeasureAction, type MeasureState } from "../measure/measureState";
+import { loadMeasurements, saveMeasurements } from "../measure/measurementStore";
 import { formatResult, sheetUnits, type SheetUnits } from "../measure/measureUnits";
 import { CadPanel, hasXrefSession, reuseXrefSession, setXrefSession } from "../components/CadPanel";
 import { CloseDrawingDialog } from "../components/CloseDrawingDialog";
@@ -142,8 +143,18 @@ export function App() {
 
   // Working modes: measuring / info state lives in group C's reducer
   const [measure, setMeasure] = useState<MeasureState>(initialMeasureState);
-  const dispatch = useCallback((action: MeasureAction) => setMeasure((m) => measureReducer(m, action)), []);
-  const setSettings = useCallback((next: MeasurementSettings) => setMeasure((m) => ({ ...m, settings: next })), []);
+  const measureRef = useRef(measure);
+  const measurementKey = useRef("");
+  const [measureSaveFailed, setMeasureSaveFailed] = useState(false);
+  const applyMeasure = useCallback((next: MeasureState, persist = true) => {
+    if (persist && measurementKey.current && next.settings.kept !== measureRef.current.settings.kept) {
+      setMeasureSaveFailed(!saveMeasurements(measurementKey.current, next.settings.kept));
+    }
+    measureRef.current = next;
+    setMeasure(next);
+  }, []);
+  const dispatch = useCallback((action: MeasureAction) => applyMeasure(measureReducer(measureRef.current, action), action.type !== 'reset'), [applyMeasure]);
+  const setSettings = useCallback((next: MeasurementSettings) => applyMeasure({ ...measureRef.current, settings: next }), [applyMeasure]);
   const [measureDetail, setMeasureDetail] = useState(false);
   const [cardPlace, setCardPlace] = useState<{ onTop: boolean; maxHeight: number } | null>(null);
   const [units, setUnits] = useState<SheetUnits>(DEFAULT_UNITS);
@@ -183,6 +194,7 @@ export function App() {
 
   // ---- resetting --------------------------------------------------------------------------------------
   const resetDrawingState = useCallback(() => {
+    measurementKey.current = ""; setMeasureSaveFailed(false);
     setSaveFailed(false); setReport(null); setSpaces([]); setSpace(MODEL_SPACE); setSwitching(false); setIndex(null);
     setCadTab(null); dispatch({ type: "reset" }); setMeasureDetail(false); setCardPlace(null); setUnits(DEFAULT_UNITS);
     setMarking(false); setTextDialog(null); setShareNote(null); setMarkCount(0); setSearchOpen(false); setSearch(null);
@@ -310,11 +322,13 @@ export function App() {
   // A sheet became ready: clear points, results and search; units for this sheet (T10 3.5, 4.2-7).
   const onMeasurementIndex = useCallback((next: MeasurementIndex) => {
     setIndex(next);
-    dispatch({ type: "sheet-ready" });
+    measurementKey.current = next.viewKey ?? "";
+    const state = measureReducer(measureRef.current, { type: "sheet-ready" });
+    applyMeasure({ ...state, settings: { ...state.settings, kept: loadMeasurements(measurementKey.current) } }, false);
     setSearch(null); setSearchOpen(false);
     canvasRef.current?.clearSearchHit();
     setUnits(sheetUnits(next.viewKey ?? "", next.unit));
-  }, [dispatch]);
+  }, [applyMeasure]);
 
   const onSpaces = useCallback((list: CadSpace[], current: string, busy: boolean) => {
     setSpaces(list); setSpace(current); setSwitching(busy);
@@ -618,7 +632,7 @@ export function App() {
 
         {screen === "viewing" && last ? (
           <>
-            <FileBar name={last.file.name} size={last.file.size} cardOpen={nameCard} onCard={setNameCard}
+            <FileBar name={last.file.name} size={last.file.size} file={last.file} entryId={last.entryId} cardOpen={nameCard} onCard={setNameCard}
               onLibrary={openLibrary} onClose={() => setCloseConfirm(true)} />
             {showStrip ? (
               <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded}
@@ -694,6 +708,7 @@ export function App() {
               </div>
             ) : null}
             {saveFailed ? <p className="save-failed" role="status">{t("viewer.librarySaveFailed")}</p> : null}
+            {measureSaveFailed ? <p className="save-failed" role="status">量測保存失敗；目前仍顯示，關閉圖面前請確認裝置儲存空間。</p> : null}
 
             {exportStage === "box" ? null : glove ? <GloveBar {...toolbarProps} /> : <ViewerDock {...toolbarProps} />}
 

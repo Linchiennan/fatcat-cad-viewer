@@ -1,0 +1,30 @@
+import { it, expect } from 'vitest';
+import { initialMeasureState, measureReducer, type MeasureAction } from './measureState';
+import { overlayModel } from '../canvas/overlayModel';
+import { resultValue } from '../viewer/measureResults';
+import type { MeasurementMode, MeasurableEntity } from '../viewer/measurementGeometry';
+const tap=(x:number,y:number,entity:MeasurableEntity|null=null):MeasureAction=>({type:'pick',pick:{point:{x,y},entity,snap:null,screenY:0,canvasHeight:500}});
+for(const mode of ['distance','path','area','angle'] as MeasurementMode[]) it(`${mode}: finish preserves geometry and values, closes input, drops draft`,()=>{
+ let s=measureReducer(initialMeasureState(),{type:'toggle-measure'});s=measureReducer(s,{type:'mode',mode});
+ const points=mode==='distance'?[[0,0],[3,4]]:[[3,0],[0,0],[0,4]];
+ for(const [x,y] of points)s=measureReducer(s,tap(x,y));
+ const value=resultValue({mode:mode as 'distance',points:s.settings.points});
+ s=measureReducer(s,{type:'close'});
+ expect(s.settings.enabled).toBe(false);expect(s.settings.points).toEqual([]);expect(s.settings.kept).toHaveLength(1);
+ expect(resultValue(s.settings.kept[0])).toBe(value);
+ const model=overlayModel({settings:s.settings,entity:null,project:p=>p.map(x=>({x:x.x*2+10,y:x.y*2+20})),labelPx:14,label:n=>String(n)});
+ expect(model.current).toBeNull();expect(model.kept).toHaveLength(1);expect(model.kept[0].labels.length).toBeGreaterThan(0);
+ expect(model.kept[0].points[0]).toEqual({x:points[0][0]*2+10,y:points[0][1]*2+20});
+ s=measureReducer(s,{type:'toggle-measure'});s=measureReducer(s,tap(9,9));s=measureReducer(s,{type:'close'});
+ expect(s.settings.points).toEqual([]);expect(s.settings.kept).toHaveLength(1);
+ s=measureReducer(s,{type:'clear-all'});expect(s.settings.kept).toEqual([]);
+});
+it('object finish preserves original analytic length/area and approximation flag, not sampled length',()=>{
+ const entity:MeasurableEntity={kind:'CIRCLE',layer:'0',points:[{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:1,y:0}],bounds:{minX:-1,minY:-1,maxX:1,maxY:1},length:2*Math.PI,area:Math.PI,approximate:false};
+ let s=([{type:'toggle-measure'},{type:'mode',mode:'object'},tap(1,0,entity),{type:'close'}] as MeasureAction[]).reduce(measureReducer,initialMeasureState());
+ expect(s.settings.kept).toHaveLength(1);expect(s.settings.kept[0]).toMatchObject({mode:'object',object:{length:2*Math.PI,area:Math.PI,approximate:false}});
+ const model=overlayModel({settings:s.settings,entity:null,project:p=>[...p],labelPx:14,label:n=>String(n)});
+ expect(model.kept[0].labels.some(l=>l.text.includes(String(2*Math.PI)))).toBe(true);
+ expect(model.kept[0].labels.some(l=>l.text.includes(String(Math.PI)))).toBe(true);
+ s=measureReducer(s,{type:'toggle-info'});expect(overlayModel({settings:s.settings,entity,project:p=>[...p],labelPx:14,label:String}).kept).toHaveLength(1);
+});

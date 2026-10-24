@@ -1,6 +1,6 @@
 // Values shown while measuring: per-segment lengths placed on the drawing, horizontal / vertical
 // components of a distance, and finished results kept for continuous measuring.
-import { measuredAngle, pathLength, polygonArea, type MeasurementMode, type SnapPoint } from "./measurementGeometry";
+import { measuredAngle, pathLength, polygonArea, type KeptMeasurement, type SnapPoint } from "./measurementGeometry";
 import type { DrawingPoint } from "./savedView";
 
 export type SnapKind = SnapPoint["kind"];
@@ -14,7 +14,7 @@ export const SNAP_KINDS: { kind: SnapKind; label: string }[] = [
 ];
 
 /** A finished measurement kept on screen while the next one is taken. */
-export type MeasureResult = { mode: Exclude<MeasurementMode, "object">; points: DrawingPoint[] };
+export type MeasureResult = KeptMeasurement;
 
 /** Segment lengths with the point where each label goes (midpoint); the area closes its outline. */
 export function segmentLabels(points: readonly DrawingPoint[], closed: boolean): { at: DrawingPoint; length: number }[] {
@@ -37,6 +37,7 @@ export function distanceParts(points: readonly DrawingPoint[]): { dx: number; dy
 
 /** The number a result stands for: length, area or angle in degrees; null while incomplete. */
 export function resultValue(r: MeasureResult): number | null {
+  if (r.mode === "object") return r.object?.length ?? null;
   if (r.mode === "distance") return r.points.length >= 2 ? pathLength(r.points.slice(0, 2)) : null;
   if (r.mode === "path") return r.points.length >= 2 ? pathLength(r.points) : null;
   if (r.mode === "area") return r.points.length >= 3 ? polygonArea(r.points) : null;

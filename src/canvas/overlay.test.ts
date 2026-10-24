@@ -23,18 +23,18 @@ describe("measuring overlay (T15 2.2)", () => {
     expect(m.current?.closed).toBe(false);
   });
 
-  it("area closes the outline and labels the closing side; angle has no labels; zero length gets none", () => {
+  it("area labels closing side and area; angle labels degrees; zero length gets none", () => {
     const tri = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: 4 }];
-    expect(overlayModel({ settings: { ...base, mode: "area", points: tri }, entity: null, project, labelPx: 14, label: String }).current?.labels.map((l) => l.text)).toEqual(["3", "4", "5"]);
-    expect(overlayModel({ settings: { ...base, mode: "angle", points: tri }, entity: null, project, labelPx: 14, label: String }).current?.labels).toEqual([]);
+    expect(overlayModel({ settings: { ...base, mode: "area", points: tri }, entity: null, project, labelPx: 14, label: String }).current?.labels.map((l) => l.text)).toEqual(["3", "4", "5", "面積 6"]);
+    expect(overlayModel({ settings: { ...base, mode: "angle", points: tri }, entity: null, project, labelPx: 14, label: String }).current?.labels.map(l=>l.text)).toEqual(["90°"]);
     expect(overlayModel({ settings: { ...base, points: [{ x: 1, y: 1 }, { x: 1, y: 1 }] }, entity: null, project, labelPx: 14, label: String }).current?.labels).toEqual([]);
   });
 
-  it("kept results are drawn while measuring, not in info mode or when closed", () => {
+  it("kept results remain drawn while measuring, in info mode and when closed", () => {
     const kept = [{ mode: "distance" as const, points: [{ x: 0, y: 0 }, { x: 1, y: 0 }] }];
     expect(overlayModel({ settings: { ...base, kept }, entity: null, project, labelPx: 14, label: String }).kept).toHaveLength(1);
-    expect(overlayModel({ settings: { ...base, kept, info: true, mode: "object" }, entity: null, project, labelPx: 14, label: String }).kept).toHaveLength(0);
-    expect(overlayModel({ settings: { ...base, kept, enabled: false }, entity: null, project, labelPx: 14, label: String }).kept).toHaveLength(0);
+    expect(overlayModel({ settings: { ...base, kept, info: true, mode: "object" }, entity: null, project, labelPx: 14, label: String }).kept).toHaveLength(1);
+    expect(overlayModel({ settings: { ...base, kept, enabled: false }, entity: null, project, labelPx: 14, label: String }).kept).toHaveLength(1);
   });
 
   it("object mode draws the picked outline only", () => {

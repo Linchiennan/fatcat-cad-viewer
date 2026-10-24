@@ -3,10 +3,37 @@
 import { MODEL_SPACE, type CadSpace } from "../types/drawing";
 import { useI18n } from "../i18n/translations";
 import { CloseIcon, FolderOpenIcon, SheetsIcon } from "../components/Icons";
-import { formatBadge, formatFileSize } from "./shellText";
+import { formatFileSize } from "./shellText";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { fileSource, resolveFileSource, type FileSource } from "../files/fileSource";
 
-export function FileBar({ name, size, cardOpen, onCard, onLibrary, onClose }: {
+function FileMarquee({text, className}: {text:string; className:string}) {
+  const viewport = useRef<HTMLSpanElement>(null), content = useRef<HTMLSpanElement>(null);
+  const [distance, setDistance] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const measure = () => {
+      if (active && viewport.current && content.current) setDistance(Math.max(0, content.current.scrollWidth - viewport.current.clientWidth));
+    };
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    if (viewport.current) observer?.observe(viewport.current);
+    if (content.current) observer?.observe(content.current);
+    void document.fonts?.ready.then(measure);
+    window.addEventListener('resize', measure);
+    return () => { active=false; observer?.disconnect(); window.removeEventListener('resize', measure); };
+  }, [text]);
+  return <span ref={viewport} className={`file-scroll ${className}`} data-overflow={distance > 1} tabIndex={distance > 1 ? 0 : undefined}
+    title={text} style={{'--file-travel':`${-distance}px`, '--file-duration':`${Math.max(4, distance / 32 + 3)}s`} as CSSProperties}>
+    <span ref={content} className="file-scroll-content">{text}</span>
+  </span>;
+}
+
+export function FileBar({ name, size, source, file, entryId, cardOpen, onCard, onLibrary, onClose }: {
   name: string;
+  source?: string;
+  file?: File;
+  entryId?: string;
   size: number;
   cardOpen: boolean;
   onCard(open: boolean): void;
@@ -14,12 +41,21 @@ export function FileBar({ name, size, cardOpen, onCard, onLibrary, onClose }: {
   onClose(): void;
 }) {
   const { t, locale } = useI18n();
-  const badge = formatBadge(name);
+  const [origin, setOrigin] = useState<FileSource>({kind:'import', path:''});
+  useEffect(() => {
+    let active = true;
+    setOrigin(file ? fileSource(file) : {kind:'import', path:''});
+    if (file) void resolveFileSource(file, entryId).then(value => { if (active) setOrigin(value); });
+    return () => { active = false; };
+  }, [file, entryId]);
+  const sourceText = source || (origin.kind === 'library' ? `${locale === 'en' ? 'Library' : '圖庫'} / ${origin.path}` : origin.path)
+    || (locale === 'en' ? 'Imported file (full path unavailable)' : '匯入檔案（未提供完整路徑）');
   return (
     <header className={`file-bar${cardOpen ? " card-open" : ""}`} data-fit="top">
-      {badge ? <span className="format-badge">{badge}</span> : null}
+
       <button type="button" className="file-name" aria-label={t("viewer.fullNameLabel")} aria-expanded={cardOpen} onClick={() => onCard(!cardOpen)}>
-        <strong>{name}</strong>
+        <FileMarquee text={name} className="file-title" />
+        <FileMarquee text={sourceText} className="file-source" />
         <small>{t("viewer.fileSizeLine", { size: formatFileSize(size, locale) })}</small>
       </button>
       <div className="file-actions">

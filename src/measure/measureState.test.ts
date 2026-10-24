@@ -105,9 +105,9 @@ describe("measuring rules (T16 3.2)", () => {
     expect(measuring.entity).toBeNull();
   });
 
-  it("opening and closing measure keeps mode, points and kept results", () => {
+  it("opening and closing measure keeps mode but cancels an unfinished draft", () => {
     const st = run({ type: "toggle-measure" }, { type: "mode", mode: "area" }, tap(0, 0), { type: "toggle-measure" }, { type: "toggle-measure" });
-    expect(st.settings).toMatchObject({ enabled: true, mode: "area", points: [{ x: 0, y: 0 }] });
+    expect(st.settings).toMatchObject({ enabled: true, mode: "area", points: [], kept: [] });
     expect(run({ type: "toggle-measure" }, tap(0, 0), { type: "reset" })).toEqual(initialMeasureState());
   });
 

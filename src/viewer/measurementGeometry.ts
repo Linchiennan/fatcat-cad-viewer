@@ -58,7 +58,7 @@ export type MeasurementGeometry = {
 export type MeasurementIndex = MeasurementGeometry & { report?: EngineReport; viewKey?: string };
 
 /** A finished measurement kept on screen (same shape as measureResults.MeasureResult). */
-export type KeptMeasurement = { mode: Exclude<MeasurementMode, "object">; points: DrawingPoint[] };
+export type KeptMeasurement = { mode: MeasurementMode; points: DrawingPoint[]; object?: Pick<MeasurableEntity, "length" | "area" | "approximate"> };
 
 /** Measuring state the App passes to the engine and to MeasureStrip (T14 8.4). */
 export type MeasurementSettings = {

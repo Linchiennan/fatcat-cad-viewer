@@ -1,8 +1,8 @@
 // What the measuring overlay draws, in canvas CSS pixels (T15 2.2). Pure, so it can be tested
 // without a browser; MeasureOverlay turns it into SVG.
 import type { DrawingBounds, DrawingPoint } from "../types/drawing";
-import type { MeasurableEntity, MeasurementSettings, SnapKind } from "../viewer/measurementGeometry";
-import { segmentLabels } from "../viewer/measureResults";
+import type { KeptMeasurement, MeasurableEntity, MeasurementSettings, SnapKind } from "../viewer/measurementGeometry";
+import { resultValue, segmentLabels } from "../viewer/measureResults";
 
 export const LABEL_MIN_PX = 14;
 export const LABEL_MAX_PX = 400;
@@ -26,13 +26,21 @@ export function labelSize(labelHeight: number | null, pixelsPerUnit: number): nu
   return Math.min(LABEL_MAX_PX, Math.max(LABEL_MIN_PX, labelHeight * pixelsPerUnit));
 }
 
-function shape(mode: MeasurementSettings["mode"], points: readonly DrawingPoint[], project: Project, size: number, label: (length: number) => string): OverlayShape {
+function shape(result: KeptMeasurement, project: Project, size: number, label: (length: number, area?: boolean) => string, angle: (value: number) => string): OverlayShape {
+  const { mode, points } = result;
   const closed = mode === "area" && points.length >= 3;
   const screen = project(points);
-  const labels: OverlayLabel[] = mode === "angle" ? [] : segmentLabels(points, closed).map(({ at, length }) => {
+  const labels: OverlayLabel[] = mode === "angle" || mode === "object" ? [] : segmentLabels(points, closed).map(({ at, length }) => {
     const [p] = project([at]);
     return { x: p.x, y: p.y - size * 0.35, text: label(length), size, stroke: Math.max(2, size / 5) };
   });
+  const value = resultValue(result);
+  if (value !== null && mode !== "distance" && screen.length) {
+    const at = mode === "angle" ? screen[1] : { x: screen.reduce((a,p)=>a+p.x,0)/screen.length, y: screen.reduce((a,p)=>a+p.y,0)/screen.length };
+    const text = mode === "angle" ? angle(value) : `${result.object?.approximate ? '≈ ' : ''}${mode === 'area' ? '面積 ' : mode === 'path' ? '總長 ' : '長度 '}${label(value, mode === 'area')}`;
+    labels.push({ x: at.x, y: at.y + size * 1.4, text, size, stroke: Math.max(2,size/5) });
+    if (mode === "object" && result.object?.area !== undefined) labels.push({ x: at.x, y: at.y + size * 2.8, text: `${result.object.approximate ? '≈ ' : ''}面積 ${label(result.object.area,true)}`, size, stroke: Math.max(2,size/5) });
+  }
   return { points: screen, closed, labels, dots: screen };
 }
 
@@ -42,15 +50,17 @@ export function overlayModel(args: {
   project: Project;
   labelPx: number;
   /** Text of a length label (number and unit, or the number alone for drawing units). */
-  label(length: number): string;
+  label(length: number, area?: boolean): string;
+  angle?(value: number): string;
 }): OverlayModel {
   const { settings: s, entity, project, labelPx, label } = args;
-  if (!s.enabled) return { current: null, kept: [], outline: null };
+  const angle = args.angle ?? (value => `${value}°`);
+  const kept = s.kept.map((k) => shape(k, project, labelPx, label, angle));
+  if (!s.enabled) return { current: null, kept, outline: null };
   const objectMode = s.info || s.mode === "object";
   const outline = objectMode && entity && entity.points.length ? project(entity.points) : null;
-  if (s.info) return { current: null, kept: [], outline };
-  const kept = s.kept.map((k) => shape(k.mode, k.points, project, labelPx, label));
-  const current = !objectMode && s.points.length ? shape(s.mode, s.points, project, labelPx, label) : null;
+  if (s.info) return { current: null, kept, outline };
+  const current = !objectMode && s.points.length ? shape({mode:s.mode,points:s.points}, project, labelPx, label, angle) : null;
   return { current, kept, outline };
 }
 

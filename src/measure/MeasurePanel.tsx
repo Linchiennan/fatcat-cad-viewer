@@ -30,7 +30,7 @@ const PROPERTY_KEYS: Record<string, TranslationKey> = {
 };
 const unitKey = (u: MeasurementUnit) => `measure.unit.${u}` as TranslationKey;
 
-const KEPT_NAMES: Record<string, MeasurementMode> = { distance: "distance", path: "path", area: "area", angle: "angle" };
+const KEPT_NAMES: Record<string, MeasurementMode> = { distance: "distance", path: "path", area: "area", angle: "angle", object: "object" };
 
 /** Panel driven by a MeasureState and its reducer. */
 export type MeasureStatePanelProps = {
@@ -190,6 +190,7 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
             {total !== null ? <div className="measure-total">{t("measure.total", { 值: format(total) })}</div> : null}
           </div>
         )}
+        {objectMode && s.kept.length > 0 ? <IconTile className="icon-tile measure-clear" name={t("measure.clearAllName")} label={t("measure.clearShort")} tip={t("measure.clearAllTip")} onClick={onClearAll}><TrashIcon /></IconTile> : null}
         <p className="measure-howto">{t(`measure.howto.${s.mode}` as Parameters<typeof t>[0])}</p>
         <div className="measure-settings">
           <button type="button" className="measure-settings-toggle" aria-expanded={settingsOpen} aria-label={t("measure.settingsLabel")} title={t("measure.settingsTitle")}
