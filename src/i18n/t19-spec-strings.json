@@ -815,12 +815,12 @@
   "section": "5.1 核心－App 殼與看圖畫面（T10）"
  },
  "markup.clearAllConfirm": {
-  "zh": "要刪除這張圖紙上的全部標註嗎？",
+  "zh": "要刪除這張圖紙上的全部註記嗎？",
   "en": "Delete all markups on this sheet?",
   "section": "5.1 核心－App 殼與看圖畫面（T10）"
  },
  "markup.clearAllOk": {
-  "zh": "刪除全部標註",
+  "zh": "刪除全部註記",
   "en": "Delete all markups",
   "section": "5.1 核心－App 殼與看圖畫面（T10）"
  },
@@ -945,12 +945,12 @@
   "section": "5.2 核心－底部工具列與 dock（T18）"
  },
  "bar.markup": {
-  "zh": "標註",
+  "zh": "註記",
   "en": "Markup",
   "section": "5.2 核心－底部工具列與 dock（T18）"
  },
  "bar.markupEnd": {
-  "zh": "結束標註",
+  "zh": "結束註記",
   "en": "End markup",
   "section": "5.2 核心－底部工具列與 dock（T18）"
  },
@@ -960,7 +960,7 @@
   "section": "5.2 核心－底部工具列與 dock（T18）"
  },
  "bar.markupNoPdf": {
-  "zh": "這個檔案不能標註（PDF 只能看）",
+  "zh": "這個檔案不能註記（PDF 只能看）",
   "en": "This file can't be marked up (PDFs are view-only)",
   "section": "5.2 核心－底部工具列與 dock（T18）"
  },

@@ -127,7 +127,7 @@ const MTEXT_MIN_HEIGHT = 150;
  * `multiline`: a 多行 text box — opens at half the screen with the white drag bar to resize it;
  * Enter starts a new line, 確定 (or Ctrl+Enter) finishes.
  */
-export function MarkupTextDialog({ onOk, onCancel, initial, multiline }: { onOk(text: string): void; onCancel(): void; initial?: string; multiline?: boolean }) {
+export function MarkupTextDialog({ onOk, onCancel, initial, multiline, color }: { onOk(text: string): void; onCancel(): void; initial?: string; multiline?: boolean; color?: string }) {
   const { t } = useI18n();
   const editing = initial !== undefined;
   const [text, setText] = useState(initial ?? "");
@@ -169,9 +169,9 @@ export function MarkupTextDialog({ onOk, onCancel, initial, multiline }: { onOk(
         : <strong className="markup-dialog-title">{editing ? t("markup.editTitle") : t("markup.inputTitle")}</strong>}
       <div className="markup-dialog-row">
         {multiline
-          ? <textarea ref={input} value={text} maxLength={400} placeholder={t("markup.placeholderMulti")} aria-label={t("markup.textLabel")}
+          ? <textarea ref={input} value={text} style={{ color }} maxLength={400} placeholder={t("markup.placeholderMulti")} aria-label={t("markup.textLabel")}
               onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && (text.trim() || editing)) onOk(text); }} />
-          : <input ref={input} value={text} maxLength={80} placeholder={t("markup.placeholder")} aria-label={t("markup.textLabel")}
+          : <input ref={input} value={text} style={{ color }} maxLength={80} placeholder={t("markup.placeholder")} aria-label={t("markup.textLabel")}
               onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (text.trim() || editing)) onOk(text); }} />}
         {multiline ? null : buttons}
       </div>

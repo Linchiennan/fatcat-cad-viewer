@@ -1,8 +1,14 @@
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nProvider } from "./i18n/translations";
+import { Capacitor } from '@capacitor/core';
+import { shouldHostPreview } from './app/devicePreview';
+const previewHost = shouldHostPreview(Capacitor.isNativePlatform());
+// The desktop parent hosts only the selector. Its single persistent child runs the original entry.
 // Build-time branch removes Firebase entirely from ordinary/native bundles.
-const Entry = import.meta.env.VITE_FATCAT_WEB === '1'
+const Entry = previewHost
+  ? lazy(() => import('./app/DevicePreviewHost'))
+  : import.meta.env.VITE_FATCAT_WEB === '1'
   ? lazy(() => import('./auth/WebEntry'))
   : lazy(() => import('./app/App').then(m => ({ default: m.App })));
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -19,7 +25,7 @@ if (typeof FontFace !== "undefined" && document.fonts) {
 }
 
 // Web build only: offline cache from the service worker next to index.html (T10 6.1-2). The APK never registers it.
-if (IS_WEB_BUILD && "serviceWorker" in navigator) {
+if (!previewHost && IS_WEB_BUILD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).then(registration => registration.update()).catch(() => { /* Online use remains possible; the gate reports offline resources as not ready. */ });
   });

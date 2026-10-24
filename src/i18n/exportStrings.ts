@@ -12,7 +12,7 @@ export const EXPORT_STRINGS = {
   "export.format": { zh: "格式", en: "Format" },
   "export.paper": { zh: "紙張", en: "Paper" },
   "export.paperNote": { zh: "橫直依範圍形狀自動決定", en: "Portrait or landscape follows the area's shape" },
-  "export.markNote": { zh: "圖上的標註會一併輸出；隱藏的圖層不輸出。", en: "Markups are included; hidden layers are left out." },
+  "export.markNote": { zh: "圖上的註記會一併輸出；隱藏的圖層不輸出。", en: "Markups are included; hidden layers are left out." },
   "export.go": { zh: "輸出", en: "Export" },
   "export.boxHint": { zh: "在圖上拖出要輸出的範圍", en: "Drag on the drawing to mark the area to export" },
   "export.boxConfirm": { zh: "確定輸出", en: "Export this area" },

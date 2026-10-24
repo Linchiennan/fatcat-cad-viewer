@@ -49,14 +49,10 @@ describe("export screens", () => {
     expect(renderToStaticMarkup(<ExportNote note={{ kind: "working" }} onShare={noop} onOpen={noop} onClose={noop} />)).toContain("正在輸出…");
   });
 
-  it("moves export out of the file bar and immediately before xrefs", () => {
-    const file = renderToStaticMarkup(<FileBar name="a.dwg" size={10} cardOpen={false} onCard={noop} onLibrary={noop} onClose={noop} />);
-    expect(file).not.toContain('aria-label="輸出"');
+  it("shares through the existing output callback on the same row", () => {
     const strip = renderToStaticMarkup(<CheckStrip spaces={[]} space="Model" switching={false} missing={0} xrefsUnloaded={0} onSpace={noop} onTab={noop} onExport={noop} />);
-    expect(strip).toContain('aria-label="輸出"');
-    expect(strip).toMatch(/>輸出<\/button><button[^>]*>外參<\/button>/);
-    expect(strip.indexOf('>缺件<')).toBeLessThan(strip.indexOf('aria-label="輸出"'));
-    const unavailable = renderToStaticMarkup(<CheckStrip spaces={[]} space="Model" switching={false} missing={0} xrefsUnloaded={0} onSpace={noop} onTab={noop} />);
-    expect(unavailable).not.toContain('aria-label="輸出"');
+    expect(strip).toContain('aria-label="分享"');
+    expect(strip).not.toContain('data-check-page="2"');
+    expect(strip).not.toContain('check-strip-dots');
   });
 });

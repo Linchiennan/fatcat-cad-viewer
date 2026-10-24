@@ -65,7 +65,7 @@ export function HomeScreen({ onLibrary, onLegal }: { onLibrary(): void; onLegal?
             <li><span className="feature-dot" aria-hidden="true" />{t("home.formats")}</li>
             <li><ShieldIcon className="feature-icon" />{IS_WEB_BUILD ? (locale === 'en' ? 'Local drawings · online access check' : '圖檔本機處理 · 授權需連線') : t("home.offline")}</li>
           </ul>
-          <p className="home-privacy">{IS_WEB_BUILD ? (locale === 'en' ? 'Google sign-in and allowlist required. Basic usage analytics only after access is granted; no drawing or annotation uploads.' : 'Google 登入與白名單驗證；授權後啟用基本使用統計，不上傳圖檔或標註。') : t("home.privacy")}</p>
+          <p className="home-privacy">{IS_WEB_BUILD ? (locale === 'en' ? 'Google sign-in and allowlist required. Basic usage analytics only after access is granted; no drawing or annotation uploads.' : 'Google 登入與白名單驗證；授權後啟用基本使用統計，不上傳圖檔或註記。') : t("home.privacy")}</p>
           {showInstallHint ? <p className="home-install">{t("home.installHintIos")}</p> : null}
           <nav className="home-legal" aria-label={t("home.legalLabel")}>
             <button type="button" className="home-link" onClick={() => onLegal?.("privacy")}>{t("home.privacyLink")}</button>

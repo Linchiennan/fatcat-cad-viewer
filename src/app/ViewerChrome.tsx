@@ -1,5 +1,5 @@
 // Top of the viewing screen (T10 2.4): the file name bar, the full-name card and the drawing check strip
-// (模型/配置▾｜圖層｜缺件｜外參). Owner: P4 group D.
+// (模型/配置▾｜圖層｜分享). Owner: P4 group D.
 import { MODEL_SPACE, type CadSpace } from "../types/drawing";
 import { useI18n } from "../i18n/translations";
 import { CloseIcon, FolderOpenIcon, SheetsIcon } from "../components/Icons";
@@ -40,7 +40,7 @@ export function FileBar({ name, size, cardOpen, onCard, onLibrary, onClose }: {
 
 export type StripTab = "layers" | "missing" | "xrefs";
 
-export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, onSpace, onTab, onExport }: {
+export function CheckStrip({ spaces, space, switching, onSpace, onTab, onExport }: {
   spaces: CadSpace[];
   space: string;
   switching: boolean;
@@ -51,28 +51,22 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
   onExport?(): void;
 }) {
   const { t } = useI18n();
-  const ordered = [...spaces].sort((a, b) => (a.name === MODEL_SPACE ? -1 : b.name === MODEL_SPACE ? 1 : a.order - b.order));
+  const ordered = [...(spaces.length ? spaces : [{ name: MODEL_SPACE, order: 0 }])].sort((a, b) => (a.name === MODEL_SPACE ? -1 : b.name === MODEL_SPACE ? 1 : a.order - b.order));
   const caption = switching ? t("viewer.spaceSwitching") : space === MODEL_SPACE ? t("viewer.spaceModel") : space;
   return (
     <nav className="check-strip" aria-label={t("viewer.checkStripLabel")} data-fit="corner">
-      {spaces.length > 1 ? (
+      <div className="check-strip-page" data-check-page="1">
         <label className={`space-switch${switching ? " is-busy" : ""}`} title={t("viewer.spaceTitle")}>
           <SheetsIcon /><span className="space-name">{caption}</span><span className="space-caret" aria-hidden="true">▾</span>
-          <select aria-label={t("viewer.spaceSelectLabel")} value={space} disabled={switching} onChange={(e) => onSpace(e.target.value)}>
-            {ordered.map((s) => (
-              <option key={s.name} value={s.name}>{s.name === MODEL_SPACE ? t("viewer.spaceModelOption") : s.name}</option>
-            ))}
+          <select aria-label={t("viewer.spaceSelectLabel")} value={space} disabled={switching} onChange={(e) => onSpace(e.target.value)}
+            onMouseDown={e => { if (typeof e.currentTarget.showPicker === "function") e.preventDefault(); }}
+            onClick={e => { e.currentTarget.focus(); e.currentTarget.showPicker?.(); }}>
+            {ordered.map((s) => <option key={s.name} value={s.name}>{s.name === MODEL_SPACE ? t("viewer.spaceModelOption") : s.name}</option>)}
           </select>
         </label>
-      ) : null}
-      <button type="button" onClick={() => onTab("layers")}>{t("viewer.stripLayers")}</button>
-      <button type="button" aria-label={missing > 0 ? `${t("viewer.stripMissing")}, ${t("viewer.missingCount", { N: missing })}` : undefined} onClick={() => onTab("missing")}>
-        {t("viewer.stripMissing")}{missing > 0 ? <em>{t("viewer.stripWarn", { N: missing })}</em> : null}
-      </button>
-      {onExport ? <button type="button" className="strip-export" aria-label={t("export.button")} title={t("export.buttonTip")} onClick={onExport}>{t("export.buttonShort")}</button> : null}
-      <button type="button" aria-label={xrefsUnloaded > 0 ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefUnloadedCount", { N: xrefsUnloaded })}` : undefined} onClick={() => onTab("xrefs")}>
-        {t("viewer.stripXrefs")}{xrefsUnloaded > 0 ? <em>{t("viewer.stripWarn", { N: xrefsUnloaded })}</em> : null}
-      </button>
+        <button type="button" onClick={() => onTab("layers")}>{t("viewer.stripLayers")}</button>
+        {onExport ? <button type="button" className="strip-export" aria-label={t("markup.share")} title={t("export.buttonTip")} onClick={onExport}>{t("markup.share")}</button> : null}
+      </div>
     </nav>
   );
 }

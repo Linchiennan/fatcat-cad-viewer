@@ -17,11 +17,11 @@ export type DrawingCanvasProps = DrawingCanvasEvents & {
   /** Measuring / info state; `enabled` false when neither is on. */
   measurement: MeasurementSettings;
   /** Markup tool and colour while marking, else null; `textAnchor` is the spot being typed into. */
-  markup: { tool: MarkTool; color: string; textAnchor: { at: DrawingPoint; width?: number } | null } | null;
+  markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: { at: DrawingPoint; width?: number } | null } | null;
   /** A text tool tapped a spot (or dragged a box) → the App asks for the text, then calls addTextMark. */
   onMarkText(at: DrawingPoint, width?: number): void;
   /** An existing text mark was tapped → the App asks for the new text, then calls editTextMark. */
-  onEditMarkText(index: number, current: string): void;
+  onEditMarkText(index: number, current: string, color: string): void;
   /** Long-press aiming preview (optional). */
   onPreview?(preview: MeasurePreview): void;
   /** The engine of this canvas once created (null when disposed); the App uses it for export (spec 005). */

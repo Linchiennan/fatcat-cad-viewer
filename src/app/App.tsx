@@ -2,6 +2,7 @@
 // Back / Esc order, exclusive working modes, top file bar and check strip, bottom tools. Owner: P4 group D.
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { Capacitor } from "@capacitor/core";
+import { phonePreview, PREVIEW_CHANGE } from './devicePreview';
 import { MODEL_SPACE, type CadSpace, type EngineReport, type LoadStage } from "../types/drawing";
 import { AppError, type AppErrorCode } from "../types/errors";
 import type { DrawingCanvasHandle, MeasurePick, ViewerHandle } from "../types/engine";
@@ -60,16 +61,19 @@ const DEFAULT_UNITS: SheetUnits = { source: "cm", display: "cm", assumed: false 
 export function useGloveMode(): boolean {
   const read = () => {
     if (typeof window === "undefined") return false;
-    if (new URLSearchParams(window.location.search).get("glove") === "1") return true;
+    if (phonePreview() || new URLSearchParams(window.location.search).get("glove") === "1") return true;
     return window.matchMedia?.("(pointer: coarse)").matches ?? false;
   };
   const [glove, setGlove] = useState(read);
   useEffect(() => {
     const query = window.matchMedia?.("(pointer: coarse)");
-    if (!query) return;
     const update = () => setGlove(read());
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
+    query?.addEventListener("change", update);
+    window.addEventListener(PREVIEW_CHANGE, update);
+    return () => {
+      query?.removeEventListener("change", update);
+      window.removeEventListener(PREVIEW_CHANGE, update);
+    };
   }, []);
   return glove;
 }
@@ -562,7 +566,7 @@ export function App() {
   const blocked = libraryOpen || closeConfirm;
   const missingCount = report ? splitCadWarnings(report.warnings).missing.length : 0;
   const xrefsUnloaded = report ? report.xrefs.filter((x) => !x.loaded && !x.disabled).length : 0;
-  const showStrip = screen === "viewing" && !!report && !isPdf && !measuring && !inspecting && !marking;
+  const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking;
   const searching = searchOpen || !!search;
 
   let viewer: ReactNode = null;
@@ -572,9 +576,9 @@ export function App() {
     } else if (cad) {
       viewer = (
         <cad.Canvas ref={canvasRef} file={drawable} createEngine={cad.createEngine} measurement={settings}
-          markup={marking ? { tool: markTool, color: markColor, textAnchor: textDialog?.kind === "new" ? { at: textDialog.at, width: textDialog.width } : null } : null}
+          markup={marking ? { tool: markTool, color: markColor, editingIndex: textDialog?.kind === "edit" ? textDialog.index : undefined, textAnchor: textDialog?.kind === "new" ? { at: textDialog.at, width: textDialog.width } : null } : null}
           onMarkText={(at, width) => setTextDialog({ kind: "new", at, width })}
-          onEditMarkText={(i, initial) => setTextDialog({ kind: "edit", index: i, initial })}
+          onEditMarkText={(i, initial, color) => { if (!marking) return; setMarkColor(color); setTextDialog({ kind: "edit", index: i, initial }); }}
           onEngine={(engine) => { engineRef.current = engine; }}
           onProgress={onProgress} onReady={onReady} onError={onViewerError} onPick={onPick}
           onMeasurementIndex={onMeasurementIndex} onSpaces={onSpaces} onMarkCount={setMarkCount} onReport={setReport} />
@@ -628,14 +632,14 @@ export function App() {
                 onClear={() => setConfirm({ message: t("markup.clearAllConfirm"), okLabel: t("markup.clearAllOk"), onOk: () => canvasRef.current?.clearMarks() })}
                 onShare={() => void share()} onDone={endMarkup} />
             ) : null}
-            {textDialog ? (
+            {marking && textDialog ? (
               <MarkupTextDialog multiline={textDialog.kind === "new" ? textDialog.width !== undefined : textDialog.initial.includes(String.fromCharCode(10))}
-                initial={textDialog.kind === "edit" ? textDialog.initial : undefined}
+                initial={textDialog.kind === "edit" ? textDialog.initial : undefined} color={markColor}
                 onCancel={() => setTextDialog(null)}
                 onOk={(text) => {
                   const d = textDialog;
                   setTextDialog(null);
-                  if (d.kind === "edit") canvasRef.current?.editTextMark(d.index, text);
+                  if (d.kind === "edit") canvasRef.current?.editTextMark(d.index, text, markColor);
                   else if (text.trim()) canvasRef.current?.addTextMark(d.at, text, d.width);
                 }} />
             ) : null}

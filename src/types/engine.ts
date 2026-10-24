@@ -62,7 +62,7 @@ export interface ViewerHandle {
 export interface DrawingCanvasHandle extends ViewerHandle {
   addTextMark(at: DrawingPoint, text: string, width?: number): void;
   /** Empty text deletes the mark. */
-  editTextMark(index: number, text: string): void;
+  editTextMark(index: number, text: string, color?: string): void;
   undoMark(): void;
   clearMarks(): void;
   shareImage(caption: string): Promise<Blob>;

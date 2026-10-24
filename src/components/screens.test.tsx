@@ -77,13 +77,13 @@ describe("viewer top (T10 2.4)", () => {
     const card = renderToStaticMarkup(<FileBar name="long.dwg" size={1} cardOpen onCard={noop} onLibrary={noop} onClose={noop} />);
     expect(card).toContain('aria-label="關閉完整檔名"');
   });
-  it("check strip: 模型 ▾ with all sheets, warnings counts on 缺件 and 外參", () => {
+  it("check strip: 模型 ▾ with all sheets and no missing/xref entry", () => {
     const html = renderToStaticMarkup(<CheckStrip spaces={[{ name: "Model", order: 0 }, { name: "主浴器具配置圖", order: 1 }, { name: "圖紙（未命名）", order: 2 }]}
       space="Model" switching={false} missing={1} xrefsUnloaded={1} onSpace={noop} onTab={noop} />);
-    for (const s of ["模型", "▾", "模型（Model）", "主浴器具配置圖", "圖層", "缺件", " ⚠ 1", "外參"]) expect(html).toContain(s);
+    for (const s of ["模型", "▾", "模型（Model）", "主浴器具配置圖", "圖層"]) expect(html).toContain(s);
     expect(html.match(/<option/g)).toHaveLength(3);
     const single = renderToStaticMarkup(<CheckStrip spaces={[{ name: "Model", order: 0 }]} space="Model" switching={false} missing={0} xrefsUnloaded={0} onSpace={noop} onTab={noop} />);
-    expect(single).not.toContain("<select");
+    expect(single).toContain("<select");
     expect(single).not.toContain("⚠");
   });
 });

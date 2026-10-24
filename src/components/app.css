@@ -238,12 +238,12 @@ button { cursor: pointer; }
   background: rgba(8, 16, 25, 0.86); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
   font-size: 0.78rem;
 }
-.check-strip > button, .space-switch {
+.check-strip-page > button, .space-switch {
   flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px;
   border: 0; border-right: 1px solid var(--line); background: none; color: #cdd9df; font-weight: 400; white-space: nowrap;
 }
 .space-switch { font-weight: 700; }
-.check-strip > button:last-child { border-right: 0; }
+.check-strip-page > button:last-child { border-right: 0; }
 .check-strip em { font-style: normal; color: var(--accent-hi); }
 .space-switch { position: relative; flex: 0 1 auto; max-width: 34%; padding: 0 14px; color: var(--accent-hi); }
 .space-switch svg { flex: none; width: 18px; height: 18px; }
@@ -254,8 +254,15 @@ button { cursor: pointer; }
 /* Touch screens (pointer: coarse) get the bigger strip; the ?glove=1 frame on a computer keeps the mouse size. */
 @media (pointer: coarse) {
   .check-strip { height: 48px; font-size: 1rem; }
-  .check-strip > button { font-weight: 600; }
+  .check-strip-page > button { font-weight: 600; }
 }
+
+/* One row: model/layout, layers and share. Keep fit bounds unchanged. */
+.check-strip-page { display: flex; flex: 1; min-width: 0; height: 100%; }
+.check-strip-page > button { padding: 0 4px; gap: 3px; line-height: 1.1; overflow: hidden; }
+.check-strip .space-switch { flex: 1 1 0; max-width: 50%; padding: 0 5px; gap: 3px; }
+.check-strip .space-switch svg { width: 15px; height: 15px; }
+@media (max-width: 360px) { .check-strip .check-strip-page { font-size: .8rem; } }
 
 /* ---------- glove bar (T18 2.1-2.3) ---------- */
 .glove-bar {
@@ -531,6 +538,7 @@ button { cursor: pointer; }
 .markup-layer { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
 .markup-layer.passive { pointer-events: none; }
 .markup-text { pointer-events: auto; }
+.markup-layer.passive .markup-text { pointer-events: none; }
 .markup-textbox { fill: none; stroke-width: 1.5; stroke-dasharray: 6 4; }
 .markup-text-anchor { stroke-width: 0.6; }
 
@@ -626,6 +634,24 @@ button { cursor: pointer; }
 .legal-files { columns: 2 220px; }
 .legal-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.75rem; line-height: 1.5; font-family: ui-monospace, Consolas, monospace; }
 .legal-note { color: var(--muted); }
+
+/* Same touch layout for the desktop size preview; pointer hardware and DPR remain unchanged. */
+:root[data-device-preview="phone"] { --strip-h: 48px; }
+/* Keep ordinary selector specificity so compact markup-row min-width rules still win. */
+:where(:root[data-device-preview="phone"]) {
+  .check-strip { height: 48px; font-size: 1rem; }
+  .check-strip-page > button { font-weight: 600; }
+  .icon-tile { min-width: 56px; min-height: 56px; }
+  .icon-tile svg { width: 28px; height: 28px; }
+  .icon-tile > span:not(.glove-tip) { font-size: 12px; }
+  .panel-drag { height: 30px; }
+  .panel-drag::before { width: 100px; height: 6px; }
+  .cad-sheet button, .cad-sheet select, .search-sheet button, .info-panel button { min-height: 52px; font-size: 16px; }
+  .cad-sheet input[type="checkbox"] { width: 28px; height: 28px; }
+  .markup-color-wrap { flex-basis: 150px; }
+  .markup-colors { grid-auto-columns: 46px; width: 150px; }
+  .markup-color { width: 46px; height: 46px; min-height: 46px; }
+}
 
 /* ---------- reduced motion (T10 2.1-5, T20 2.2-4) ---------- */
 @media (prefers-reduced-motion: reduce) {

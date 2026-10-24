@@ -9,6 +9,7 @@ import { pathLength, type MeasurableEntity, type MeasurementMode, type Measureme
 import { ALL_SNAP_KINDS, canKeep, initialMeasureState, measureReducer, MODE_KEYS, statusKey, type MeasureAction, type MeasureState } from "./measureState";
 import { publishPickStatus, usePickStatus } from "./pickStatus";
 import { clampPanelHeight, loadPanelHeight, nextUnits, savePanelHeight, UNIT_CHOICES, type SheetUnits } from "./measureUnits";
+import { phonePreview } from '../app/devicePreview';
 import "./measure.css";
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>;
@@ -52,7 +53,7 @@ export type MeasureStatePanelProps = {
   onClearAll(): void;
 };
 
-const coarse = () => typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+const coarse = () => phonePreview() || (typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches);
 const viewportHeight = () => (typeof window !== "undefined" ? window.innerHeight : 800);
 
 /** Panel driven by plain MeasurementSettings (the App keeps the settings and the picked object). */

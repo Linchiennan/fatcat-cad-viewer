@@ -36,7 +36,7 @@ type ExplicitCanvasProps = {
   pickedEntity?: MeasurableEntity | null;
   units: SheetUnits;
   decimals: number;
-  /** Markup mode on: the layer takes touches for the chosen tool (移動 lets them through). */
+  /** Markup mode on: the layer handles drawing or moving user markups. */
   marking: boolean;
   markTool: MarkTool;
   markColor: string;
@@ -52,9 +52,9 @@ type ExplicitCanvasProps = {
 type CompactCanvasProps = {
   createEngine?(host: HTMLDivElement): CadEngine;
   /** Markup tool and colour while marking, else null; `textAnchor` is the spot being typed into. */
-  markup: { tool: MarkTool; color: string; textAnchor: TextSpot | null } | null;
+  markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: TextSpot | null } | null;
   onMarkText(at: DrawingPoint, width?: number): void;
-  onEditMarkText(index: number, current: string): void;
+  onEditMarkText(index: number, current: string, color: string): void;
 };
 
 export type DrawingCanvasProps = CanvasCommon & (ExplicitCanvasProps | CompactCanvasProps);
@@ -170,8 +170,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const next = applyMarkEdit(marksRef.current, { add: { at, text, width, color, size: ppu > 0 ? TEXT_PX / ppu : 0 } });
       if (next !== marksRef.current) updateMarks(next);
     },
-    editTextMark(index, text) {
-      const next = applyMarkEdit(marksRef.current, { edit: { index, text } });
+    editTextMark(index, text, color) {
+      const next = applyMarkEdit(marksRef.current, { edit: { index, text, color } });
       if (next !== marksRef.current) updateMarks(next);
     },
     undoMark() { if (marksRef.current.length) updateMarks(marksRef.current.slice(0, -1)); },
@@ -244,16 +244,21 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const textAnchor = "markup" in props ? props.markup?.textAnchor ?? null : props.textAnchor ?? null;
   const askText = (at: DrawingPoint, width?: number) => { const p = events.current; if ("onMarkText" in p) p.onMarkText(at, width); else p.onTextRequest(at, width); };
   const askEdit = (i: number) => {
+    if (!markup || editingIndex !== undefined) return;
     const p = events.current, mk = marksRef.current[i];
-    if ("onEditMarkText" in p) { if (mk?.kind === "text") p.onEditMarkText(i, mk.text); } else p.onEditTextRequest(i);
+    if ("onEditMarkText" in p) { if (mk?.kind === "text") p.onEditMarkText(i, mk.text, mk.color); } else p.onEditTextRequest(i);
   };
 
+  // Preview only: cancellation drops the draft without writing persisted marks.
+  const editingIndex = "markup" in props ? props.markup?.editingIndex : undefined;
+  const visibleMarks = editingIndex === undefined ? marks : marks.map((mark, i) => i === editingIndex && mark.kind === "text" ? { ...mark, color: markup!.color } : mark);
   return (
     <div className={`drawing-canvas${m.enabled ? " measuring" : ""}`}>
       <div ref={host} className="drawing-engine" />
       {model ? <MeasureOverlay model={model} aim={aim} snapAt={snapAt} /> : null}
       {e && (markup || marks.length) ? (
-        <MarkupLayer marks={marks} tool={markup?.tool ?? "move"} color={markup?.color ?? "#ff3b30"} project={project} unproject={unproject} ppu={ppu}
+        <MarkupLayer active={!!markup && editingIndex === undefined} marks={visibleMarks} tool={markup?.tool ?? "move"} color={markup?.color ?? "#ff3b30"} project={project} unproject={unproject} ppu={ppu}
+          onMove={(index, mark) => updateMarks(marksRef.current.map((m, i) => i === index ? mark : m))}
           onAdd={(mark) => updateMarks([...marksRef.current, mark])} onText={askText} onEditText={askEdit}
           onPan={(dx, dy) => { if (ppu > 0) engine.current?.panBy(dx, dy); }} textAnchor={textAnchor} />
       ) : null}

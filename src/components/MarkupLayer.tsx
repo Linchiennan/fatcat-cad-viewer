@@ -1,4 +1,5 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { hitMark, markBounds, translateMark } from "../viewer/markupMove";
 import type { DrawingPoint } from "../viewer/savedView";
 import { arrowHead, PEN_PX, squareBox, TEXT_LINE_GAP, TEXT_PX, textLines, thinStroke, type Mark, type MarkTool } from "../viewer/markup";
 
@@ -13,6 +14,8 @@ type Props = {
   unproject(x: number, y: number): DrawingPoint;
   ppu: number;
   onAdd(mark: Mark): void;
+  active?: boolean;
+  onMove?(index: number, mark: Mark): void;
   onText(at: DrawingPoint, width?: number): void;
   /** A text markup already on the drawing was tapped: edit it instead of adding a new one. */
   onEditText?(index: number): void;
@@ -47,18 +50,28 @@ function twoPointMark(t: MarkTool, color: string, a: DrawingPoint, b: DrawingPoi
   return { kind: "pen", color, points: [a, b] };
 }
 
-/**
- * Markups drawn over the drawing. With 移動 selected the layer lets touches through to the drawing
- * (pan / pinch); with a pen, line, box, circle or text tool one finger draws. 直線 is one straight
- * segment: press at one end, drag, release at the other.
- */
-export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd, onText, onEditText, onPan, textAnchor }: Props) {
+/** Existing markups are moved as whole objects; only middle drag pans while marking. */
+export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd, onText, onEditText, onPan, textAnchor, active = true, onMove }: Props) {
+  const svg = useRef<SVGSVGElement>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [moved, setMoved] = useState<Mark | null>(null);
+  const gesture = useRef<{id:number; index:number; original:Mark; start:DrawingPoint; x:number; y:number; dragged:boolean; next:Mark} | null>(null);
+  const tap = useRef<{index:number; mark:Mark; x:number; y:number; time:number} | null>(null);
+  const editCooldown = useRef(0);
+  const screen = (e: {clientX:number;clientY:number}) => { const r=svg.current!.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; };
+  const textBox = (i:number) => { const el=svg.current?.querySelector<SVGGraphicsElement>(`[data-mark-index="${i}"]`); return el?.getBBox?.(); };
+  const hit = (e:{clientX:number;clientY:number}) => hitMark(marks,screen(e),project,ppu,textBox);
+  const release = (id:number) => { if(svg.current?.hasPointerCapture?.(id))svg.current.releasePointerCapture(id); };
+  const cancel = () => { const ids=[gesture.current?.id,drawing.current?.id,panning.current?.id]; gesture.current=null; drawing.current=null;panning.current=null;setMoved(null);setDraft(null);tap.current=null;ids.forEach(id=>{if(id!==undefined)release(id);}); };
+  useEffect(() => { cancel();setSelected(null); }, [tool,active,marks]);
+  const edit = (index:number) => { if(!active)return;const now=performance.now();if(now<editCooldown.current)return;editCooldown.current=now+450;tap.current=null;onEditText?.(index); };
   const drawing = useRef<{ id: number; points: DrawingPoint[] } | null>(null);
   const panning = useRef<{ id: number; x: number; y: number } | null>(null);
   const [draft, setDraft] = useState<DrawingPoint[] | null>(null);
   const local = (e: ReactPointerEvent) => { const r = e.currentTarget.getBoundingClientRect(); return unproject(e.clientX - r.left, e.clientY - r.top); };
 
   const down = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (!active) return;
     if (e.pointerType === "mouse" && e.button === 1) {
       // Middle button moves the drawing even while drawing tools are on (like two fingers on a phone).
       e.preventDefault();
@@ -66,7 +79,17 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
       panning.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
       return;
     }
-    if (tool === "move" || drawing.current) return;
+    if (drawing.current || gesture.current || panning.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const index = hit(e);
+    if ((active && tool === 'move') || (index >= 0 && marks[index].kind === 'text')) {
+      e.preventDefault();e.stopPropagation();setSelected(index >= 0 ? index : null);
+      if(index < 0){tap.current=null;return;}
+      const original=marks[index];
+      gesture.current={id:e.pointerId,index,original,start:local(e),x:e.clientX,y:e.clientY,dragged:false,next:original};
+      e.currentTarget.setPointerCapture(e.pointerId);return;
+    }
+    if (!active) return;
+    tap.current=null;
     e.preventDefault();
     if (tool === "text") { onText(local(e)); return; }
     // 多行: drag out the text box first (like the box tool); its width wraps the lines.
@@ -76,6 +99,13 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
     setDraft([p, p]);
   };
   const move = (e: ReactPointerEvent<SVGSVGElement>) => {
+    const g=gesture.current;
+    if(g && g.id===e.pointerId){
+      e.preventDefault();e.stopPropagation();
+      if(Math.hypot(e.clientX-g.x,e.clientY-g.y)>5)g.dragged=true;
+      if(g.dragged){tap.current=null;if(active && tool==='move'){const p=local(e);g.next=translateMark(g.original,p.x-g.start.x,p.y-g.start.y);setMoved(g.next);}}
+      return;
+    }
     const pan = panning.current;
     if (pan && pan.id === e.pointerId) { onPan?.(e.clientX - pan.x, e.clientY - pan.y); pan.x = e.clientX; pan.y = e.clientY; return; }
     const d = drawing.current;
@@ -85,7 +115,18 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
     setDraft(d.points);
   };
   const up = (e: ReactPointerEvent<SVGSVGElement>) => {
-    if (panning.current?.id === e.pointerId) { panning.current = null; return; }
+    const g=gesture.current;
+    if(g && g.id===e.pointerId){
+      move(e);gesture.current=null;setMoved(null);release(e.pointerId);e.stopPropagation();e.preventDefault();
+      if(g.dragged){editCooldown.current=performance.now()+450;tap.current=null;if(g.next!==g.original)onMove?.(g.index,g.next);return;}
+      if(g.original.kind==='text'){
+        const previous=tap.current,now=performance.now();
+        if(previous && previous.index===g.index && previous.mark===g.original && now-previous.time<=350 && Math.hypot(e.clientX-previous.x,e.clientY-previous.y)<=20)edit(g.index);
+        else tap.current={index:g.index,mark:g.original,x:e.clientX,y:e.clientY,time:now};
+      }else tap.current=null;
+      return;
+    }
+    if (panning.current?.id === e.pointerId) { panning.current = null; release(e.pointerId); return; }
     const d = drawing.current;
     if (!d || d.id !== e.pointerId) return;
     drawing.current = null;
@@ -107,18 +148,21 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
   const path = (pts: DrawingPoint[]) => project(pts).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const box = (pts: readonly DrawingPoint[]) => { const [a, b] = project(pts); return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y) }; };
   const pending: Mark | null = !draft || tool === "mtext" ? null : twoPoint(tool) ? twoPointMark(tool, color, draft[0], draft.at(-1)!) : { kind: "pen", color, points: draft };
-  const all: Mark[] = pending ? [...marks, pending] : [...marks];
+  const shown = marks.map((m,i)=>i===selected && moved ? moved : m);
+  const all: Mark[] = pending ? [...shown, pending] : shown;
+  const selection = selected !== null && shown[selected] ? markBounds(shown[selected],project,ppu) : null;
 
   return (
-    <svg className={`markup-layer${tool === "move" ? " passive" : ""}`} aria-label="標註" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+    <svg ref={svg} className={`markup-layer${!active ? " passive" : ""}`} aria-label="註記" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onLostPointerCapture={()=>{if(gesture.current || drawing.current || panning.current)cancel();}}
+      onDoubleClick={e=>{if(!active)return;e.preventDefault();e.stopPropagation(); /* Pointer taps already handled editing; swallow synthetic dblclick only while marking. */}}>
       {all.map((m, i) => m.kind === "text"
-        ? (() => { const [p] = project([m.at]); const px = Math.max(6, m.size * ppu); return <text key={i} x={p.x} y={p.y + px * 0.85} fontSize={px} fill={m.color} className="markup-text"
-            onPointerDown={i < marks.length && onEditText ? (e) => { if (e.pointerType === "mouse" && e.button !== 0) return; e.stopPropagation(); e.preventDefault(); onEditText(i); } : undefined}>
+        ? (() => { const [p] = project([m.at]); const px = Math.max(6, m.size * ppu); return <text key={i} data-mark-index={i} x={p.x} y={p.y + px * 0.85} fontSize={px} fill={m.color} className="markup-text">
             {textLines(m.text, px, m.width ? m.width * ppu : undefined).map((line, k) => <tspan key={k} x={p.x} dy={k ? px * TEXT_LINE_GAP : 0}>{line}</tspan>)}</text>; })()
         : m.kind === "rect" ? <rect key={i} {...box(m.points)} stroke={m.color} strokeWidth={PEN_PX} fill="none" />
         : m.kind === "arrow" ? (() => { const [a, b] = project(m.points), [l, r] = arrowHead(a, b); return <polyline key={i} points={`${a.x},${a.y} ${b.x},${b.y} ${l.x},${l.y} ${b.x},${b.y} ${r.x},${r.y}`} stroke={m.color} strokeWidth={PEN_PX} fill="none" strokeLinecap="round" strokeLinejoin="round" />; })()
         : m.kind === "circle" ? (() => { const r = box(m.points); return <ellipse key={i} cx={r.x + r.width / 2} cy={r.y + r.height / 2} rx={r.width / 2} ry={r.height / 2} stroke={m.color} strokeWidth={PEN_PX} fill="none" />; })()
         : <polyline key={i} points={path(m.points)} stroke={m.color} strokeWidth={PEN_PX} fill="none" strokeLinecap="round" strokeLinejoin="round" />)}
+        {selection ? <rect data-mark-selection={selected} x={selection.x-6} y={selection.y-6} width={selection.width+12} height={selection.height+12} fill="none" stroke="#00cfff" strokeWidth={2} strokeDasharray="5 3" pointerEvents="none" /> : null}
         {draft && tool === "mtext" ? (() => { const r = box([draft[0], draft.at(-1)!]); return <rect {...r} className="markup-textbox" stroke={color} />; })() : null}
         {textAnchor?.width ? (() => { const [p] = project([textAnchor.at]); return <rect x={p.x} y={p.y} width={textAnchor.width * ppu} height={TEXT_PX * TEXT_LINE_GAP * 2} className="markup-textbox" stroke={color} />; })() : null}
         {textAnchor ? (() => { const [p] = project([textAnchor.at]); return <TextAnchorPaw x={p.x} y={p.y} color={color} />; })() : null}
