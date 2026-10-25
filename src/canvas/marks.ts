@@ -5,7 +5,7 @@ import type { Mark } from "../viewer/markup";
 export type MarkEdit =
   | { add: { at: DrawingPoint; text: string; width?: number; color: string; size: number } }
   /** Empty text deletes the mark. */
-  | { edit: { index: number; text: string; color?: string } };
+  | { edit: { index: number; text: string; color?: string; size?: number } };
 
 /** The new list, or the same list when nothing changes (blank text, bad index, camera not ready). */
 export function applyMarkEdit(marks: readonly Mark[], change: MarkEdit): Mark[] {
@@ -21,6 +21,7 @@ export function applyMarkEdit(marks: readonly Mark[], change: MarkEdit): Mark[] 
   const trimmed = text.trim();
   if (!trimmed) return marks.filter((_, i) => i !== index);
   const color = change.edit.color ?? old.color;
-  if (trimmed === old.text && color === old.color) return list;
-  return marks.map((m, i) => (i === index ? { ...old, text: trimmed, color } : m));
+  const size = change.edit.size && change.edit.size > 0 && Number.isFinite(change.edit.size) ? change.edit.size : old.size;
+  if (trimmed === old.text && color === old.color && size === old.size) return list;
+  return marks.map((m, i) => (i === index ? { ...old, text: trimmed, color, size } : m));
 }

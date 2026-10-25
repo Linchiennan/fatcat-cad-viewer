@@ -19,7 +19,7 @@ describe("measuring overlay (T15 2.2)", () => {
   it("current distance: dots, one label at the middle raised by 0.35 × size", () => {
     const m = overlayModel({ settings: { ...base, points: [{ x: 0, y: 0 }, { x: 30, y: 0 }] }, entity: null, project, labelPx: 20, label: (l) => `${l} cm` });
     expect(m.current?.dots).toEqual([{ x: 0, y: 100 }, { x: 60, y: 100 }]);
-    expect(m.current?.labels).toEqual([{ x: 30, y: 93, text: "30 cm", size: 20, stroke: 4 }]);
+    expect(m.current?.labels).toEqual([{ x: 30, y: 93, text: "30 cm", size: 20, stroke: 4, seg: { a: { x: 0, y: 100 }, b: { x: 60, y: 100 } } }]);
     expect(m.current?.closed).toBe(false);
   });
 

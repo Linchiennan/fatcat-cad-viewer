@@ -95,6 +95,7 @@
 .lib-small { min-height: 32px; padding: 0 10px; font-size: 13px; background: var(--lib-panel); }
 .lib-actions .lib-primary { flex: 1.3; }
 .lib-actions .lib-secondary { flex: 1; }
+.lib-actions .lib-two-line { white-space: pre-line; line-height: 1.2; }
 
 .lib-recent { flex: none; }
 .lib-recent h2, .lib-filter h2 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--lib-muted); }
@@ -276,6 +277,7 @@
 .lib-replace p { margin: 0 0 8px; font-size: 12px; line-height: 1.5; color: var(--lib-muted); }
 .lib-replace .lib-secondary { width: 100%; margin-bottom: 8px; }
 .lib-sheet-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lib-sheet-tiles.two { grid-template-columns: repeat(2, 1fr); }
 .lib-tile {
   display: flex;
   flex-direction: column;

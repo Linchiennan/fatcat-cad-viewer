@@ -9,7 +9,8 @@ export const LABEL_MAX_PX = 400;
 /** Gap around a search hit (px). */
 export const SEARCH_PAD_PX = 6;
 
-export type OverlayLabel = { x: number; y: number; text: string; size: number; stroke: number };
+/** A length number; `seg` (screen px) is the line it measures, so the overlay can turn the number with it or break the line. */
+export type OverlayLabel = { x: number; y: number; text: string; size: number; stroke: number; seg?: { a: DrawingPoint; b: DrawingPoint } };
 export type OverlayShape = { points: DrawingPoint[]; closed: boolean; labels: OverlayLabel[]; dots: DrawingPoint[]; rightAngles?: DrawingPoint[][] };
 export type OverlayModel = {
   current: OverlayShape | null;
@@ -38,9 +39,16 @@ function shape(result: KeptMeasurement, project: Project, size: number, label: (
   const { mode, points } = result;
   const closed = mode === "area" && points.length >= 3;
   const screen = project(points);
-  const labels: OverlayLabel[] = mode === "angle" || mode === "object" ? [] : segmentLabels(points, closed).map(({ at, length }) => {
+  // Screen ends of every non-zero segment, in the order segmentLabels gives them.
+  const n = points.length, last = closed && n >= 3 ? n : n - 1;
+  const segs: { a: DrawingPoint; b: DrawingPoint }[] = [];
+  for (let i = 0; i < last; i++) {
+    const a = points[i], b = points[(i + 1) % n];
+    if (Math.hypot(b.x - a.x, b.y - a.y) > 0) segs.push({ a: screen[i], b: screen[(i + 1) % n] });
+  }
+  const labels: OverlayLabel[] = mode === "angle" || mode === "object" ? [] : segmentLabels(points, closed).map(({ at, length }, i) => {
     const [p] = project([at]);
-    return { x: p.x, y: p.y - size * 0.35, text: label(length), size, stroke: Math.max(2, size / 5) };
+    return { x: p.x, y: p.y - size * 0.35, text: label(length), size, stroke: Math.max(2, size / 5), ...(segs[i] ? { seg: segs[i] } : {}) };
   });
   const value = resultValue(result);
   if (value !== null && mode !== "distance" && screen.length) {

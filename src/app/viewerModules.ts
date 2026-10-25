@@ -20,11 +20,11 @@ export type DrawingCanvasProps = DrawingCanvasEvents & {
   onSelectionCount?(count: number): void;
   onDeleteMeasurements?(indices: number[]): void;
   /** Markup tool and colour while marking, else null; `textAnchor` is the spot being typed into. */
-  markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: { at: DrawingPoint; width?: number } | null } | null;
+  markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: { at: DrawingPoint; width?: number } | null; textPx?: number } | null;
   /** A text tool tapped a spot (or dragged a box) → the App asks for the text, then calls addTextMark. */
   onMarkText(at: DrawingPoint, width?: number): void;
   /** An existing text mark was tapped → the App asks for the new text, then calls editTextMark. */
-  onEditMarkText(index: number, current: string, color: string): void;
+  onEditMarkText(index: number, current: string, color: string, textPx: number, multiline: boolean): void;
   /** Long-press aiming preview (optional). */
   onPreview?(preview: MeasurePreview): void;
   /** The engine of this canvas once created (null when disposed); the App uses it for export (spec 005). */

@@ -5,8 +5,10 @@ import { act } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("../i18n/translations", async () => {
-  const strings = (await import("../i18n/t19-spec-strings.json")).default as Record<string, { zh: string }>;
-  const t = (key: string) => strings[key]?.zh ?? key;
+  const spec = (await import("../i18n/t19-spec-strings.json")).default as Record<string, { zh: string }>;
+  const own = (await import("../i18n/ownStrings")).OWN_STRINGS as Record<string, { zh: string }>;
+  const strings: Record<string, { zh: string }> = { ...spec, ...own };
+  const t = (key: string, vars?: Record<string, string | number>) => (strings[key]?.zh ?? key).replace(/{(w+)}/g, (m, k) => (vars && k in vars ? String(vars[k]) : m));
   return { useI18n: () => ({ locale: "zh-TW", setLocale() {}, t }), translate: (_l: string, key: string) => t(key) };
 });
 
@@ -103,16 +105,16 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
   it("the exports button replaces new-folder and lists exports newest first with the total size", async () => {
     const m = await mount();
     const buttons = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).map((b) => b.textContent?.trim());
-    expect(buttons).toEqual(["加入檔案", "輸出成果"]);
+    expect(buttons).toEqual(["單一\n檔案", "整個\n資料夾", "歷史輸出"]);
     const exportsStore = await import("./exportStore");
     const shot = (name: string) => ({ blob: new Blob(["PNG"]), mime: "image/png" as const, fileName: name, widthPx: 10, heightPx: 10, dpi: 200, downscaled: false, thumbnail: new Blob(["t"]) });
     await exportsStore.saveExport(shot("old.png"));
     await new Promise((r) => setTimeout(r, 3));
     await exportsStore.saveExport({ ...shot("new.pdf"), mime: "application/pdf" as const });
-    const entry = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).find((b) => b.textContent?.includes("輸出成果"))!;
+    const entry = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).find((b) => b.textContent?.includes("歷史輸出"))!;
     await act(async () => entry.click());
     await m.settle();
-    expect(m.host.querySelector(".lib-titles h1")?.textContent).toBe("輸出成果");
+    expect(m.host.querySelector(".lib-titles h1")?.textContent).toBe("歷史輸出");
     const rows = Array.from(m.host.querySelectorAll(".lib-row.export")).map((r) => r.textContent ?? "");
     expect(rows[0]).toContain("new.pdf");
     expect(rows[1]).toContain("old.png");
@@ -131,7 +133,7 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     const exportsStore = await import("./exportStore");
     await exportsStore.saveExport({ blob: new Blob(["PNG"]), mime: "image/png", fileName: "plan.png", widthPx: 1, heightPx: 1, dpi: 200, downscaled: true, thumbnail: new Blob(["t"]) });
     const m = await mount();
-    const entry = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).find((b) => b.textContent?.includes("輸出成果"))!;
+    const entry = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).find((b) => b.textContent?.includes("歷史輸出"))!;
     await act(async () => entry.click());
     await m.settle();
     const row = () => m.host.querySelector<HTMLButtonElement>(".lib-row.export .lib-row-main")!;
@@ -163,7 +165,7 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     await m.settle();
     await m.settle();
     expect(m.host.querySelector(".lib-row.export")).toBeNull();
-    expect(m.host.textContent).toContain("還沒有輸出成果");
+    expect(m.host.textContent).toContain("還沒有歷史輸出");
   });
 
   it("shows a dismissable red warning above 500 MB", async () => {
@@ -178,7 +180,7 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
       };
     });
     const m = await mount();
-    const entry = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).find((b) => b.textContent?.includes("輸出成果"))!;
+    const entry = Array.from(m.host.querySelectorAll<HTMLButtonElement>(".lib-actions button")).find((b) => b.textContent?.includes("歷史輸出"))!;
     await act(async () => entry.click());
     await m.settle();
     const warning = m.host.querySelector(".lib-warning");

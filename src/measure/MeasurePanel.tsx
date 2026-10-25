@@ -4,6 +4,7 @@ import { useI18n, type TranslationKey } from "../i18n/translations";
 import { IconTile } from "../components/IconTile";
 import { AngleIcon, AreaIcon, CheckIcon, CloseIcon, DistanceIcon, EraserIcon, GearIcon, PathIcon, PointerIcon, TrashIcon, ArrowLeftIcon } from "../components/Icons";
 import { DECIMAL_CHOICES, fixedNumber } from "../viewer/measureFormat";
+import { LABEL_STYLES, setLabelStyle, setLabelUnit, useLabelStyle, useLabelUnit, type MeasureLabelStyle } from "../viewer/measureLabelStyle";
 import { distanceParts, lengthTotal, resultValue } from "../viewer/measureResults";
 import { pathLength, type MeasurableEntity, type MeasurementMode, type MeasurementSettings, type MeasurementUnit } from "../viewer/measurementGeometry";
 import { ALL_SNAP_KINDS, canKeep, initialMeasureState, measureReducer, MODE_KEYS, statusKey, type MeasureAction, type MeasureState } from "./measureState";
@@ -100,6 +101,8 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
   const s = state.settings;
   const [height, setHeight] = useState<number | null>(() => loadPanelHeight());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const labelStyle = useLabelStyle();
+  const labelUnit = useLabelUnit();
   const drag = useRef<{ id: number; y: number; h: number } | null>(null);
   const panel = useRef<HTMLElement | null>(null);
 
@@ -216,6 +219,14 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
               <label>{t("measure.decimals")}
                 <select value={decimals} onChange={(e) => { onDecimals(Number(e.target.value)); dispatch({ type: "status-reset" }); }}>
                   {DECIMAL_CHOICES.map((n) => <option key={n} value={n}>{n === 0 ? t("measure.decimalsInt") : t("measure.decimalsN", { N: n })}</option>)}
+                </select>
+              </label>
+              <label className="measure-check">
+                <input type="checkbox" checked={labelUnit} onChange={(e) => setLabelUnit(e.target.checked)} />{t("measure.labelUnit")}
+              </label>
+              <label>{t("measure.labelStyle")}
+                <select value={labelStyle} onChange={(e) => setLabelStyle(e.target.value as MeasureLabelStyle)}>
+                  {LABEL_STYLES.map((v) => <option key={v} value={v}>{t(`measure.labelStyle.${v}` as TranslationKey)}</option>)}
                 </select>
               </label>
               {s.snap && !objectMode ? (

@@ -222,7 +222,7 @@ export function ExportsView({ popup, setPopup, busy, runBusy, notify, inert }: {
 
       {deleteIds ? <Dialog className="lib-dialog" role="alertdialog" label={en ? 'Delete selected exports' : '刪除所選成果'} onCancel={() => setDeleteIds(null)}>
         <h3>{en ? `Delete ${deleteIds.length} exports?` : `確定刪除 ${deleteIds.length} 項成果？`}</h3>
-        <p>{en ? 'Only the selected exports will be deleted. Original drawings are untouched.' : '只刪除所選輸出成果，不會刪除原圖庫檔案。'}</p>
+        <p>{en ? 'Only the selected exports will be deleted. Original drawings are untouched.' : '只刪除所選歷史輸出，不會刪除原圖庫檔案。'}</p>
         <div className="lib-dialog-buttons"><button type="button" disabled={busy} onClick={() => setDeleteIds(null)}>{t('action.cancel')}</button>
         <button type="button" className="lib-danger" disabled={busy} onClick={() => { const ids = deleteIds; setDeleteIds(null); void runBusy(async () => { try { for (const id of ids) await deleteExport(id); } finally { setSelected(new Set()); refresh(); } }); }}>{en ? 'Confirm delete' : '確認刪除'}</button></div>
       </Dialog> : null}

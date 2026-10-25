@@ -428,6 +428,14 @@ export class DxfCadEngine implements FatcatCadEngine {
     this.afterViewChange();
   }
 
+  zoomAt(x: number, y: number, factor: number): void {
+    if (!this.ready || !(factor > 0) || !Number.isFinite(factor)) return;
+    const view = this.currentView(), p = this.unproject(x, y);
+    const k = 1 / factor; // the point under (x, y) stays put
+    this.setView({ center: { x: p.x + (view.center.x - p.x) * k, y: p.y + (view.center.y - p.y) * k }, width: view.width * k });
+    this.afterViewChange();
+  }
+
   /** Shell elements around the canvas, measured now. */
   private shellLayout(): ShellLayout {
     const shell = this.canvas.closest?.(SHELL_SELECTORS.shell);

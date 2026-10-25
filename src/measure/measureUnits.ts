@@ -2,6 +2,7 @@
 import { readPosition, savePosition } from "../viewer/readingPosition";
 import type { MeasurementUnit } from "../viewer/measurementGeometry";
 import { formatMeasure, fixedNumber } from "../viewer/measureFormat";
+import { convertMeasurement } from "../viewer/measurementGeometry";
 
 export const UNIT_CHOICES: MeasurementUnit[] = ["drawing", "mm", "cm", "m", "in", "ft"];
 /** Names in the unit menus. */
@@ -44,10 +45,14 @@ export function changeUnits(viewKey: string, fileUnit: MeasurementUnit, prev: Sh
 export const formatResult = (units: SheetUnits, decimals: number) => (value: number, area = false) =>
   formatMeasure(value, units.source, units.display, decimals, area);
 
-/** Text of a length label on the drawing: no unit word when the display unit is the drawing unit (T15 2.2-4). */
-export function formatLabel(value: number, units: SheetUnits, decimals: number): string {
+/**
+ * Text of a number on the drawing: no unit word when the display unit is the drawing unit (T15 2.2-4), nor when the
+ * 齒輪「圖上顯示單位」 is off (`withUnit` false: the number in the display unit only).
+ */
+export function formatLabel(value: number, units: SheetUnits, decimals: number, withUnit = true, area = false): string {
   if (units.display === "drawing" || units.source === "drawing") return fixedNumber(value, decimals);
-  return formatMeasure(value, units.source, units.display, decimals);
+  if (!withUnit) return fixedNumber(convertMeasurement(value, units.source, units.display, area), decimals);
+  return formatMeasure(value, units.source, units.display, decimals, area);
 }
 
 const HEIGHT_KEY = "fatcat:measure-panel-height";

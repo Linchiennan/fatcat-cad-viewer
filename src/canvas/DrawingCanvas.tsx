@@ -7,10 +7,11 @@ import type { MeasurableEntity, MeasurementSettings, SnapKind } from "../viewer/
 import { MarkupLayer, type TextSpot } from "../components/MarkupLayer";
 import { loadMarks, saveMarks, TEXT_PX, type Mark, type MarkTool } from "../viewer/markup";
 import { hitView } from "../viewer/textSearch";
-import { formatLabel, formatResult, sheetUnits, type SheetUnits } from "../measure/measureUnits";
+import { formatLabel, sheetUnits, type SheetUnits } from "../measure/measureUnits";
 import { resolveMeasurePick, toleranceFor } from "../measure/resolvePick";
 import { publishPickStatus, statusForPick } from "../measure/pickStatus";
 import { fixedNumber, loadDecimals } from "../viewer/measureFormat";
+import { useLabelUnit } from "../viewer/measureLabelStyle";
 import { createCadEngine } from "../viewer/cadEngine";
 import { MeasureOverlay } from "./MeasureOverlay";
 import { labelSize, overlayModel, searchBox } from "./overlayModel";
@@ -57,9 +58,9 @@ type ExplicitCanvasProps = {
 type CompactCanvasProps = {
   createEngine?(host: HTMLDivElement): CadEngine;
   /** Markup tool and colour while marking, else null; `textAnchor` is the spot being typed into. */
-  markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: TextSpot | null } | null;
+  markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: TextSpot | null; textPx?: number } | null;
   onMarkText(at: DrawingPoint, width?: number): void;
-  onEditMarkText(index: number, current: string, color: string): void;
+  onEditMarkText(index: number, current: string, color: string, textPx: number, multiline: boolean): void;
 };
 
 export type DrawingCanvasProps = CanvasCommon & (ExplicitCanvasProps | CompactCanvasProps);
@@ -176,14 +177,21 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
 
   useImperativeHandle(ref, (): DrawingCanvasHandle & ExportCapable => ({
     command: (c) => engine.current?.command(c),
-    addTextMark(at, text, width) {
+    addTextMark(at, text, width, textPx = TEXT_PX) {
       const ppu = engine.current?.pixelsPerUnit() ?? 0;
+      // One-line text is centred on the tapped spot (where the paw was): its top-left moves half a character up-left.
+      if (!width && engine.current && ppu > 0) {
+        const [s] = engine.current.project([at]);
+        const moved = engine.current.unproject(s.x - textPx / 2, s.y - textPx / 2);
+        if (Number.isFinite(moved.x) && Number.isFinite(moved.y)) at = moved;
+      }
       const p = events.current, color = "markup" in p ? p.markup?.color ?? "#ff3b30" : p.markColor;
-      const next = applyMarkEdit(marksRef.current, { add: { at, text, width, color, size: ppu > 0 ? TEXT_PX / ppu : 0 } });
+      const next = applyMarkEdit(marksRef.current, { add: { at, text, width, color, size: ppu > 0 ? textPx / ppu : 0 } });
       if (next !== marksRef.current) updateMarks(next);
     },
-    editTextMark(index, text, color) {
-      const next = applyMarkEdit(marksRef.current, { edit: { index, text, color } });
+    editTextMark(index, text, color, textPx) {
+      const ppu = engine.current?.pixelsPerUnit() ?? 0;
+      const next = applyMarkEdit(marksRef.current, { edit: { index, text, color, size: textPx && ppu > 0 ? textPx / ppu : undefined } });
       if (next !== marksRef.current) updateMarks(next);
     },
     undoMark() { if (marksRef.current.length) updateMarks(marksRef.current.slice(0, -1)); },
@@ -233,6 +241,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     captureDiagnostics: () => engine.current?.captureDiagnostics() ?? null,
   }), [sheetReady, updateMarks, runExport, changeSelection]);
 
+  const labelUnit = useLabelUnit();
   const e = ready ? engine.current : null;
   const project = useCallback((pts: readonly DrawingPoint[]) => (engine.current ? engine.current.project(pts) : pts.map(() => ({ x: NaN, y: NaN }))), []);
   const unproject = useCallback((x: number, y: number) => engine.current?.unproject(x, y) ?? { x: NaN, y: NaN }, []);
@@ -246,7 +255,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const units = "units" in props ? props.units : sheetUnits(viewKey.current, index?.unit ?? "drawing");
     const decimals = "decimals" in props ? props.decimals : loadDecimals();
     const entity = "pickedEntity" in props && props.pickedEntity !== undefined ? props.pickedEntity : picked;
-    model = overlayModel({ settings: m, entity, project, labelPx: labelSize(e.measureLabelHeight(), ppu), label: (value, area) => area ? formatResult(units, decimals)(value, true) : formatLabel(value, units, decimals), angle: value => `${fixedNumber(value, decimals)}°` });
+    model = overlayModel({ settings: m, entity, project, labelPx: labelSize(e.measureLabelHeight(), ppu), label: (value, area) => formatLabel(value, units, decimals, labelUnit, area), angle: value => `${fixedNumber(value, decimals)}°` });
     // Long-press aim: crosshair at the aim, snap marker on the snap itself (T15 2.2-7).
     if (m.enabled && preview) {
       [aim] = project([preview.point]);
@@ -266,21 +275,23 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const askEdit = (i: number) => {
     if (!markup || editingIndex !== undefined) return;
     const p = events.current, mk = marksRef.current[i];
-    if ("onEditMarkText" in p) { if (mk?.kind === "text") p.onEditMarkText(i, mk.text, mk.color); } else p.onEditTextRequest(i);
+    if ("onEditMarkText" in p) { if (mk?.kind === "text") p.onEditMarkText(i, mk.text, mk.color, Math.round((mk.size * (engine.current?.pixelsPerUnit() ?? 0)) || TEXT_PX), !!(mk.width && mk.width > 0) || mk.text.includes(String.fromCharCode(10))); } else p.onEditTextRequest(i);
   };
 
   // Preview only: cancellation drops the draft without writing persisted marks.
   const editingIndex = "markup" in props ? props.markup?.editingIndex : undefined;
-  const visibleMarks = editingIndex === undefined ? marks : marks.map((mark, i) => i === editingIndex && mark.kind === "text" ? { ...mark, color: markup!.color } : mark);
+  const editPx = "markup" in props ? props.markup?.textPx : undefined;
+  // While a text is being edited it shows the colour and size being chosen.
+  const visibleMarks = editingIndex === undefined ? marks : marks.map((mark, i) => i === editingIndex && mark.kind === "text" ? { ...mark, color: markup!.color, ...(editPx && ppu > 0 ? { size: editPx / ppu } : {}) } : mark);
   return (
     <div className={`drawing-canvas${m.enabled ? " measuring" : ""}`}>
       <div ref={host} className="drawing-engine" />
       {model ? <MeasureOverlay model={model} aim={aim} snapAt={snapAt} /> : null}
       {e && (markup || marks.length) ? (
-        <MarkupLayer active={!!markup && editingIndex === undefined} marks={visibleMarks} tool={markup?.tool ?? "move"} color={markup?.color ?? "#ff3b30"} project={project} unproject={unproject} ppu={ppu}
+        <MarkupLayer active={!!markup && markup.tool !== "none" && editingIndex === undefined} marks={visibleMarks} tool={markup?.tool ?? "move"} color={markup?.color ?? "#ff3b30"} project={project} unproject={unproject} ppu={ppu}
           onMove={(index, mark) => updateMarks(marksRef.current.map((m, i) => i === index ? mark : m))}
           onAdd={(mark) => updateMarks([...marksRef.current, mark])} onText={askText} onEditText={askEdit}
-          onPan={(dx, dy) => { if (ppu > 0) engine.current?.panBy(dx, dy); }} textAnchor={textAnchor} />
+          onPan={(dx, dy) => { if (ppu > 0) engine.current?.panBy(dx, dy); }} onZoom={(x, y, factor) => { if (ppu > 0) engine.current?.zoomAt(x, y, factor); }} textAnchor={textAnchor} textPx={editPx} />
       ) : null}
       {e && props.selectionTool ? <SelectionOverlay tool={props.selectionTool} marks={marks} model={model} project={project} ppu={ppu} selected={selection} onChange={changeSelection} /> : null}
       {box ? <div key={searchHit?.serial} className="search-hit-box" style={{ left: box.left, top: box.top, width: box.width, height: box.height }} /> : null}

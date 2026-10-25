@@ -35,6 +35,8 @@ export interface CadEngine {
   pixelsPerUnit(): number;
   /** Pan by CSS px (right / down positive); redraws and fires onViewChanged. */
   panBy(dx: number, dy: number): void;
+  /** Zoom by `factor` (>1 = closer) keeping the drawing point under canvas CSS px (x, y) in place. */
+  zoomAt(x: number, y: number, factor: number): void;
   /** Centre `view` in the free area (T14 3.5); returns where `focus` lands on the canvas, or null without a layout. */
   zoomTo(view: DrawingBounds, focus: DrawingBounds): { left: number; top: number; width: number; height: number } | null;
   measurementIndex(): MeasurementIndex | null;
@@ -60,9 +62,9 @@ export interface ViewerHandle {
 
 /** Extra commands of the CAD canvas (T15 8-4). */
 export interface DrawingCanvasHandle extends ViewerHandle {
-  addTextMark(at: DrawingPoint, text: string, width?: number): void;
+  addTextMark(at: DrawingPoint, text: string, width?: number, textPx?: number): void;
   /** Empty text deletes the mark. */
-  editTextMark(index: number, text: string, color?: string): void;
+  editTextMark(index: number, text: string, color?: string, textPx?: number): void;
   undoMark(): void;
   clearMarks(): void;
   deleteSelection?(): void;

@@ -4,7 +4,8 @@ import type { DrawingPoint } from "./savedView";
 
 /** pen: freehand; line / arrow: one straight segment (drag end to end, the arrow points at the end);
  * rect / circle / ellipse: drag a box (circle keeps it square). */
-export type MarkTool = "pen" | "line" | "arrow" | "rect" | "circle" | "ellipse" | "text" | "mtext" | "move";
+/** "none": markup mode with no tool picked (the default) — the drawing pans and zooms as in plain viewing. */
+export type MarkTool = "none" | "pen" | "line" | "arrow" | "rect" | "circle" | "ellipse" | "text" | "mtext" | "move";
 export type Mark =
   | { kind: "pen"; color: string; points: DrawingPoint[] }
   | { kind: "rect"; color: string; points: [DrawingPoint, DrawingPoint] }
@@ -43,6 +44,18 @@ export function squareBox(a: DrawingPoint, b: DrawingPoint): [DrawingPoint, Draw
   return [a, { x: a.x + Math.sign(b.x - a.x || 1) * side, y: a.y + Math.sign(b.y - a.y || 1) * side }];
 }
 export const TEXT_PX = 18;
+/** Text markup size range in screen pixels at the zoom it was written (the size control's limits). */
+export const TEXT_PX_MIN = 8;
+export const TEXT_PX_MAX = 96;
+const TEXT_PX_KEY = "fatcat:markup-text-px";
+export const clampTextPx = (n: number) => Math.round(Math.min(TEXT_PX_MAX, Math.max(TEXT_PX_MIN, Number.isFinite(n) ? n : TEXT_PX)));
+/** The size last used for a text markup on this device (default 18 px). */
+export function loadTextPx(): number {
+  try { const n = Number(localStorage.getItem(TEXT_PX_KEY)); return n > 0 ? clampTextPx(n) : TEXT_PX; } catch { return TEXT_PX; }
+}
+export function saveTextPx(n: number): void {
+  try { localStorage.setItem(TEXT_PX_KEY, String(clampTextPx(n))); } catch { /* private mode: this visit only */ }
+}
 export const TEXT_FONT = '"Noto Sans CJK TC","Noto Sans TC",sans-serif';
 /** Line spacing of multi-line text, in font sizes. */
 export const TEXT_LINE_GAP = 1.25;

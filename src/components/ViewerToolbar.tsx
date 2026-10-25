@@ -14,6 +14,16 @@ export function SelectionIcon(props: IconProps) {
   return <svg {...props} viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 3l14 10-7 1-3 7z" /></svg>;
 }
 
+/** 選取 on the phone glove bar: a smaller arrow with a curled cat tail (用戶選 T2，箭頭再小一點). */
+export function SelectionTailIcon(props: IconProps) {
+  return (
+    <svg {...props} viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4.5 2.8L13.1 8.1 9.3 9.1 11.6 13.1 9.8 14 7.6 10 4.8 12.7z" />
+      <path d="M10.8 13.9c1.3 2.8 3.8 4.6 6.6 4 2.5-.5 3.2-3.3 1.8-5-.9-1.1-2.5-.9-2.9.3" />
+    </svg>
+  );
+}
+
 /** Tools that replace the five buttons while measuring (T18 2.3). */
 export type MeasureTools = {
   mode: MeasurementMode;
@@ -58,11 +68,11 @@ const MODE_ICON: Record<MeasurementMode, ComponentType<IconProps>> = {
 };
 const barMode = (mode: MeasurementMode): BarMode => (mode === "object" ? "distance" : mode);
 
-/** Short side lines next to the icon of the two "ear" buttons. */
+/** Three slightly curved whiskers each side of the two "ear" buttons, reaching just past the edges (用戶選 W1). */
 function Whiskers() {
   return (
     <svg className="glove-whiskers" viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <path d="M1 5l14 3M1 15l14-3M99 5l-14 3M99 15l-14-3" />
+      <path d="M0 2Q9 3.6 17 7M0 10Q9 9.3 17 10M0 18Q9 16.4 17 13M100 2Q91 3.6 83 7M100 10Q91 9.3 83 10M100 18Q91 16.4 83 13" />
     </svg>
   );
 }
@@ -155,7 +165,7 @@ export function GloveBar(props: ToolbarProps) {
       },
       {
         key: "select", name: t(props.selecting ? 'select.end' : 'select.title'), label: t('select.title'),
-        tip: t('select.tip'), Icon: SelectionIcon, pressed: !!props.selecting, disabled: pdf, onClick: () => props.onSelect?.(),
+        tip: t('select.tip'), Icon: SelectionTailIcon, pressed: !!props.selecting, disabled: pdf, onClick: () => props.onSelect?.(),
       },
     ];
   }

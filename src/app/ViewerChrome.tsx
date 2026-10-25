@@ -1,6 +1,7 @@
 // Top of the viewing screen (T10 2.4): the file name bar, the full-name card and the drawing check strip
 // (模型/配置▾｜圖層｜分享). Owner: P4 group D.
 import { libraryText } from "../library/libraryText";
+import { Capacitor } from "@capacitor/core";
 import { MODEL_SPACE, type CadSpace } from "../types/drawing";
 import { useI18n } from "../i18n/translations";
 import { CloseIcon, FolderOpenIcon, SheetsIcon } from "../components/Icons";
@@ -50,7 +51,10 @@ export function FileBar({ name, size, source, file, entryId, cardOpen, onCard, o
     return () => { active = false; };
   }, [file, entryId]);
   const sourceText = safeSourcePath(source || '') || origin.path
-    || (locale === 'en' ? 'Original source path not provided' : '原始來源路徑未提供');
+    // A browser never tells a page where a picked file lives (only the Android app gets the location).
+    || (Capacitor.isNativePlatform()
+      ? (locale === 'en' ? 'Original source path not provided' : '原始來源路徑未提供')
+      : (locale === 'en' ? 'Not provided by the browser' : '瀏覽器不提供'));
   return (
     <header className={`file-bar${cardOpen ? " card-open" : ""}`} data-fit="top">
 
@@ -138,7 +142,10 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
     <nav className="check-strip" aria-label={t("viewer.checkStripLabel")} data-fit="corner" data-strip-page={page} data-dragging={offset !== 0 || undefined}>
       <div className="check-strip-viewport" ref={viewport}
         onPointerDownCapture={e => {
-          if (!e.isPrimary || e.button !== 0) return;
+          // Left button / finger as before; the mouse's middle button drags pages too (no auto-scroll circle).
+          const middle = e.pointerType === "mouse" && e.button === 1;
+          if (!e.isPrimary || (e.button !== 0 && !middle)) return;
+          if (middle) e.preventDefault();
           suppressClick.current = false;
           gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dragged: false };
         }}
@@ -156,7 +163,9 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
         }}
         onPointerUp={e => finish(e)} onPointerCancel={e => finish(e, true)}
         onLostPointerCapture={e => { if (e.target === e.currentTarget && gesture.current) finish(e, true); }}
-        onClickCapture={e => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); } }}>
+        onClickCapture={e => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); } }}
+        onMouseDown={e => { if (e.button === 1) e.preventDefault(); }}
+        onAuxClick={e => { if (e.button === 1) e.preventDefault(); }}>
         <div className="check-strip-track" style={{ transform: `translateX(calc(${-page * 100}% + ${offset}px))` }}>
         <div className="check-strip-page" data-check-page="1" inert={page !== 0} aria-hidden={page !== 0}>
       

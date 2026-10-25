@@ -74,7 +74,7 @@ describe("viewer top (T10 2.4)", () => {
   it("file bar: no badge, name, source, 檔案大小: …, library and close", () => {
     const html = renderToStaticMarkup(<FileBar name="t1-B01主浴.dwg" size={666_726} cardOpen={false} onCard={noop} onLibrary={noop} onClose={noop} />);
     expect(html).not.toContain('format-badge');
-    for (const s of ["原始來源路徑未提供", "t1-B01主浴.dwg", "檔案大小: 651.1 KB", 'aria-label="我的圖面"', 'aria-label="關閉圖面"']) expect(html).toContain(s);
+    for (const s of ["瀏覽器不提供", "t1-B01主浴.dwg", "檔案大小: 651.1 KB", 'aria-label="我的圖面"', 'aria-label="關閉圖面"']) expect(html).toContain(s);
     const card = renderToStaticMarkup(<FileBar name="long.dwg" size={1} cardOpen onCard={noop} onLibrary={noop} onClose={noop} />);
     expect(card).toContain('aria-label="關閉完整檔名"');
   });

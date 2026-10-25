@@ -1,6 +1,7 @@
 // The App shell (T10): four screens (home / loading / viewing / error), opening and closing drawings,
 // Back / Esc order, exclusive working modes, top file bar and check strip, bottom tools. Owner: P4 group D.
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { clampTextPx, loadTextPx, saveTextPx } from "../viewer/markup";
 import { Capacitor } from "@capacitor/core";
 import { phonePreview, PREVIEW_CHANGE } from './devicePreview';
 import { MODEL_SPACE, type CadSpace, type EngineReport, type LoadStage } from "../types/drawing";
@@ -108,7 +109,8 @@ function useLazyPart<T>(loader: () => Promise<T>, enabled: boolean, onMissing?: 
 
 type LastDrawing = { file: File; entryId?: string; format: DrawingFormat };
 type SearchState = { query: string; hits: TextHit[]; index: number };
-type TextDialog = { kind: "new"; at: { x: number; y: number }; width?: number } | { kind: "edit"; index: number; initial: string };
+// multiline (edit): the text was written in a 多行 box or has line breaks, so it is edited in the 多行 box again.
+type TextDialog = { kind: "new"; at: { x: number; y: number }; width?: number } | { kind: "edit"; index: number; initial: string; multiline: boolean };
 type ShareNote = { text: string; error: boolean };
 
 export function App() {
@@ -166,12 +168,14 @@ export function App() {
   const [selecting, setSelecting] = useState(false);
   const [selectionTool, setSelectionTool] = useState<'single' | 'box'>('single');
   const [selectionCount, setSelectionCount] = useState(0);
-  const [markTool, setMarkTool] = useState<MarkTool>("pen");
+  const [markTool, setMarkTool] = useState<MarkTool>("none");
   const [markColor, setMarkColor] = useState(MARK_RED);
   const [markCount, setMarkCount] = useState(0);
   const [sharing, setSharing] = useState(false);
   const [shareNote, setShareNote] = useState<ShareNote | null>(null);
   const [textDialog, setTextDialog] = useState<TextDialog | null>(null);
+  // Size for new text markups (remembered on this device); while editing, the edited text's size.
+  const [textPx, setTextPx] = useState(loadTextPx);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState<SearchState | null>(null);
   // Export (spec 005): dialog → (area selection) → working → saved note with 分享／打開
@@ -386,7 +390,7 @@ export function App() {
     if (isPdf) return;
     setCadTab(null); setSearchOpen(false); endMeasure(); setShareNote(null); setTextDialog(null);
     if (marking) { setMarking(false); return; }
-    setMarkTool("pen"); setMarkColor(MARK_RED); setMarking(true);
+    setMarkTool("none"); setMarkColor(MARK_RED); setMarking(true);
   }, [isPdf, marking, endMeasure]);
 
   const toggleSearch = useCallback(() => {
@@ -615,9 +619,9 @@ export function App() {
         <cad.Canvas ref={canvasRef} file={drawable} createEngine={cad.createEngine} measurement={settings}
           selectionTool={selecting ? selectionTool : null} onSelectionCount={setSelectionCount}
           onDeleteMeasurements={indices => { const current = measureRef.current; applyMeasure({ ...current, settings: { ...current.settings, kept: removeSelected(current.settings.kept, indices) } }); }}
-          markup={marking ? { tool: markTool, color: markColor, editingIndex: textDialog?.kind === "edit" ? textDialog.index : undefined, textAnchor: textDialog?.kind === "new" ? { at: textDialog.at, width: textDialog.width } : null } : null}
+          markup={marking ? { tool: markTool, color: markColor, editingIndex: textDialog?.kind === "edit" ? textDialog.index : undefined, textAnchor: textDialog?.kind === "new" ? { at: textDialog.at, width: textDialog.width } : null, textPx } : null}
           onMarkText={(at, width) => setTextDialog({ kind: "new", at, width })}
-          onEditMarkText={(i, initial, color) => { if (!marking) return; setMarkColor(color); setTextDialog({ kind: "edit", index: i, initial }); }}
+          onEditMarkText={(i, initial, color, px, multiline) => { if (!marking) return; setMarkColor(color); setTextPx(clampTextPx(px)); setTextDialog({ kind: "edit", index: i, initial, multiline }); }}
           onEngine={(engine) => { engineRef.current = engine; }}
           onProgress={onProgress} onReady={onReady} onError={onViewerError} onPick={onPick} onPreview={setMeasurePreview}
           onMeasurementIndex={onMeasurementIndex} onSpaces={onSpaces} onMarkCount={setMarkCount} onReport={setReport} />
@@ -674,14 +678,15 @@ export function App() {
                 onShare={() => void share()} onDone={endMarkup} />
             ) : null}
             {marking && textDialog ? (
-              <MarkupTextDialog multiline={textDialog.kind === "new" ? textDialog.width !== undefined : textDialog.initial.includes(String.fromCharCode(10))}
+              <MarkupTextDialog multiline={textDialog.kind === "new" ? textDialog.width !== undefined : textDialog.multiline}
                 initial={textDialog.kind === "edit" ? textDialog.initial : undefined} color={markColor}
-                onCancel={() => setTextDialog(null)}
+                textPx={textPx} onTextPx={setTextPx}
+                onCancel={() => { setTextDialog(null); setTextPx(loadTextPx()); }}
                 onOk={(text) => {
                   const d = textDialog;
                   setTextDialog(null);
-                  if (d.kind === "edit") canvasRef.current?.editTextMark(d.index, text, markColor);
-                  else if (text.trim()) canvasRef.current?.addTextMark(d.at, text, d.width);
+                  if (d.kind === "edit") { canvasRef.current?.editTextMark(d.index, text, markColor, textPx); setTextPx(loadTextPx()); }
+                  else if (text.trim()) { canvasRef.current?.addTextMark(d.at, text, d.width, textPx); saveTextPx(textPx); }
                 }} />
             ) : null}
 
@@ -726,6 +731,8 @@ export function App() {
                 onClearAll={askClearAll} onClose={() => (glove ? setMeasureDetail(false) : endMeasure())} />
             ) : null}
 
+            {/* Snapping turned off while measuring: a red reminder at the top left (taps land exactly where pressed). */}
+            {measuring && !settings.snap ? <div className="snap-off-warning" role="status">{t("measure.snapOffWarning")}</div> : null}
             <SnapToast text={measuring && settings.snap && measure.toast ? t(toastKey(measure.toast.kind)) : null} serial={measure.toast?.serial ?? 0}
               previewText={measuring && settings.snap && measurePreview ? (measurePreview.snap ? t(`canvas.snap.${measurePreview.snap}` as TranslationKey) : null) : undefined} />
 

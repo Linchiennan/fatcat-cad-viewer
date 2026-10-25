@@ -2,6 +2,7 @@
 // scrolls, ✕ at the top right, Back / Esc closes (a license text opened inside goes back to the list first).
 // Loaded lazily from the home screen. Owner: P4 group D.
 import { useEffect, useState } from "react";
+import { DragRow } from "../components/DragRow";
 import nativePrivacyPolicy from "../../PRIVACY_POLICY.md?raw";
 import webPrivacyPolicy from "../../WEB_PRIVACY.md?raw";
 const privacyPolicy = import.meta.env.VITE_FATCAT_WEB === '1' ? webPrivacyPolicy : nativePrivacyPolicy;
@@ -56,7 +57,7 @@ function PrivacyBody({ onOpen }: { onOpen(file: string): void }) {
       <p><LicenseLink file="LICENSE" label={t("legal.gplFull")} onOpen={onOpen} /></p>
       <h2>{t("legal.thirdHeading")}</h2>
       <p>{t("legal.thirdIntro")}</p>
-      <div className="legal-table-wrap">
+      <DragRow className="legal-table-wrap">
         <table className="legal-table">
           <thead><tr><th>{t("legal.col.component")}</th><th>{t("legal.col.version")}</th><th>{t("legal.col.use")}</th><th>{t("legal.col.license")}</th></tr></thead>
           <tbody>
@@ -68,7 +69,7 @@ function PrivacyBody({ onOpen }: { onOpen(file: string): void }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </DragRow>
       <h2>{t("legal.textsHeading")}</h2>
       <ul className="legal-files">{texts.map((f) => <li key={f}><LicenseLink file={f} onOpen={onOpen} /></li>)}</ul>
     </>

@@ -302,15 +302,15 @@ button { cursor: pointer; }
 .glove-btn.is-on { background: var(--accent); border-color: var(--accent-hi); color: #1b1b1b; }
 .glove-btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
 .glove-caret { position: absolute; left: calc(50% + 12px); top: 34px; width: 9px; height: 6px; fill: currentColor; }
-/* ears: two small triangles on the top edge */
+/* ears: two round-tipped ears on the top edge, leaning outwards (用戶選 D：外斜圓耳) */
 .glove-ear::before, .glove-ear::after {
-  content: ""; position: absolute; top: -5px; width: 13px; height: 13px; transform: rotate(45deg);
-  background: var(--tile-bg); border-left: 1.5px solid var(--tile-line); border-top: 1.5px solid var(--tile-line); border-radius: 2px 0 0 0;
+  content: ""; position: absolute; top: -5px; width: 15px; height: 15px;
+  background: var(--tile-bg); border-left: 1.5px solid var(--tile-line); border-top: 1.5px solid var(--tile-line); border-radius: 8px 0 0 0;
 }
-.glove-ear::before { left: 11px; }
-.glove-ear::after { right: 11px; }
+.glove-ear::before { left: 10px; transform: rotate(30deg); }
+.glove-ear::after { right: 10px; transform: rotate(60deg); }
 .glove-ear.is-on::before, .glove-ear.is-on::after { background: var(--accent); border-color: var(--accent-hi); }
-.glove-whiskers { position: absolute; left: 3px; width: calc(100% - 6px); top: 40%; height: 9px; fill: none; stroke: #8fb3c7; stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.glove-whiskers { position: absolute; left: -6px; width: calc(100% + 12px); top: 33%; height: 18px; overflow: visible; fill: none; stroke: #8fb3c7; stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
 .glove-whiskers path { vector-effect: non-scaling-stroke; }
 .glove-ear.is-on .glove-whiskers { stroke: #6b4a10; }
 /* the centre paw */
@@ -688,3 +688,27 @@ button { cursor: pointer; }
   .loading-bar.is-unknown span { animation: none; left: 31%; }
   .marquee.scrolling span { animation: none; }
 }
+
+/* 註記文字大小：文字框右方的橫向拉桿＋數字框（8～96）。 */
+.markup-size { flex: none; display: flex; align-items: center; gap: 6px; }
+.markup-size input[type="range"] { flex: none; width: 92px; min-height: 0; padding: 0; border: 0; background: none; accent-color: var(--accent); }
+.markup-size input[type="number"] { flex: none; width: 56px; min-width: 0; min-height: 48px; padding: 0 6px; text-align: center; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; font-size: 16px; }
+.markup-dialog-actions { flex: none; display: flex; gap: 8px; } /* 確定＋✕ kept together at the right of the title */
+.markup-size input[type="number"]::-webkit-inner-spin-button, .markup-size input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.markup-size input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+/* 統一版面：標題｜拉桿｜數字｜確定｜✕ 一排，拉桿依剩餘寬度伸縮；輸入框在下一排佈滿。 */
+.markup-dialog-head .markup-dialog-title { flex: none; white-space: nowrap; }
+.markup-dialog-head .markup-size { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+.markup-dialog-head .markup-size input[type="range"] { flex: 1 1 auto; width: auto; min-width: 48px; max-width: 160px; }
+/* 窄手機（360 寬）也要一排放下：確定與數字框收窄、間距縮小，留空間給拉桿。 */
+.markup-dialog-head { gap: 6px; }
+.markup-dialog-head .markup-dialog-ok { padding: 0 12px; }
+.markup-dialog-head .markup-size input[type="number"] { width: 48px; }
+.markup-dialog-head .markup-dialog-actions { gap: 6px; }
+.markup-dialog-head .markup-size input[type="range"] { min-width: 40px; }
+/* 沒有標題：拉桿佈滿確定與 ✕ 左邊的全部寬度。 */
+.markup-dialog-head .markup-size { justify-content: flex-start; }
+.markup-dialog-head .markup-size input[type="range"] { max-width: none; }
+
+/* 量測時鎖點關閉：左上角（上方工具列下）紅字提醒；與置中的鎖點提示不會同時出現。 */
+.snap-off-warning { position: absolute; z-index: 35; left: 12px; top: calc(78px + var(--strip-h) + var(--safe-top)); padding: 4px 10px; border-radius: 8px; background: rgba(8, 16, 25, 0.82); color: #ff4d4f; font-size: 15px; font-weight: 700; white-space: nowrap; pointer-events: none; }

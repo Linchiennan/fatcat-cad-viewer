@@ -21,14 +21,25 @@ type Props = {
   onEditText?(index: number): void;
   /** Move the drawing by screen pixels (middle-button drag while a drawing tool is on). */
   onPan?(dx: number, dy: number): void;
+  /** Zoom by `factor` around screen px (x, y): the mouse wheel and a two-finger pinch while marking. */
+  onZoom?(x: number, y: number, factor: number): void;
   /** The spot picked for a text markup while its text is being typed (shown as a red paw). */
   textAnchor?: TextSpot | null;
+  /** Size of the text being typed, in screen pixels; the paw is drawn this tall. */
+  textPx?: number;
 };
 
-/** Cat paw in the chosen colour on the spot where the text will go (the text starts at its top-left). */
-function TextAnchorPaw({ x, y, color }: { x: number; y: number; color: string }) {
+/** The paw outline is 17.6 units tall; scaled so the paw is as tall as the text size. */
+const PAW_UNITS = 17.6;
+
+/**
+ * Cat paw in the chosen colour exactly where the first character will appear: the text starts at (x, y) and grows
+ * right and down, so the paw (drawn around its own centre) is moved half a character right and down and is as tall
+ * as the text.
+ */
+function TextAnchorPaw({ x, y, color, size, centered }: { x: number; y: number; color: string; size: number; centered?: boolean }) {
   return (
-    <g className="markup-text-anchor" transform={`translate(${x} ${y}) scale(1.6)`} style={{ fill: color, stroke: color.toLowerCase() === "#ffffff" ? "#333333" : "#ffffff" }}>
+    <g className="markup-text-anchor" data-size={size} transform={`translate(${centered ? x : x + size / 2} ${centered ? y : y + size / 2}) scale(${size / PAW_UNITS})`} style={{ fill: color, stroke: color.toLowerCase() === "#ffffff" ? "#333333" : "#ffffff" }}>
       <ellipse cx="-5.6" cy="-3.6" rx="1.7" ry="2.1" transform="rotate(-26 -5.6 -3.6)" />
       <ellipse cx="-2" cy="-6.6" rx="1.8" ry="2.2" />
       <ellipse cx="2" cy="-6.6" rx="1.8" ry="2.2" />
@@ -50,8 +61,8 @@ function twoPointMark(t: MarkTool, color: string, a: DrawingPoint, b: DrawingPoi
   return { kind: "pen", color, points: [a, b] };
 }
 
-/** Existing markups are moved as whole objects; only middle drag pans while marking. */
-export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd, onText, onEditText, onPan, textAnchor, active = true, onMove }: Props) {
+/** Existing markups are moved as whole objects; middle drag or two fingers pan, the wheel or a pinch zooms. */
+export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd, onText, onEditText, onPan, onZoom, textAnchor, textPx = TEXT_PX, active = true, onMove }: Props) {
   const svg = useRef<SVGSVGElement>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [moved, setMoved] = useState<Mark | null>(null);
@@ -62,16 +73,61 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
   const textBox = (i:number) => { const el=svg.current?.querySelector<SVGGraphicsElement>(`[data-mark-index="${i}"]`); return el?.getBBox?.(); };
   const hit = (e:{clientX:number;clientY:number}) => hitMark(marks,screen(e),project,ppu,textBox);
   const release = (id:number) => { if(svg.current?.hasPointerCapture?.(id))svg.current.releasePointerCapture(id); };
-  const cancel = () => { const ids=[gesture.current?.id,drawing.current?.id,panning.current?.id]; gesture.current=null; drawing.current=null;panning.current=null;setMoved(null);setDraft(null);tap.current=null;ids.forEach(id=>{if(id!==undefined)release(id);}); };
+  const cancel = () => { const ids=[gesture.current?.id,drawing.current?.id,panning.current?.id,textTap.current?.id]; gesture.current=null; drawing.current=null;panning.current=null;textTap.current=null;setMoved(null);setDraft(null);tap.current=null;ids.forEach(id=>{if(id!==undefined)release(id);}); };
   useEffect(() => { cancel();setSelected(null); }, [tool,active,marks]);
   const edit = (index:number) => { if(!active)return;const now=performance.now();if(now<editCooldown.current)return;editCooldown.current=now+450;tap.current=null;onEditText?.(index); };
   const drawing = useRef<{ id: number; points: DrawingPoint[] } | null>(null);
   const panning = useRef<{ id: number; x: number; y: number } | null>(null);
   const [draft, setDraft] = useState<DrawingPoint[] | null>(null);
   const local = (e: ReactPointerEvent) => { const r = e.currentTarget.getBoundingClientRect(); return unproject(e.clientX - r.left, e.clientY - r.top); };
+  // 文字 is placed when the finger lifts, so the first finger of a pinch does not open the text box.
+  const textTap = useRef<{ id: number; p: DrawingPoint; x: number; y: number } | null>(null);
+  // Two fingers zoom and pan the drawing in every markup tool (the second finger drops the stroke the first one began);
+  // after a pinch nothing is drawn until every finger is up.
+  const touches = useRef(new Map<number, DrawingPoint>());
+  const pinch = useRef<{ d: number; x: number; y: number } | null>(null);
+  const afterPinch = useRef(false);
+  const zoomRef = useRef(onZoom);
+  zoomRef.current = onZoom;
+  const pinchSpot = () => { const [a, b] = [...touches.current.values()]; return { d: Math.hypot(b.x - a.x, b.y - a.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+  const startPinch = (e: ReactPointerEvent<SVGSVGElement>) => {
+    cancel();
+    for (const id of touches.current.keys()) { try { e.currentTarget.setPointerCapture(id); } catch { /* finger already gone */ } }
+    pinch.current = pinchSpot();
+    afterPinch.current = true;
+  };
+  const movePinch = () => {
+    const prev = pinch.current!, next = pinchSpot();
+    onPan?.(next.x - prev.x, next.y - prev.y);
+    if (prev.d > 0 && next.d > 0) zoomRef.current?.(next.x, next.y, next.d / prev.d);
+    pinch.current = next;
+  };
+  const lift = (id: number) => {
+    touches.current.delete(id);
+    if (touches.current.size < 2) pinch.current = null;
+    if (!touches.current.size) afterPinch.current = false;
+  };
+  // The wheel zooms around the mouse; a native listener because React wheel handlers cannot stop the page scrolling.
+  useEffect(() => {
+    const el = svg.current;
+    if (!el || !active) return;
+    const wheel = (e: WheelEvent) => {
+      if (!zoomRef.current) return;
+      e.preventDefault();
+      const r = el.getBoundingClientRect(), dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1);
+      zoomRef.current(e.clientX - r.left, e.clientY - r.top, Math.exp(-dy * 0.0015));
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, [active]);
 
   const down = (e: ReactPointerEvent<SVGSVGElement>) => {
     if (!active) return;
+    if (e.pointerType === "touch") {
+      touches.current.set(e.pointerId, screen(e));
+      if (touches.current.size >= 2) { e.preventDefault(); startPinch(e); return; }
+    }
+    if (afterPinch.current) return;
     if (e.pointerType === "mouse" && e.button === 1) {
       // Middle button moves the drawing even while drawing tools are on (like two fingers on a phone).
       e.preventDefault();
@@ -91,7 +147,7 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
     if (!active) return;
     tap.current=null;
     e.preventDefault();
-    if (tool === "text") { onText(local(e)); return; }
+    if (tool === "text") { e.currentTarget.setPointerCapture(e.pointerId); textTap.current = { id: e.pointerId, p: local(e), x: e.clientX, y: e.clientY }; return; }
     // 多行: drag out the text box first (like the box tool); its width wraps the lines.
     e.currentTarget.setPointerCapture(e.pointerId);
     const p = local(e);
@@ -99,6 +155,10 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
     setDraft([p, p]);
   };
   const move = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === "touch" && touches.current.has(e.pointerId)) {
+      touches.current.set(e.pointerId, screen(e));
+      if (pinch.current) { e.preventDefault(); movePinch(); return; }
+    }
     const g=gesture.current;
     if(g && g.id===e.pointerId){
       e.preventDefault();e.stopPropagation();
@@ -115,6 +175,13 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
     setDraft(d.points);
   };
   const up = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === "touch") { const pinching = afterPinch.current; lift(e.pointerId); if (pinching) { release(e.pointerId); return; } }
+    const t = textTap.current;
+    if (t && t.id === e.pointerId) {
+      textTap.current = null; release(e.pointerId);
+      if (Math.hypot(e.clientX - t.x, e.clientY - t.y) <= 12) onText(t.p);
+      return;
+    }
     const g=gesture.current;
     if(g && g.id===e.pointerId){
       move(e);gesture.current=null;setMoved(null);release(e.pointerId);e.stopPropagation();e.preventDefault();
@@ -153,7 +220,7 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
   const selection = selected !== null && shown[selected] ? markBounds(shown[selected],project,ppu) : null;
 
   return (
-    <svg ref={svg} className={`markup-layer${!active ? " passive" : ""}`} aria-label="註記" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancel} onLostPointerCapture={()=>{if(gesture.current || drawing.current || panning.current)cancel();}}
+    <svg ref={svg} className={`markup-layer${!active ? " passive" : ""}`} aria-label="註記" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={e=>{if(e.pointerType==="touch")lift(e.pointerId);cancel();}} onLostPointerCapture={()=>{if(gesture.current || drawing.current || panning.current || textTap.current)cancel();}}
       onDoubleClick={e=>{if(!active)return;e.preventDefault();e.stopPropagation(); /* Pointer taps already handled editing; swallow synthetic dblclick only while marking. */}}>
       {all.map((m, i) => m.kind === "text"
         ? (() => { const [p] = project([m.at]); const px = Math.max(6, m.size * ppu); return <text key={i} data-mark-index={i} x={p.x} y={p.y + px * 0.85} fontSize={px} fill={m.color} className="markup-text">
@@ -164,8 +231,10 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
         : <polyline key={i} points={path(m.points)} stroke={m.color} strokeWidth={PEN_PX} fill="none" strokeLinecap="round" strokeLinejoin="round" />)}
         {selection ? <rect data-mark-selection={selected} x={selection.x-6} y={selection.y-6} width={selection.width+12} height={selection.height+12} fill="none" stroke="#00cfff" strokeWidth={2} strokeDasharray="5 3" pointerEvents="none" /> : null}
         {draft && tool === "mtext" ? (() => { const r = box([draft[0], draft.at(-1)!]); return <rect {...r} className="markup-textbox" stroke={color} />; })() : null}
-        {textAnchor?.width ? (() => { const [p] = project([textAnchor.at]); return <rect x={p.x} y={p.y} width={textAnchor.width * ppu} height={TEXT_PX * TEXT_LINE_GAP * 2} className="markup-textbox" stroke={color} />; })() : null}
-        {textAnchor ? (() => { const [p] = project([textAnchor.at]); return <TextAnchorPaw x={p.x} y={p.y} color={color} />; })() : null}
+        {textAnchor?.width ? (() => { const [p] = project([textAnchor.at]); return <rect x={p.x} y={p.y} width={textAnchor.width * ppu} height={textPx * TEXT_LINE_GAP * 2} className="markup-textbox" stroke={color} />; })() : null}
+        {textAnchor ? (() => { const [p] = project([textAnchor.at]); // One-line text: the paw is centred on the tapped spot (the first character will be centred there too).
+          // 多行 box: the paw sits in the box's first character cell.
+          return <TextAnchorPaw x={p.x} y={p.y} color={color} size={textPx} centered={!textAnchor.width} />; })() : null}
     </svg>
   );
 }

@@ -1,10 +1,11 @@
 // Drawing library overlay (T11 2, 4, 8.5; exports area spec 005). Owner: P4 group A.
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { DragRow } from "../components/DragRow";
 import { IS_WEB_BUILD } from "../app/platform";
 import { MarqueeText } from "../components/MarqueeText";
 import { RecentCarousel } from "../components/RecentCarousel";
 import {
-  ArrowLeftIcon, ChevronRightIcon, CloseIcon, CopyIcon, FileIcon, FolderCheckIcon, FolderIcon, ImportIcon, MoreIcon, MoveIcon,
+  ArrowLeftIcon, ChevronRightIcon, CloseIcon, FileIcon, FolderCheckIcon, FolderIcon, FolderOpenIcon, ImportIcon, MoreIcon,
   RenameIcon, TrashIcon,
 } from "../components/Icons";
 import { openArchive, type ArchiveItem, type ArchiveSession } from "../files/archives";
@@ -14,7 +15,7 @@ import {
   MAX_NAME_LENGTH, ROOT_ID, copyLibraryEntry, createLibraryFolder, deleteLibraryEntry, importArchiveToLibrary,
   importDrawingToLibrary, libraryBreadcrumb, listLibraryChildren, listLibraryFolders, listRecentDrawings, moveLibraryEntry,
   openLibraryDrawing, renameLibraryEntry, replaceLibraryDrawing, requestPersistentStorage,
-  type LibraryDrawingEntry, type LibraryEntry, type LibraryFolderEntry,
+  folderImportItems, folderNameOf, type ArchiveImportItem, type LibraryDrawingEntry, type LibraryEntry, type LibraryFolderEntry,
 } from "./drawingLibrary";
 import { libraryText } from "./libraryText";
 import {
@@ -89,6 +90,8 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   });
   useEffect(() => () => { choiceRef.current?.('cancel'); choiceRef.current = null; }, []);
   const addInput = useRef<HTMLInputElement>(null);
+  const folderInput = useRef<HTMLInputElement>(null);
+  const [folderOffer, setFolderOffer] = useState<{ name: string; items: ArchiveImportItem[]; bytes: number } | null>(null);
   const replaceInput = useRef<HTMLInputElement>(null);
   const replaceTarget = useRef<LibraryDrawingEntry | null>(null);
   const archiveRun = useRef<{ token: number; controller: AbortController; session: ArchiveSession | null; file: File | null }>({ token: 0, controller: new AbortController(), session: null, file: null });
@@ -287,6 +290,27 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
     });
   };
 
+  // 整個資料夾 uses the plain folder picker input everywhere: it gives each file its path inside the folder, and the
+  // embedded / in-app browsers reject showDirectoryPicker without opening anything. Nothing is imported until the
+  // user confirms the count and size.
+  const pickFolder = () => {
+    if (!busyRef.current) folderInput.current?.click();
+  };
+  const offerFolder = (name: string, files: File[]) => {
+    const items = folderImportItems(files);
+    if (!items.length) { setNotice({ text: t("library.folderEmpty"), error: true }); return; }
+    setFolderOffer({ name: name || t("library.addFolder"), items, bytes: items.reduce((n, i) => n + i.file.size, 0) });
+  };
+  const importFolder = (offer: { name: string; items: ArchiveImportItem[] }) => {
+    setFolderOffer(null);
+    void runBusy(async () => {
+      const result = await importArchiveToLibrary(offer.items, folderId, offer.name);
+      refresh();
+      goToFolder(result.folder.id);
+      setNotice({ text: t("library.folderImported", { n: result.drawings.length, name: result.folder.name }), error: false });
+    });
+  };
+
   const onReplaceFile = (list: FileList | null) => {
     const file = list?.[0];
     if (replaceInput.current) replaceInput.current.value = "";
@@ -364,7 +388,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         />
       ) : (
       <div className="lib-body" inert={blocked}>
-        <nav className="lib-crumbs" aria-label={t("library.rootFolder")}>
+        <DragRow as="nav" className="lib-crumbs" aria-label={t("library.rootFolder")}>
           <button type="button" className={folderId === ROOT_ID ? "current" : ""} disabled={busy || loading} onClick={() => goToFolder(ROOT_ID)}>
             {t("library.rootFolder")}
           </button>
@@ -374,18 +398,25 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
               <button type="button" className={c.id === folderId ? "current" : ""} disabled={busy || loading} onClick={() => goToFolder(c.id)}>{c.name}</button>
             </span>
           ))}
-        </nav>
+        </DragRow>
 
         {IS_WEB_BUILD ? <p className="lib-web-note">{t("library.webNote")}</p> : null}
 
         <div className="lib-actions">
+          {/* 單一檔案 = browser file picker (no folder info); 整個資料夾 keeps each file's path inside the folder and its
+              drawings serve as external references (same-name files in the library are applied automatically). */}
           <button type="button" className="lib-primary" disabled={busy} onClick={() => addInput.current?.click()}>
-            <ImportIcon /> <span>{t("library.addFiles")}</span>
+            <ImportIcon /> <span className="lib-two-line">{t("library.addOneFileBtn")}</span>
+          </button>
+          <button type="button" className="lib-primary" disabled={busy} onClick={pickFolder} title={t("library.addFolderTip")}>
+            <FolderOpenIcon /> <span className="lib-two-line">{t("library.addFolderBtn")}</span>
           </button>
           <button type="button" className="lib-secondary" disabled={busy} onClick={() => { setExportPopup(null); setExportsOpen(true); }}>
             <FolderCheckIcon /> <span>{libraryText(locale, "exports")}</span>
           </button>
           <input ref={addInput} type="file" multiple accept={FILE_ACCEPT} hidden onChange={(e) => onAddFiles(e.currentTarget.files)} />
+          <input ref={folderInput} type="file" multiple hidden {...({ webkitdirectory: "" } as object)} aria-label={t("library.addFolder")}
+            onChange={(e) => { const list = e.currentTarget.files ? Array.from(e.currentTarget.files) : []; e.currentTarget.value = ""; offerFolder(folderNameOf(list), list); }} />
           <input ref={replaceInput} type="file" hidden aria-label={t("library.replacePickerLabel")} onChange={(e) => onReplaceFile(e.currentTarget.files)} />
         </div>
 
@@ -561,6 +592,16 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         />
       ) : null}
 
+      {folderOffer ? (
+        <Dialog className="lib-dialog" label={t("library.addFolder")} onCancel={() => setFolderOffer(null)}>
+          <h3>{t("library.folderConfirmTitle", { name: folderOffer.name })}</h3>
+          <p>{t("library.folderConfirmBody", { n: folderOffer.items.length, size: formatLibrarySize(folderOffer.bytes, locale) })}</p>
+          <div className="lib-dialog-buttons">
+            <button type="button" className="lib-secondary" onClick={() => setFolderOffer(null)}>{t("action.cancel")}</button>
+            <button type="button" className="lib-primary" onClick={() => importFolder(folderOffer)}>{t("library.folderConfirmOk")}</button>
+          </div>
+        </Dialog>
+      ) : null}
       {notice ? (
         <div className={notice.error ? "lib-toast error" : "lib-toast"} role={notice.error ? "alert" : "status"} onClick={() => setNotice(null)}>
           {notice.text}
@@ -574,14 +615,13 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
 }
 
 function ActionSheet({ entry, onCancel, onReplace, onPick }: {
-  entry: LibraryEntry; onCancel(): void; onReplace(): void; onPick(kind: "rename" | "copy" | "move" | "delete"): void;
+  entry: LibraryEntry; onCancel(): void; onReplace(): void; onPick(kind: "rename" | "delete"): void;
 }) {
   const { t } = useI18n();
   const canReplace = entry.kind === "drawing" && !isArchiveFormat(entry.format);
-  const tiles: { kind: "rename" | "copy" | "move" | "delete"; icon: ReactNode; label: string }[] = [
+  // 複製／移動 removed (user request): a drawing sheet only renames or deletes.
+  const tiles: { kind: "rename" | "delete"; icon: ReactNode; label: string }[] = [
     { kind: "rename", icon: <RenameIcon />, label: t("action.rename") },
-    { kind: "copy", icon: <CopyIcon />, label: t("action.copy") },
-    { kind: "move", icon: <MoveIcon />, label: t("action.move") },
     { kind: "delete", icon: <TrashIcon />, label: t("action.delete") },
   ];
   return (
@@ -595,7 +635,7 @@ function ActionSheet({ entry, onCancel, onReplace, onPick }: {
           <p>{t("library.replaceNote")}</p>
         </div>
       ) : null}
-      <div className="lib-sheet-tiles">
+      <div className="lib-sheet-tiles two">
         {tiles.map((tile) => (
           <button key={tile.kind} type="button" className={tile.kind === "delete" ? "lib-tile danger" : "lib-tile"} onClick={() => onPick(tile.kind)}>
             {tile.icon}

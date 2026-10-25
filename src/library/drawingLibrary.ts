@@ -565,6 +565,28 @@ export function archiveFolderName(archiveName: string): string {
   return base && isValidLibraryName(base) ? base : "Archive";
 }
 
+/**
+ * The drawings a folder pick brought in, as import items: path inside the chosen folder (the folder's own name
+ * dropped, because it becomes the new library folder), drawings only (no archives, no empty files).
+ */
+export function folderImportItems(files: readonly File[]): ArchiveImportItem[] {
+  const out: ArchiveImportItem[] = [];
+  for (const file of files) {
+    const rel = (file.webkitRelativePath || file.name).replace(/\\/g, "/");
+    const path = rel.includes("/") ? rel.slice(rel.indexOf("/") + 1) : rel;
+    const format = detectDrawingFormat(file.name);
+    if (!path || !format || isArchiveFormat(format) || !isImportableFormat(format) || !(file.size > 0)) continue;
+    out.push({ path, file });
+  }
+  return out;
+}
+
+/** The chosen folder's name, from the files' relative paths ("CAD/x.dwg" → "CAD"). */
+export function folderNameOf(files: readonly File[]): string {
+  const rel = files.find((f) => f.webkitRelativePath)?.webkitRelativePath.replace(/\\/g, "/") ?? "";
+  return rel.includes("/") ? rel.slice(0, rel.indexOf("/")) : "";
+}
+
 /** Import checked archive items into a new folder (one transaction, all or nothing). */
 export async function importArchiveToLibrary(
   items: readonly ArchiveImportItem[], parentId: string, archiveName: string, signal?: AbortSignal,

@@ -39,7 +39,9 @@ export async function forgetFolder(name: string): Promise<void> {
   await run("readwrite", (s) => s.delete(name));
 }
 
-async function walk(root: DirHandle, names: Set<string> | null): Promise<{ file: File; origin: string }[]> {
+const XREF_FILES = /\.(dwg|dxf|png|jpe?g)$/;
+
+async function walk(root: DirHandle, names: Set<string> | null, accept: RegExp = XREF_FILES): Promise<{ file: File; origin: string }[]> {
   const out: { file: File; origin: string }[] = [];
   let seen = 0;
   const visit = async (dir: DirHandle, prefix: string, depth: number) => {
@@ -47,7 +49,7 @@ async function walk(root: DirHandle, names: Set<string> | null): Promise<{ file:
       if (++seen > MAX_ENTRIES) return;
       if (entry.kind === "directory") { if (depth < MAX_DEPTH) await visit(entry, prefix + entry.name + "/", depth + 1); continue; }
       const lower = String(entry.name).toLocaleLowerCase("en-US");
-      if (!/\.(dwg|dxf|png|jpe?g)$/.test(lower) || (names && !names.has(lower))) continue;
+      if (!accept.test(lower) || (names && !names.has(lower))) continue;
       const file: File = await entry.getFile();
       Object.defineProperty(file, "webkitRelativePath", { value: prefix + entry.name });
       out.push({ file, origin: `記住的資料夾「${root.name}」` });

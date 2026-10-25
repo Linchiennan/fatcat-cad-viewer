@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useMouseDragScroll } from "./middleDragScroll";
 import type { ComponentType, SVGProps } from "react";
-import { MARK_COLORS, type MarkTool } from "../viewer/markup";
+import { MARK_COLORS, type MarkTool, TEXT_PX, TEXT_PX_MIN, TEXT_PX_MAX, clampTextPx } from "../viewer/markup";
 import { useI18n, type TranslationKey } from "../i18n/translations";
 import { IconTile } from "./IconTile";
 import { ArrowIcon, ArrowLeftIcon, CheckIcon, CircleIcon, EllipseIcon, HandIcon, LineIcon, PenIcon, RectIcon, ShareIcon, TextBoxIcon, TextIcon } from "./Icons";
 
 type ToolFace = { tool: MarkTool; Icon: ComponentType<SVGProps<SVGSVGElement>> };
-// Each slot holds one tool or a pair; tapping the pressed slot again switches to its other tool.
+// Each slot holds one tool or a few; tapping the pressed slot steps to the next one, and after the last one to no tool
+// at all (用戶指定：輪完一輪「通通不選」), so the next tap starts again from the first.
 const SLOTS: ToolFace[][] = [
   [{ tool: "pen", Icon: PenIcon }, { tool: "line", Icon: LineIcon }, { tool: "arrow", Icon: ArrowIcon }],
   [{ tool: "rect", Icon: RectIcon }, { tool: "circle", Icon: CircleIcon }, { tool: "ellipse", Icon: EllipseIcon }],
@@ -36,7 +38,8 @@ export function MarkupBar({ tool, color, count, sharing, onTool, onColor, onUndo
           const active = slot.findIndex((f) => f.tool === tool);
           const face = slot[active >= 0 ? active : faces[s]];
           const pick = () => {
-            const next = active >= 0 && slot.length > 1 ? (active + 1) % slot.length : (active >= 0 ? active : faces[s]);
+            const next = active >= 0 ? active + 1 : faces[s];
+            if (next >= slot.length) { setFaces((list) => list.map((v, i) => (i === s ? 0 : v))); onTool("none"); return; }
             setFaces((list) => list.map((v, i) => (i === s ? next : v)));
             onTool(slot[next].tool);
           };
@@ -63,7 +66,6 @@ function ColorStrip({ color, onColor }: { color: string; onColor(c: string): voi
   const { t } = useI18n();
   const colorName = (zh: string) => (COLOR_KEYS[zh] ? t(COLOR_KEYS[zh]) : zh);
   const row = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x: number; left: number; moved: boolean } | null>(null);
   const pages = Math.ceil(MARK_COLORS.length / COLORS_PER_PAGE);
   const [page, setPage] = useState(0);
   const pageWidth = () => (row.current?.clientWidth ?? 0) + 6; // three swatches plus the 6 px gap after them
@@ -79,32 +81,11 @@ function ColorStrip({ color, onColor }: { color: string; onColor(c: string): voi
     return () => el.removeEventListener("scroll", onScroll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const down = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== "mouse" || !row.current) return; // fingers scroll natively
-    drag.current = { x: e.clientX, left: row.current.scrollLeft, moved: false };
-    row.current.classList.add("dragging");
-  };
-  const move = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = drag.current, el = row.current;
-    if (!d || !el) return;
-    if (Math.abs(e.clientX - d.x) > 4) d.moved = true;
-    el.scrollLeft = d.left - (e.clientX - d.x);
-  };
-  const up = () => {
-    const d = drag.current, el = row.current;
-    if (!d || !el) return;
-    el.classList.remove("dragging");
-    goTo(Math.round(el.scrollLeft / Math.max(1, pageWidth())));
-    if (d.moved) {
-      const swallow = (ev: MouseEvent) => { ev.stopPropagation(); ev.preventDefault(); };
-      el.addEventListener("click", swallow, { capture: true, once: true });
-      setTimeout(() => el.removeEventListener("click", swallow, { capture: true }), 300);
-    }
-    drag.current = null;
-  };
+  // A mouse drags the strip with the left or middle button (fingers scroll natively); release snaps to a page.
+  useMouseDragScroll(row, { buttons: [0, 1], onEnd: (el) => goTo(Math.round(el.scrollLeft / Math.max(1, pageWidth()))) });
   return (
     <div className="markup-color-wrap">
-      <div className="markup-colors" ref={row} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} onPointerCancel={up}>
+      <div className="markup-colors" ref={row}>
         {MARK_COLORS.map((c) => (
           <button key={c.value} type="button" className="markup-color" aria-pressed={color === c.value} aria-label={t("markup.colorName", { name: colorName(c.name) })} title={t("markup.colorLabel", { name: colorName(c.name) })} onClick={() => onColor(c.value)}>
             <i style={{ background: c.value }} />
@@ -127,7 +108,7 @@ const MTEXT_MIN_HEIGHT = 150;
  * `multiline`: a 多行 text box — opens at half the screen with the white drag bar to resize it;
  * Enter starts a new line, 確定 (or Ctrl+Enter) finishes.
  */
-export function MarkupTextDialog({ onOk, onCancel, initial, multiline, color }: { onOk(text: string): void; onCancel(): void; initial?: string; multiline?: boolean; color?: string }) {
+export function MarkupTextDialog({ onOk, onCancel, initial, multiline, color, textPx = TEXT_PX, onTextPx }: { onOk(text: string): void; onCancel(): void; initial?: string; multiline?: boolean; color?: string; textPx?: number; onTextPx?(px: number): void }) {
   const { t } = useI18n();
   const editing = initial !== undefined;
   const [text, setText] = useState(initial ?? "");
@@ -154,26 +135,51 @@ export function MarkupTextDialog({ onOk, onCancel, initial, multiline, color }: 
   useEffect(() => { input.current?.focus(); if (editing) input.current?.select(); }, [editing]);
   // Half the screen to start, but never over the toolbar on a short screen.
   useEffect(() => { if (multiline && box.current && box.current.getBoundingClientRect().height > maxHeight()) setHeight(maxHeight()); }, [multiline]);
-  const buttons = <>
-    <button type="button" className="markup-dialog-ok" disabled={!text.trim() && !editing} onClick={() => onOk(text)}>{editing && !text.trim() ? t("markup.delete") : t("markup.ok")}</button>
+  // Typing in the number box shows the digits as typed; the size itself is clamped to the allowed range.
+  const [sizeDraft, setSizeDraft] = useState<string | null>(null);
+  const setSize = (n: number) => onTextPx?.(clampTextPx(n));
+  const sizeControl = onTextPx ? (
+    <div className="markup-size" role="group" aria-label={t("markup.sizeLabel")} title={t("markup.sizeTip")}>
+      <input type="range" min={TEXT_PX_MIN} max={TEXT_PX_MAX} step={1} value={textPx} aria-label={t("markup.sizeSlider")}
+        onChange={(e) => { setSizeDraft(null); setSize(Number(e.target.value)); }} />
+      <input type="number" inputMode="numeric" min={TEXT_PX_MIN} max={TEXT_PX_MAX} step={1} value={sizeDraft ?? String(textPx)} aria-label={t("markup.sizeNumber")}
+        onChange={(e) => { setSizeDraft(e.target.value); const n = Number(e.target.value); if (e.target.value !== "" && n >= TEXT_PX_MIN && n <= TEXT_PX_MAX) setSize(n); }}
+        onBlur={() => { if (sizeDraft !== null) { setSize(Number(sizeDraft)); setSizeDraft(null); } }}
+        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setSize(Number(sizeDraft ?? textPx)); setSizeDraft(null); input.current?.focus(); } }} />
+    </div>
+  ) : null;
+  // Android Chinese keyboards keep the characters "composing" (underlined, not committed) and some never send an
+  // input event until the composition ends, so the state can say empty while the box shows 中文. Track composition,
+  // and take what the box really holds when 確定 is pressed.
+  const [composing, setComposing] = useState(false);
+  const boxText = () => input.current?.value ?? text;
+  const ok = () => onOk(boxText());
+  const typing = {
+    onChange: (e: { target: { value: string } }) => setText(e.target.value),
+    onCompositionStart: () => setComposing(true),
+    onCompositionUpdate: (e: { currentTarget: { value: string } }) => setText(e.currentTarget.value),
+    onCompositionEnd: (e: { currentTarget: { value: string } }) => { setComposing(false); setText(e.currentTarget.value); },
+  };
+  // Enter while composing picks the keyboard candidate, it does not confirm the text.
+  const enterOk = (e: { nativeEvent: KeyboardEvent }) => !e.nativeEvent.isComposing && (boxText().trim() || editing);
+  const buttons = <span className="markup-dialog-actions">
+    <button type="button" className="markup-dialog-ok" disabled={!composing && !text.trim() && !editing} onClick={ok}>{editing && !text.trim() && !composing ? t("markup.delete") : t("markup.ok")}</button>
     <button type="button" className="markup-dialog-cancel" aria-label={t("markup.cancel")} onClick={onCancel}>✕</button>
-  </>;
+  </span>;
   return (
     // Two rows sitting right on the bottom buttons: the title, then the text box with 確定 and ✕.
-    <div ref={box} className={`markup-dialog${multiline ? " multiline" : ""}`} role="dialog" aria-label={editing ? t("markup.editTitle") : t("markup.inputTitle")} style={multiline && height ? { height } : undefined}>
+    <div ref={box} className={`markup-dialog${multiline ? " multiline" : ""}`} role="dialog" aria-label={editing ? t("markup.editTitle") : multiline ? t("markup.inputMultiTitle") : t("markup.inputTitle")} style={multiline && height ? { height } : undefined}>
       {multiline ? <div className="panel-drag" role="separator" aria-orientation="horizontal" aria-label={t("markup.dragLabel")} title={t("markup.dragLabel")}
         onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}><span /></div> : null}
-      {multiline
-        // 多行: 確定 and ✕ ride on the title line so the text area below gets all the room.
-        ? <div className="markup-dialog-head"><strong className="markup-dialog-title">{editing ? t("markup.editTitle") : t("markup.inputMultiTitle")}</strong>{buttons}</div>
-        : <strong className="markup-dialog-title">{editing ? t("markup.editTitle") : t("markup.inputTitle")}</strong>}
+      {/* Same layout for one line and 多行: the size slider (all the room left), number, 確定 and ✕ on the top line;
+          the text box (or 多行 text area) fills the line below. No visible title; the dialog keeps its name for screen readers. */}
+      <div className="markup-dialog-head">{sizeControl}{buttons}</div>
       <div className="markup-dialog-row">
         {multiline
           ? <textarea ref={input} value={text} style={{ color }} maxLength={400} placeholder={t("markup.placeholderMulti")} aria-label={t("markup.textLabel")}
-              onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && (text.trim() || editing)) onOk(text); }} />
+              {...typing} onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && enterOk(e)) ok(); }} />
           : <input ref={input} value={text} style={{ color }} maxLength={80} placeholder={t("markup.placeholder")} aria-label={t("markup.textLabel")}
-              onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && (text.trim() || editing)) onOk(text); }} />}
-        {multiline ? null : buttons}
+              {...typing} onKeyDown={(e) => { if (e.key === "Enter" && enterOk(e)) ok(); }} />}
       </div>
     </div>
   );

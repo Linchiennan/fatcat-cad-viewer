@@ -42,6 +42,10 @@ describe("sheet units (T16 3.4)", () => {
     expect(formatResult(mm, 1)(10000, true)).toBe("100.0 cm²");
     expect(formatLabel(628, mm, 1)).toBe("62.8 cm");
     expect(formatLabel(628, { source: "drawing", display: "drawing", assumed: false }, 2)).toBe("628.00");
+    // 齒輪「圖上數字顯示單位」關閉：只留換算後的數字（面積也一樣），結果面板仍用 formatResult 帶單位
+    expect(formatLabel(628, mm, 1, false)).toBe("62.8");
+    expect(formatLabel(10000, mm, 1, false, true)).toBe("100.0");
+    expect(formatLabel(10000, mm, 1, true, true)).toBe("100.0 cm²");
   });
 });
 
