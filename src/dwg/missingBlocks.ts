@@ -134,13 +134,21 @@ export function rebuildBlocks(db: Any, names: readonly string[], arrowSize = 2.5
 // (Greek is excluded: φ/α are normal on drawings).
 const SUSPECT = /\U\+0(?:[12][0-9A-Fa-f]{2}|3[0-6][0-9A-Fa-f]|[4-7][0-9A-Fa-f]{2})/g;
 const CJK_CODEPAGE = /^\s*ANSI_(932|936|949|950)\s*$/;
+// Text the writer turns into old multibyte codes ("\M+5B4C5") sometimes gets bytes read past its end appended
+// (":磁簧防盜感應器" came out with "L\x06" after it; 上晴 D 區 had 733 such texts, all with \M+ codes). The object
+// reader has the same text without the tail. Long ones (over ~250 characters, 上晴 A/D 區 material notes) come out as
+// only their last part behind leftovers of an earlier string, so any text the reader holds in these codes is taken
+// from the reader.
+const MIF_CODE = /\\M\+[1-5][0-9A-Fa-f]{4}/;
+// A tail can also be a cut-off piece of such a code ("Yoga\PRoom" came out with "+5C0FD\" after it, 上晴 D 區).
+const MIF_PIECE = /\+[1-5][0-9A-Fa-f]{4}/;
 
 export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).length;
 
 /** True when a converted DXF looks like it carries mis-decoded text worth re-reading. */
 export function needsTextRecovery(dxf: string): boolean {
   const head = dxf.slice(0, 20000).split(/\r?\n/), i = head.findIndex((l) => l === "$DWGCODEPAGE");
-  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && suspectTextCount(dxf) >= 3;
+  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 3 || MIF_CODE.test(dxf));
 }
 
 /** Text of every text-bearing entity by handle, from the object reader. */
@@ -156,13 +164,17 @@ export function readerTexts(db: Any): Record<string, string> {
   return out;
 }
 
-/** Replace mis-decoded text with the reader's; returns how many entities were fixed. */
+/**
+ * Replace mis-decoded text with the reader's: text with garbage escapes, or the reader's text with a tail appended
+ * after old multibyte codes (bytes read past the end of the string). Returns how many entities were fixed.
+ */
 export function applyReaderTexts(doc: Any, texts: Record<string, string>): number {
   let fixed = 0;
   const all = [...(doc.entities ?? []), ...Object.values(doc.blocks ?? {}).flatMap((b: Any) => b.entities ?? [])];
   for (const e of all) {
     const better = e.handle && texts[e.handle];
-    if (better && typeof e.text === "string" && suspectTextCount(e.text) > 0 && better !== e.text) { e.text = better; fixed++; }
+    if (!better || typeof e.text !== "string" || better === e.text) continue;
+    if (suspectTextCount(e.text) > 0 || MIF_CODE.test(better) || (e.text.startsWith(better) && (MIF_CODE.test(e.text) || MIF_PIECE.test(e.text.slice(better.length))))) { e.text = better; fixed++; }
   }
   return fixed;
 }

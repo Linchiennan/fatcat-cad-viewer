@@ -55,6 +55,27 @@ describe("text LibreDWG's DXF writer mis-decoded (15A 客變圖 R2004 Big5 MTEXT
     expect(doc.entities[0].text).toContain("五十七間堂");
     expect(doc.entities[1].text).toBe("正常（DXF）");
   });
+
+  // 惠宇施工圖 E05：":磁簧防盜感應器" 寫成舊式碼後多讀了兩個位元組（"L" 與 0x06）；上晴 D 區 733 筆同樣情形。
+  const mif = ":\\M+5B4C5\\M+5BBC9\\M+5B7C0\\M+5B149\\M+5B8D0\\M+591AA\\M+5C6F7";
+  it("re-reads drawings with old multibyte codes, where tails get appended", () => {
+    expect(needsTextRecovery(head("ANSI_950", `  1\n${mif}L\x06\n`))).toBe(true);
+    expect(needsTextRecovery(head("ANSI_1252", `  1\n${mif}\n`))).toBe(false);
+  });
+
+  it("takes text held in old multibyte codes from the reader; other differences stay as the DXF has them", () => {
+    const long = "2." + mif + " ".repeat(70) + "A=(10.29+1.35=11.64M2";
+    const texts = { T1: mif, T2: "天然橡木", T3: long, T4: "1F", T5: "Yoga\\PRoom" };
+    const doc = { entities: [
+      { type: "TEXT", handle: "T1", text: mif + "L\x06" }, // tail after codes
+      { type: "TEXT", handle: "T2", text: "天然橡木染色" }, // no old codes: not this bug, left alone
+      { type: "TEXT", handle: "T3", text: "80.2m              A=(10.29+1.35=11.64M2 " }, // 上晴 A 區: last part behind leftovers
+      { type: "TEXT", handle: "T4", text: "2F" },
+      { type: "MTEXT", handle: "T5", text: "Yoga\\PRoom+5C0FD\\" }, // cut-off piece of a code as the tail
+    ], blocks: {} };
+    expect(applyReaderTexts(doc, texts)).toBe(3);
+    expect(doc.entities.map((e) => e.text)).toEqual([mif, "天然橡木染色", long, "2F", "Yoga\\PRoom"]);
+  });
 });
 
 import { headerArrowSize } from "./missingBlocks";

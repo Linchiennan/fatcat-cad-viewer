@@ -185,8 +185,8 @@
   "section": "錯誤畫面（20 鍵）"
  },
  "error.dwg.parse": {
-  "zh": "DWG 包含目前引擎無法讀取的資料或圖面物件。",
-  "en": "The DWG contains data or objects the engine can't read.",
+  "zh": "DWG 包含目前引擎無法讀取的資料或圖面物件。可在電腦 CAD 開啟後另存一次（例如另存成 2013 版）再開。",
+  "en": "The DWG contains data or objects the engine can't read. Open it in desktop CAD, save it once (for example as 2013), then open it again.",
   "section": "錯誤畫面（20 鍵）"
  },
  "error.dwg.runtime": {

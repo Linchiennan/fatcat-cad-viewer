@@ -2,10 +2,14 @@
 // into ACIS data, material XML). DXF is strict code/value line pairs, so the next line is taken as a
 // group code and the whole drawing fails to open. Drop the stray lines until the pairs line up again.
 const GROUP_CODE = /^\s*-?\d{1,4}\s*$/;
+// Lines are split exactly as the parser splits them (dxf-viewer DxfParser: \r\n, \r or \n). A lone \r inside a
+// string read past its end (上晴 A 區大廳: a block name followed by control bytes) made the parser see a line this
+// repair did not, so the drawing still failed to open after the repair.
+const LINE_BREAK = /\r\n|\r|\n/;
 
 export function repairDxfText(text: string): { text: string; dropped: number } {
-  const trailing = /\r?\n$/.test(text);
-  const lines = (trailing ? text.replace(/\r?\n$/, "") : text).split(/\r?\n/), out: string[] = [];
+  const trailing = /(\r\n|\r|\n)$/.test(text);
+  const lines = (trailing ? text.replace(/(\r\n|\r|\n)$/, "") : text).split(LINE_BREAK), out: string[] = [];
   let dropped = 0;
   for (let i = 0; i < lines.length;) {
     if (!GROUP_CODE.test(lines[i])) {

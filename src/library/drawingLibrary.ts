@@ -599,7 +599,8 @@ export async function importArchiveToLibrary(
     const path = normalizeArchivePath(item.path);
     const name = path.slice(path.lastIndexOf("/") + 1);
     const format = detectDrawingFormat(name);
-    if (!isImportableFormat(format) || !Number.isSafeInteger(item.file.size) || item.file.size <= 0 || item.file.name !== name) {
+    if (!isImportableFormat(format) || !Number.isSafeInteger(item.file.size) || item.file.size <= 0 || normalizeLibraryName(item.file.name) !== name) {
+      // compared normalised: the path has runs of spaces collapsed ("公設B區-2.dwg  算圖.dwg" was refused as a bad file)
       throw fail("INVALID_FILE", "bad archive item");
     }
     return { path, name, format: format!, file: item.file };

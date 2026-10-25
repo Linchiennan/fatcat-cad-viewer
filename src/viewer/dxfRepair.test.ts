@@ -22,6 +22,15 @@ describe("repairing DXF lines LibreDWG broke", () => {
     expect((new DxfParser().parseSync(text) as any).entities[0].vertices[1]).toMatchObject({ x: 3, y: 4 });
   });
 
+  it("splits lines like the parser, lone CR included (上晴 A 區大廳：block name read past its end)", () => {
+    // the value line holds a lone \r followed by "\x028": the parser sees "\x028" as a group code line
+    const broken = dxf(`  0\nLINE\n  8\nlight-\\M+5A651\x02\r\x028\x02h\n 10\n1\n 20\n2\n 11\n3\n 21\n4\n`).replace(/\n/g, "\r\n");
+    expect(() => new DxfParser().parseSync(broken)).toThrow(/Cannot parse group code/);
+    const { text, dropped } = repairDxfText(broken);
+    expect(dropped).toBe(1);
+    expect((new DxfParser().parseSync(text) as any).entities[0].vertices[1]).toMatchObject({ x: 3, y: 4 });
+  });
+
   it("leaves a sound file unchanged", () => {
     const sound = dxf(LINE);
     expect(repairDxfText(sound)).toEqual({ text: sound.replace(/\n$/, "\n"), dropped: 0 });

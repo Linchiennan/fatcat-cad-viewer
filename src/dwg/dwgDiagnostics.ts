@@ -34,9 +34,15 @@ export function engineCodeName(error: number): string {
 /** Errors after which the object reader's data cannot be used. */
 export const FATAL_READ_ERRORS = 1024 | 2048 | 4096 | 8192;
 
-/** Code for a non-zero engine error value (T13 5.2-2..4). */
-export function classifyEngineError(error: number): DwgErrorCode {
-  if (error & 8192) return "DWG_MEMORY_LIMIT";
+/** Below this a DWG cannot really exhaust the engine's memory (it may grow to 4 GB). */
+export const SMALL_DWG_BYTES = 32 * 1024 * 1024;
+
+/**
+ * Code for a non-zero engine error value (T13 5.2-2..4). The engine also says "out of memory" when bad data asks
+ * it for an absurd allocation (惠宇 E03, 222 KB): for a small file that is unreadable data, not a memory limit.
+ */
+export function classifyEngineError(error: number, size = 0): DwgErrorCode {
+  if (error & 8192) return size > 0 && size < SMALL_DWG_BYTES ? "DWG_PARSE_FAILED" : "DWG_MEMORY_LIMIT";
   if (error & (1 | 8 | 16 | 32 | 64 | 2048)) return "DWG_CORRUPT_OR_ENCRYPTED";
   return "DWG_PARSE_FAILED";
 }

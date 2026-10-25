@@ -25,6 +25,9 @@ describe("DWG diagnostics (T13 3.3, 3.4, 5.2)", () => {
 
   it("classifies engine errors", () => {
     expect(classifyEngineError(8192 | 2048)).toBe("DWG_MEMORY_LIMIT");
+    // 惠宇 E03（222 KB）：小檔回報記憶體不足其實是讀不了的資料，另存後可開
+    expect(classifyEngineError(8192, 222024)).toBe("DWG_PARSE_FAILED");
+    expect(classifyEngineError(8192, 64 * 1024 * 1024)).toBe("DWG_MEMORY_LIMIT");
     for (const bit of [1, 8, 16, 32, 64, 2048]) expect(classifyEngineError(bit)).toBe("DWG_CORRUPT_OR_ENCRYPTED");
     for (const bit of [2, 4, 128, 256, 512, 1024, 4096]) expect(classifyEngineError(bit)).toBe("DWG_PARSE_FAILED");
   });

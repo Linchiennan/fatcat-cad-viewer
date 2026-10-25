@@ -261,6 +261,11 @@ describe("archive import (T11 3.15)", () => {
     expect(again.folder.name).toBe("package (2)");
     expect((await lib.importArchiveToLibrary([{ path: "a.dxf", file: file("a.dxf") }], "root", ".rar")).folder.name).toBe("Archive");
   });
+  it("imports files whose names hold runs of spaces (上晴「公設B區-2.dwg  算圖.dwg  2004.dwg」)", async () => {
+    const name = "1050429  公設B區-2.dwg  算圖.dwg  2004.dwg";
+    const result = await lib.importArchiveToLibrary([{ path: "上晴/" + name, file: file(name, "D") }], "root", "上晴");
+    expect(result.drawings.map((d) => d.name)).toEqual(["1050429 公設B區-2.dwg 算圖.dwg 2004.dwg"]);
+  });
   it("bad paths, mismatched names and cancelled imports create nothing", async () => {
     expect(await code(lib.importArchiveToLibrary([{ path: "../x.dxf", file: file("x.dxf") }], "root", "a.zip"))).toBe("ARCHIVE_INVALID_PATH");
     expect(await code(lib.importArchiveToLibrary([{ path: "x.dxf", file: file("y.dxf") }], "root", "a.zip"))).toBe("INVALID_FILE");

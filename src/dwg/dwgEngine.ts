@@ -144,7 +144,7 @@ export async function convertDwgBytes(dwg: Uint8Array, createEngine: EngineFacto
     module.FS.writeFile(INPUT, dwg);
     const meta = readDwgMetadata(module, INPUT);
     const error = Number(module.dwg_write_dxf(INPUT, OUTPUT));
-    if (error !== 0) throw new DwgFailure(classifyEngineError(error), `libredwg returned ${error}`, error);
+    if (error !== 0) throw new DwgFailure(classifyEngineError(error, dwg.length), `libredwg returned ${error}`, error);
     const size = module.FS.stat(OUTPUT).size;
     if (size > MAX_DXF_BYTES) throw new DwgFailure("FILE_TOO_LARGE", "The converted drawing exceeds the viewer's file size limit.");
     let dxf: Uint8Array = module.FS.readFile(OUTPUT);
