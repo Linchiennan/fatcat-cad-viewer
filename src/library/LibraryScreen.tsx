@@ -56,6 +56,13 @@ type ArchiveState = {
 
 const TOAST_MS = 3200;
 
+/** Android and iPhone/iPad browsers and web views ignore webkitdirectory; desktop browsers support it. */
+const cannotPickFolder = () => {
+  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
+  return nav.userAgentData?.mobile === true || /Android|iPhone|iPad|iPod/i.test(nav.userAgent)
+    || (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1); // iPadOS reports a Mac
+};
+
 export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken }: LibraryScreenProps) {
   const { locale, t } = useI18n();
   const [folderId, setFolderId] = useState(ROOT_ID);
@@ -293,8 +300,12 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   // 整個資料夾 uses the plain folder picker input everywhere: it gives each file its path inside the folder, and the
   // embedded / in-app browsers reject showDirectoryPicker without opening anything. Nothing is imported until the
   // user confirms the count and size.
+  // Phone browsers (and the Android app) cannot pick a folder: the picker opens for files and a folder can only be
+  // entered, so nothing happens. Say so instead (用戶指定先做提示版).
   const pickFolder = () => {
-    if (!busyRef.current) folderInput.current?.click();
+    if (busyRef.current) return;
+    if (cannotPickFolder()) { setNotice({ text: t("library.folderPhone"), error: true }); return; }
+    folderInput.current?.click();
   };
   const offerFolder = (name: string, files: File[]) => {
     const items = folderImportItems(files);

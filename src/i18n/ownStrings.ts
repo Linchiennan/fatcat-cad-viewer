@@ -267,6 +267,7 @@ export const OWN_STRINGS = {
   "library.addOneFileBtn": { zh: "單一\n檔案", en: "Single\nfile" },
   "library.addFolderBtn": { zh: "整個\n資料夾", en: "Whole\nfolder" },
   "library.addFolderTip": { zh: "選一個資料夾，把裡面的圖面全部加入；來源顯示資料夾內的路徑，外參會自動套用", en: "Pick a folder and add all its drawings; the source shows each file's path in the folder and external references are applied automatically" },
+  "library.folderPhone": { zh: "手機瀏覽器不能選整個資料夾。請用電腦開，或按「單一檔案」一次多選圖檔（外參圖框也一起選）。", en: "Phone browsers cannot pick a whole folder. Use a computer, or tap \"Single file\" and select several drawings at once (include the xref frames)." },
   "library.folderEmpty": { zh: "這個資料夾裡沒有可開啟的圖面（DWG、DXF、PDF、PNG、JPG）。", en: "This folder has no drawings that can be opened (DWG, DXF, PDF, PNG, JPG)." },
   "library.folderConfirmTitle": { zh: "加入資料夾「{name}」？", en: "Add folder \"{name}\"?" },
   "library.folderConfirmBody": { zh: "共 {n} 個圖面，{size}。會在圖面庫建立同名資料夾（子資料夾照原樣），外參會自動套用。", en: "{n} drawings, {size}. A folder of the same name is made in the library (subfolders kept); external references are applied automatically." },
