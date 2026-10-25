@@ -2,6 +2,7 @@ import { preserveCadMetadata } from './cadDocument';
 import {rasterData,standaloneRaster} from './rasterImages';
 import { resolveOleImages } from './oleImages';
 import { decodeMifEntities } from './mifText';
+import { decodeCaretEntities } from './caretText';
 import { annotateDxfXclips } from '../dwg/xclipMetadata';
 import { bindDrawingIdentity } from './readingPosition';
 import DxfParser from 'dxf-viewer/src/parser/DxfParser.js';
@@ -47,7 +48,7 @@ export async function parseCadFile(file:File):Promise<Any>{
  const source=/\.dwg$/i.test(file.name)?await convertDwgToDxf(file):file;
  const bytes=annotateDxfXclips(new Uint8Array(await source.arrayBuffer()));const text=new TextDecoder(detectDxfEncoding(bytes.subarray(0,65536))).decode(bytes);let dxfText=text,repaired=0;let raw:Any;try{raw=new DxfParser().parseSync(dxfText);}catch(error){if(!/Cannot parse group code/.test(String(error)))throw error;const fixed=repairDxfText(text);dxfText=fixed.text;repaired=fixed.dropped;raw=new DxfParser().parseSync(dxfText);}
  const rebuilt=conversionRebuiltBlocks.get(source);let restored=0;if(rebuilt){raw.blocks??={};for(const [n,b] of Object.entries(rebuilt.blocks))if(!raw.blocks[n]){raw.blocks[n]=b;restored++;}}
- const parsed:Any=preserveCadMetadata(raw,dxfText);if(restored)(parsed.cadDiagnostics??=[]).push(`${restored} 個圖塊在 DWG 轉檔時遺漏，已改用備援讀取補回`);if(rebuilt?.error)(parsed.cadDiagnostics??=[]).push(`漏寫圖塊或文字的備援讀取失敗：${rebuilt.error}`);const textFixed=rebuilt?.texts?applyReaderTexts(parsed,rebuilt.texts):0;if(textFixed)(parsed.cadDiagnostics??=[]).push(`${textFixed} 段文字在 DWG 轉檔時解碼錯誤，已改用備援讀取修正`);for(const [type,n] of Object.entries(rebuilt?.skipped??{}))(parsed.cadDiagnostics??=[]).push(`補回的圖塊中有 ${n} 個 ${type} 尚未支援顯示`);if(repaired)(parsed.cadDiagnostics??=[]).push(repairWarning(repaired));await resolveOleImages(parsed);decodeMifEntities(parsed);if(conversionWarnings.get(source))(parsed.cadDiagnostics??=[]).push(file.name+'：DWG解析傳回 '+conversionWarnings.get(source)+' 筆診斷');return parsed;
+ const parsed:Any=preserveCadMetadata(raw,dxfText);if(restored)(parsed.cadDiagnostics??=[]).push(`${restored} 個圖塊在 DWG 轉檔時遺漏，已改用備援讀取補回`);if(rebuilt?.error)(parsed.cadDiagnostics??=[]).push(`漏寫圖塊或文字的備援讀取失敗：${rebuilt.error}`);const textFixed=rebuilt?.texts?applyReaderTexts(parsed,rebuilt.texts):0;if(textFixed)(parsed.cadDiagnostics??=[]).push(`${textFixed} 段文字在 DWG 轉檔時解碼錯誤，已改用備援讀取修正`);for(const [type,n] of Object.entries(rebuilt?.skipped??{}))(parsed.cadDiagnostics??=[]).push(`補回的圖塊中有 ${n} 個 ${type} 尚未支援顯示`);if(repaired)(parsed.cadDiagnostics??=[]).push(repairWarning(repaired));await resolveOleImages(parsed);decodeMifEntities(parsed);decodeCaretEntities(parsed);if(conversionWarnings.get(source))(parsed.cadDiagnostics??=[]).push(file.name+'：DWG解析傳回 '+conversionWarnings.get(source)+' 筆診斷');return parsed;
 }
 /** Import into existing INSERT/BLOCK path; no network or alternate renderer. */
 export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<string,string>={},disabled:Set<string>=new Set()):Promise<{file:File;statuses:XrefStatus[]}> {

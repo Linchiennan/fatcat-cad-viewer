@@ -28,12 +28,21 @@ type WorkerLike = Pick<Worker, "postMessage" | "terminate" | "addEventListener" 
 let workerFactory: () => WorkerLike = () =>
   new Worker(new URL("./dwg.worker.ts", import.meta.url), { type: "module", name: "fatcat-dwg-converter" });
 
+// One worker for the session with conversions queued on it, so the engine code the browser optimised on the first
+// conversion is kept (a worker per conversion paid ~430 MB each time). Dropped after a failure, timeout or cancel.
+let shared: WorkerLike | null = null;
+let queue: Promise<unknown> = Promise.resolve();
+
 /** Replace how conversion workers are made (tests); null restores the real worker. */
 export function setDwgWorkerFactory(factory: (() => WorkerLike) | null): void {
   workerFactory = factory ?? (() => new Worker(new URL("./dwg.worker.ts", import.meta.url), { type: "module", name: "fatcat-dwg-converter" }));
+  shared?.terminate();
+  shared = null;
 }
 
 const abortError = () => new DOMException("The DWG conversion was cancelled.", "AbortError");
+// The same File converts once per session: opening a drawing and then applying its xrefs converted it twice.
+const converted = new WeakMap<File, File>();
 let requestSerial = 0;
 
 /** Page base URL the worker uses to find public/runtime. */
@@ -59,6 +68,17 @@ function parseFallback(json: string | null): FallbackData | null {
  */
 export async function convertDwgToDxf(file: File, signal?: AbortSignal): Promise<File> {
   if (signal?.aborted) throw abortError();
+  const done = converted.get(file);
+  if (done) return done;
+  const run = queue.then(() => convertOnce(file, signal));
+  queue = run.catch(() => {});
+  const out = await run;
+  converted.set(file, out);
+  return out;
+}
+
+async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
+  if (signal?.aborted) throw abortError();
   assertFileSize(file.size);
   let bytes: ArrayBuffer;
   try { bytes = await file.arrayBuffer(); } catch (cause) {
@@ -73,12 +93,13 @@ export async function convertDwgToDxf(file: File, signal?: AbortSignal): Promise
   const reply = await new Promise<Extract<DwgReply, { ok: true }>>((resolve, reject) => {
     const id = ++requestSerial;
     let worker: WorkerLike;
-    try { worker = workerFactory(); } catch (cause) {
+    try { worker = shared ??= workerFactory(); } catch (cause) {
       reject(fail("DWG_RUNTIME_MISSING", "The DWG worker could not start: " + String(cause)));
       return;
     }
     let settled = false;
-    const finish = (run: () => void) => {
+    // keep: true leaves the worker for the next conversion; anything else ends it.
+    const finish = (run: () => void, keep = false) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -86,7 +107,10 @@ export async function convertDwgToDxf(file: File, signal?: AbortSignal): Promise
       worker.removeEventListener("message", onMessage as EventListener);
       worker.removeEventListener("error", onError);
       worker.removeEventListener("messageerror", onMessageError);
-      worker.terminate();
+      if (!keep) {
+        worker.terminate();
+        if (shared === worker) shared = null;
+      }
       run();
     };
     const onAbort = () => finish(() => reject(abortError()));
@@ -95,7 +119,7 @@ export async function convertDwgToDxf(file: File, signal?: AbortSignal): Promise
     const onMessage = (event: MessageEvent<DwgReply>) => {
       const data = event.data;
       if (!data || data.id !== id) return;
-      if (data.ok) finish(() => resolve(data));
+      if (data.ok) finish(() => resolve(data), true);
       else finish(() => reject(fail(data.code as AppErrorCode, data.message, data.engineError)));
     };
     const timer = setTimeout(() => finish(() => reject(fail("DWG_CONVERSION_TIMEOUT", "The DWG conversion took too long."))), DWG_TIMEOUT_MS);

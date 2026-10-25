@@ -32,7 +32,30 @@ const use = (reply: Reply | null, postFails = false) => {
 afterEach(() => { setDwgWorkerFactory(null); vi.useRealTimers(); });
 
 describe("convertDwgToDxf", () => {
-  it("returns a .dxf with the saved view and diagnostics, and ends the worker", async () => {
+  it("keeps one worker for the session and converts the same file only once (open, then apply its xrefs)", async () => {
+    let made = 0;
+    setDwgWorkerFactory(() => { made++; return (last = new FakeWorker((req: any) => ({ id: req.id, ok: true, dxf: dxfBytes(), savedView: null, diagnostics: 0, fallback: null }))) as unknown as Worker; });
+    const a = dwg("AC1018 first");
+    const out = await convertDwgToDxf(a);
+    expect(await convertDwgToDxf(a)).toBe(out);
+    expect(last!.requests).toHaveLength(1);
+    await convertDwgToDxf(dwg("AC1018 second"));
+    expect(made).toBe(1);
+    expect(last!.requests).toHaveLength(2);
+    expect(last!.terminated).toBe(false);
+  });
+
+  it("drops the worker after a failure so the next conversion starts a fresh one", async () => {
+    let made = 0, fail = true;
+    setDwgWorkerFactory(() => { made++; return (last = new FakeWorker((req: any) => (fail ? { id: req.id, ok: false, code: "DWG_CONVERSION_FAILED", message: "x" } : { id: req.id, ok: true, dxf: dxfBytes(), savedView: null, diagnostics: 0, fallback: null }))) as unknown as Worker; });
+    await expect(convertDwgToDxf(dwg("AC1018 a"))).rejects.toBeInstanceOf(AppError);
+    expect(last!.terminated).toBe(true);
+    fail = false;
+    await convertDwgToDxf(dwg("AC1018 b"));
+    expect(made).toBe(2);
+  });
+
+  it("returns a .dxf with the saved view and diagnostics, and keeps the worker for the next one", async () => {
     use({ ok: true, dxf: dxfBytes(), savedView: { center: { x: 1, y: 2 }, viewHeight: 5, aspect: 2 }, diagnostics: 3, fallback: JSON.stringify({ blocks: { X: {} }, skipped: { HATCH: 1 } }) });
     const source = dwg();
     const out = await convertDwgToDxf(source);
@@ -42,7 +65,7 @@ describe("convertDwgToDxf", () => {
     expect(conversionWarnings.get(out)).toBe(3);
     expect(conversionRebuiltBlocks.get(out)).toEqual({ blocks: { X: {} }, skipped: { HATCH: 1 } });
     expect(await drawingIdentity(out)).toBe(await drawingIdentity(source));
-    expect(last!.terminated).toBe(true);
+    expect(last!.terminated).toBe(false);
     expect(last!.requests[0].transfer).toHaveLength(1);
   });
 

@@ -148,6 +148,8 @@ export class DxfCadEngine implements FatcatCadEngine {
   private saved: SavedView | null = null;
   private home: CameraView | null = null;
   private recenterTimers: ReturnType<typeof setTimeout>[] = [];
+  /** The view is still the automatic first fit (no wheel, touch, zoom command or jump since loading). */
+  private autoView = false;
   private recenterFrame = 0;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private rebuild: { timer: ReturnType<typeof setTimeout>; waiters: { resolve: (v: boolean) => void; reject: (e: unknown) => void }[] } | null = null;
@@ -180,7 +182,7 @@ export class DxfCadEngine implements FatcatCadEngine {
     this.listen(this.canvas, "pointerleave", () => { if (!this.aiming) this.emitPreview(null); });
     this.listen(this.canvas, "pointerup", (e) => this.onPointerUp(e as PointerEvent));
     this.listen(this.canvas, "pointercancel", (e) => this.onPointerCancel(e as PointerEvent));
-    this.listen(this.canvas, "wheel", () => this.cancelRecenter(), { passive: true });
+    this.listen(this.canvas, "wheel", () => this.userMoved(), { passive: true });
     // Middle button pans; stop the browser's autoscroll cursor.
     this.listen(this.canvas, "mousedown", (e) => { if ((e as MouseEvent).button === 1) e.preventDefault(); });
     const onView = () => this.onViewerViewChanged();
@@ -487,11 +489,15 @@ export class DxfCadEngine implements FatcatCadEngine {
 
   /** First view after loading (T14 4.3). */
   private openView(position: ReadingPosition | null): void {
-    if (position) {
+    // A saved automatic fit is fitted again: it may have been saved before the bars were in place (a drawing
+    // reloaded at once to apply its xrefs kept the half-done fit).
+    if (position && !position.auto) {
+      this.autoView = false;
       this.home = { center: { x: position.x, y: position.y }, width: position.width };
       this.setView(this.home);
       return;
     }
+    this.autoView = true;
     this.home = null;
     if (!this.initialRange()) return;
     this.fitInitial();
@@ -499,6 +505,12 @@ export class DxfCadEngine implements FatcatCadEngine {
     const again = () => { if (this.ready && !this.disposed) { this.fitInitial(); this.render(); this.savePositionNow(); this.emitView(); } };
     if (typeof requestAnimationFrame === "function") this.recenterFrame = requestAnimationFrame(again);
     this.recenterTimers = RECENTER_DELAYS.map((ms) => setTimeout(again, ms));
+  }
+
+  /** The user moved the view: stop the automatic fits and remember this view as theirs. */
+  private userMoved(): void {
+    this.autoView = false;
+    this.cancelRecenter();
   }
 
   private cancelRecenter(): void {
@@ -510,7 +522,7 @@ export class DxfCadEngine implements FatcatCadEngine {
 
   command(command: ViewCommand): void {
     if (!this.ready || this.disposed) return;
-    this.cancelRecenter();
+    this.userMoved();
     try {
       const cam = this.viewer.GetCamera();
       if (command === "zoom-in" || command === "zoom-out") {
@@ -536,7 +548,7 @@ export class DxfCadEngine implements FatcatCadEngine {
 
   zoomTo(view: DrawingBounds, focus: DrawingBounds): { left: number; top: number; width: number; height: number } | null {
     if (!this.ready || !validBounds(view)) return null;
-    this.cancelRecenter();
+    this.userMoved();
     const camera = this.fit(view);
     this.afterViewChange();
     if (!camera) return null;
@@ -570,7 +582,7 @@ export class DxfCadEngine implements FatcatCadEngine {
     if (!this.ready || !this.key || !this.allBounds()) return;
     const v = this.currentView();
     if (![v.center.x, v.center.y, v.width].every(Number.isFinite) || !(v.width > 0)) return;
-    savePosition(this.key, { x: v.center.x, y: v.center.y, width: v.width });
+    savePosition(this.key, { x: v.center.x, y: v.center.y, width: v.width, auto: this.autoView });
   }
 
   private flushPosition(): void {
@@ -604,7 +616,7 @@ export class DxfCadEngine implements FatcatCadEngine {
   }
 
   private onPointerDown(e: PointerEvent): void {
-    this.cancelRecenter();
+    this.userMoved();
     if (!this.measuring()) return;
     this.pointers.set(e.pointerId, this.local(e));
     if (this.pointers.size > 1) { const keep = new Map(this.pointers); this.resetGesture(); keep.forEach((v, k) => this.pointers.set(k, v)); return; }

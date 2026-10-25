@@ -1,7 +1,8 @@
 // Reading position and layer memory per drawing sheet (T14 3.6, 3.7). Keys: "fatcat-reading-v1:" + name
 // + ":" + SHA-256 of the source, plus ":space:<layout>" for paper layouts and ":layers" for layer memory.
 import type { MeasurementUnit } from './measurementGeometry';
-export type ReadingPosition={x:number;y:number;width:number;sourceUnit?:MeasurementUnit;displayUnit?:MeasurementUnit;time:number};
+/** auto: the view is the automatic first fit, not one the user moved to (a reload fits again instead of reusing it). */
+export type ReadingPosition={x:number;y:number;width:number;sourceUnit?:MeasurementUnit;displayUnit?:MeasurementUnit;time:number;auto?:boolean};
 const prefix='fatcat-reading-v1:';
 const LAYERS=':layers';
 const KEEP=100;

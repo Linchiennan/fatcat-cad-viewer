@@ -1,9 +1,13 @@
 // Copies the third-party runtime files the app loads at run time (DWG engine, archive reader, PDF worker and
 // its data) from node_modules into public/runtime, so the built app works fully offline.
 // Every source is the published npm package itself; their license files are copied alongside.
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PAGE, setWasmInitialPages } from "./wasmMemory.mjs";
+
+/** 1024 pages = 64 MB. */
+const DWG_INITIAL_PAGES = 1024;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const mod = (...p) => join(root, "node_modules", ...p);
@@ -44,6 +48,14 @@ const missing = [];
 for (const [from, to] of items) {
   if (!existsSync(from)) { missing.push(from); continue; }
   bytes += copy(from, join(out, to));
+}
+// The DWG engine starts with 64 MB instead of 1024 MB and grows as a drawing needs (see wasmMemory.mjs).
+const dwgWasm = join(out, "libredwg/libredwg-web.wasm");
+if (existsSync(dwgWasm)) {
+  const data = readFileSync(dwgWasm);
+  const was = setWasmInitialPages(data, DWG_INITIAL_PAGES);
+  writeFileSync(dwgWasm, data);
+  if (was !== DWG_INITIAL_PAGES) console.log(`libredwg 起始記憶體 ${(was * PAGE) / 1048576} MB → ${(DWG_INITIAL_PAGES * PAGE) / 1048576} MB`);
 }
 if (missing.length) {
   // A license file some packages do not ship is not fatal; a missing runtime file is.

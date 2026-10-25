@@ -289,6 +289,26 @@ describe("CAD engine", () => {
     expect(engine.unproject(400, 300).x).toBeCloseTo(before.x, 6);
   });
 
+  it("fits again on reload when the saved view was only the automatic first fit", async () => {
+    // A drawing reloaded at once to apply its xrefs must not keep a half-done first fit.
+    engine = make();
+    const file = jsonFile("autofit.dxf");
+    let load = engine.load(file, () => {});
+    await until(() => viewer.pending.length === 1);
+    viewer.finish();
+    await load;
+    const fitted = engine.unproject(400, 300);
+    engine.panBy(60, 0); // moved by the program, not the user: still an automatic view
+    engine.dispose();
+
+    engine = make();
+    load = engine.load(file, () => {});
+    await until(() => viewer.pending.length === 1);
+    viewer.finish();
+    await load;
+    expect(engine.unproject(400, 300).x).toBeCloseTo(fitted.x, 6);
+  });
+
   it("rebuilds once for switches of layers used inside blocks", async () => {
     engine = make();
     const load = engine.load(jsonFile("blocks.dxf"), () => {});
