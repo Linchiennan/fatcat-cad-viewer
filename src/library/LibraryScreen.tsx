@@ -101,6 +101,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   const [folderOffer, setFolderOffer] = useState<{ name: string; items: ArchiveImportItem[]; bytes: number } | null>(null);
   // Phones: the files picked instead of a folder, each with its tick (all ticked to start).
   const pickInput = useRef<HTMLInputElement>(null);
+  const noFolderPick = cannotPickFolder();
   const [pickOffer, setPickOffer] = useState<{ name: string; items: ArchiveImportItem[]; on: boolean[] } | null>(null);
   const replaceInput = useRef<HTMLInputElement>(null);
   const replaceTarget = useRef<LibraryDrawingEntry | null>(null);
@@ -440,8 +441,9 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           <button type="button" className="lib-primary" disabled={busy} onClick={() => addInput.current?.click()}>
             <ImportIcon /> <span className="lib-two-line">{t("library.addOneFileBtn")}</span>
           </button>
-          <button type="button" className="lib-primary" disabled={busy} onClick={pickFolder} title={t("library.addFolderTip")}>
-            <FolderOpenIcon /> <span className="lib-two-line">{t("library.addFolderBtn")}</span>
+          {/* Where a folder cannot be picked (phones) the same button picks several files, so it says so (用戶指定). */}
+          <button type="button" className="lib-primary" disabled={busy} onClick={pickFolder} title={t(noFolderPick ? "library.pickFilesTip" : "library.addFolderTip")}>
+            <FolderOpenIcon /> <span className="lib-two-line">{t(noFolderPick ? "library.pickFilesBtn" : "library.addFolderBtn")}</span>
           </button>
           <button type="button" className="lib-secondary" disabled={busy} onClick={() => { setExportPopup(null); setExportsOpen(true); }}>
             <FolderCheckIcon /> <span>{libraryText(locale, "exports")}</span>
@@ -631,7 +633,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         const bytes = pickOffer.items.reduce((n, item, i) => n + (pickOffer.on[i] ? item.file.size : 0), 0);
         const all = count === pickOffer.items.length;
         return (
-          <Dialog className="lib-dialog lib-pick" label={t("library.addFolder")} onCancel={() => setPickOffer(null)}>
+          <Dialog className="lib-dialog lib-pick" label={t("library.pickFilesLabel")} onCancel={() => setPickOffer(null)}>
             <h3>{t("library.pickTitle")}</h3>
             <p>{t("library.pickBody", { name: pickOffer.name })}</p>
             <label className="lib-pick-all">
