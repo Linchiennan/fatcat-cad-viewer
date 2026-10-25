@@ -18,7 +18,16 @@ export type FatcatDebug = {
   ready(): boolean;
   /** Camera centre and visible width in drawing units (extra, for view comparisons). */
   camera(): { center: { x: number; y: number }; width: number } | null;
+  /** Message and stack of the last failed load (the error screen shows only a generic line). */
+  lastError(): string | null;
 };
+
+let lastError: string | null = null;
+
+/** Keep why a load failed, for lastError(). */
+export function noteLoadError(error: unknown): void {
+  try { lastError = error instanceof Error ? `${error.message}\n${error.stack ?? ""}`.slice(0, 2000) : String(error); } catch { /* never block the error path */ }
+}
 
 /** debug=1 in a query string. */
 export function debugRequested(search: string | null | undefined): boolean {
@@ -39,6 +48,7 @@ export function makeDebugApi(): FatcatDebug {
     sceneStats: () => current?.sceneStats() ?? { meshes: 0, verts: 0 },
     ready: () => !!current && current.isReady() && !current.isLoading(),
     camera: () => current?.camera() ?? null,
+    lastError: () => lastError,
   };
 }
 

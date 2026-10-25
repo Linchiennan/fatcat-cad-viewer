@@ -23,7 +23,7 @@ import { savedViewFor, type SavedView } from "./savedView";
 import { drawingIdentity, loadPosition, readLayerMemory, saveLayerMemory, savePosition, sheetKey, type ReadingPosition } from "./readingPosition";
 import { installXclipViewer, XCLIP_LAYER_PREFIX, xclipBaseLayer } from "./xclipScene";
 import { VIEWER_WORKER_FAILED } from "./workerMessages";
-import { attachDebug, detachDebug } from "./engineDebug";
+import { attachDebug, detachDebug, noteLoadError } from "./engineDebug";
 import { renderRegion as drawRegion, type RegionOptions, type RegionResult } from "./regionRender";
 import { fallbackPadding, fitInArea, freeArea, initialBounds, savedViewCamera, validBounds, type CameraView, type Rect, type ShellLayout } from "./viewGeometry";
 
@@ -276,6 +276,7 @@ export class DxfCadEngine implements FatcatCadEngine {
       this.emitView();
     } catch (error) {
       if (current()) { try { this.viewer.Clear(); } catch { /* keep the original error */ } this.ready = false; }
+      if (!isAbort(error)) noteLoadError(error);
       if (isAbort(error) || error instanceof AppError) throw error;
       throw new AppError("DXF_OPEN_FAILED", error instanceof Error ? error.message : String(error), { cause: error });
     } finally {

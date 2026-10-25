@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { attachDebug, debugRequested, detachDebug, type DebugSource } from "./engineDebug";
+import { attachDebug, debugRequested, detachDebug, noteLoadError, type DebugSource } from "./engineDebug";
 
 const g = globalThis as any;
 const source = (over: Partial<DebugSource> = {}): DebugSource => ({
@@ -42,5 +42,12 @@ describe("debug hook (debug=1 only)", () => {
     expect(api.ready()).toBe(false);
     expect(api.report()).toBeNull();
     expect(api.sceneStats()).toEqual({ meshes: 0, verts: 0 });
+  });
+
+  it("tells why the last load failed (the error screen shows only a generic line)", () => {
+    g.location = { search: "?debug=1" };
+    attachDebug(source());
+    noteLoadError(new Error("Drawing loading timed out."));
+    expect(g.__fatcatDebug.lastError()).toMatch(/^Drawing loading timed out\./);
   });
 });

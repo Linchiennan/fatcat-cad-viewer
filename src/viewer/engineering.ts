@@ -1,6 +1,7 @@
 import type { DrawingPoint } from './savedView';
 import {widePolyline} from './widePolyline';
 import {complexLinePrimitives} from './complexLineType';
+import {Entity} from 'dxf-viewer/src/DxfScene.js';
 import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
@@ -42,6 +43,11 @@ export function advancedSnap(entities:MeasurableEntity[],target:DrawingPoint,tol
  return best;
 }
 const DASH_LIMIT=200000;
+// Segments one hatch may produce before it is drawn as its boundary only (see _DecomposeHatch below).
+export const DENSE_HATCH_SEGMENTS=100000;
+// Pattern segments a whole drawing may spend; past it only small hatches keep their pattern.
+export const HATCH_BUDGET=6000000;
+export const SMALL_HATCH_SEGMENTS=2000;
 /** Signed DXF pattern, continuous phase across vertices; dots use a tiny visible segment. */
 export function dashSegments(points:DrawingPoint[],pattern:number[],scale:number,closed:boolean):DrawingPoint[][] {
  const output:DrawingPoint[][]=[];const pat=pattern.map(n=>n*scale);
@@ -136,7 +142,32 @@ export function installEngineeringScene(ctor:Any):void {
   return n===1?points[0]:points[i].map((v,k)=>v+(points[i+1][k]-v)*f);
  };
  p._GetLineType=(e:Any)=>1000+Math.max(0,e.cadLineweight??0);
- p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;await original.call(this,dxf,fonts);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
+ // A pattern far too fine for its area (上晴 B區-2: AR-CONC at scale 0.1, about 400,000 to 840,000 segments per hatch,
+ // repeated through nested xref and clipped blocks to over 100 million) kept the drawing worker past the load timeout.
+ // A hatch past DENSE_HATCH_SEGMENTS is drawn as its boundary only, and once the drawing has spent HATCH_BUDGET
+ // segments on patterns, any hatch past SMALL_HATCH_SEGMENTS is too. Copies of a block hold copies of a hatch with
+ // the same handle, so once one is drawn as its boundary the others go straight to that.
+ const decomposeHatch=p._DecomposeHatch;
+ p._DecomposeHatch=function*(e:Any,ctx:Any){
+  const outlined:Set<string>=this.cadDenseHatches??=new Set();
+  const key=e.handle?`${e.handle}|${e.patternName}|${e.patternScale}`:null;
+  if(!key||!outlined.has(key)){
+   const limit=(this.cadHatchSegments??0)<HATCH_BUDGET?DENSE_HATCH_SEGMENTS:SMALL_HATCH_SEGMENTS;
+   const out:Any[]=[];let over=false;
+   for(const x of decomposeHatch.call(this,e,ctx)){out.push(x);if(out.length>limit){over=true;break;}}
+   if(!over){this.cadHatchSegments=(this.cadHatchSegments??0)+out.length;yield* out;return;}
+   if(key)outlined.add(key);
+  }
+  this.cadDenseHatchCount=(this.cadDenseHatchCount??0)+1;
+  const transform=this._GetEntityExtrusionTransform(e),layer=this._GetEntityLayer(e,ctx),color=this._GetEntityColor(e,ctx);
+  for(const loop of this._GetHatchBoundaryLoops(e)){
+   const v=(loop.vertices??[]).map((q:Any)=>transform?q.clone().applyMatrix3(transform):q);
+   if(v.length<2)continue;
+   const vertices:Any[]=[];for(let i=0;i<v.length;i++)vertices.push(v[i],v[(i+1)%v.length]);
+   yield new Entity({type:Entity.Type.LINE_SEGMENTS,vertices,layer,color});
+  }
+ };
+ p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;this.cadDenseHatchCount=0;this.cadDenseHatches=new Set();this.cadHatchSegments=0;await original.call(this,dxf,fonts);if(this.cadDenseHatchCount)report.warnings.push(`剖面線 ${this.cadDenseHatchCount} 個的圖樣過密或超過整張圖的繪製量，只畫外框`);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
  report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;dxf.cadReport=report;};
  // Load hidden layers; saved ON/OFF is applied to actual GPU layer objects after loading.
  p._FilterEntity=function(e:Any){return !e.hidden&&(!this.options.suppressPaperSpace||!e.inPaperSpace);};

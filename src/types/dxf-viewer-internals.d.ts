@@ -15,6 +15,8 @@ declare module "dxf-viewer/src/DxfScene.js" {
     [member: string]: any;
   }
   export class Entity {
+    constructor(params?: any);
+    static Type: Readonly<Record<string, number>>;
     [member: string]: any;
   }
   export const ColorCode: Readonly<Record<string, number>>;
