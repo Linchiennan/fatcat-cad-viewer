@@ -99,6 +99,9 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   const addInput = useRef<HTMLInputElement>(null);
   const folderInput = useRef<HTMLInputElement>(null);
   const [folderOffer, setFolderOffer] = useState<{ name: string; items: ArchiveImportItem[]; bytes: number } | null>(null);
+  // Phones: the files picked instead of a folder, each with its tick (all ticked to start).
+  const pickInput = useRef<HTMLInputElement>(null);
+  const [pickOffer, setPickOffer] = useState<{ name: string; items: ArchiveImportItem[]; on: boolean[] } | null>(null);
   const replaceInput = useRef<HTMLInputElement>(null);
   const replaceTarget = useRef<LibraryDrawingEntry | null>(null);
   const archiveRun = useRef<{ token: number; controller: AbortController; session: ArchiveSession | null; file: File | null }>({ token: 0, controller: new AbortController(), session: null, file: null });
@@ -301,11 +304,29 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   // embedded / in-app browsers reject showDirectoryPicker without opening anything. Nothing is imported until the
   // user confirms the count and size.
   // Phone browsers (and the Android app) cannot pick a folder: the picker opens for files and a folder can only be
-  // entered, so nothing happens. Say so instead (用戶指定先做提示版).
+  // entered. There 整個資料夾 picks several files instead, listed with ticks (all on) before they go into a new
+  // folder; desktop browsers keep the folder picker (用戶指定).
   const pickFolder = () => {
     if (busyRef.current) return;
-    if (cannotPickFolder()) { setNotice({ text: t("library.folderPhone"), error: true }); return; }
-    folderInput.current?.click();
+    (cannotPickFolder() ? pickInput : folderInput).current?.click();
+  };
+  const offerPicked = (files: File[]) => {
+    const items = folderImportItems(files);
+    if (!items.length) { if (files.length) setNotice({ text: t("library.folderEmpty"), error: true }); return; }
+    const d = new Date(), two = (n: number) => String(n).padStart(2, "0");
+    const name = t("library.pickFolderName", { date: `${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}` });
+    setPickOffer({ name, items, on: items.map(() => true) });
+  };
+  const importPicked = (offer: { name: string; items: ArchiveImportItem[]; on: boolean[] }) => {
+    const items = offer.items.filter((_, i) => offer.on[i]);
+    setPickOffer(null);
+    if (!items.length) return;
+    void runBusy(async () => {
+      const result = await importArchiveToLibrary(items, folderId, offer.name, undefined, false);
+      refresh();
+      goToFolder(result.folder.id);
+      setNotice({ text: t("library.folderImported", { n: result.drawings.length, name: result.folder.name }), error: false });
+    });
   };
   const offerFolder = (name: string, files: File[]) => {
     const items = folderImportItems(files);
@@ -428,6 +449,8 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           <input ref={addInput} type="file" multiple accept={FILE_ACCEPT} hidden onChange={(e) => onAddFiles(e.currentTarget.files)} />
           <input ref={folderInput} type="file" multiple hidden {...({ webkitdirectory: "" } as object)} aria-label={t("library.addFolder")}
             onChange={(e) => { const list = e.currentTarget.files ? Array.from(e.currentTarget.files) : []; e.currentTarget.value = ""; offerFolder(folderNameOf(list), list); }} />
+          <input ref={pickInput} type="file" multiple accept={FILE_ACCEPT} hidden aria-label={t("library.pickFilesLabel")}
+            onChange={(e) => { const list = e.currentTarget.files ? Array.from(e.currentTarget.files) : []; e.currentTarget.value = ""; offerPicked(list); }} />
           <input ref={replaceInput} type="file" hidden aria-label={t("library.replacePickerLabel")} onChange={(e) => onReplaceFile(e.currentTarget.files)} />
         </div>
 
@@ -603,6 +626,34 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         />
       ) : null}
 
+      {pickOffer ? (() => {
+        const count = pickOffer.on.filter(Boolean).length;
+        const bytes = pickOffer.items.reduce((n, item, i) => n + (pickOffer.on[i] ? item.file.size : 0), 0);
+        const all = count === pickOffer.items.length;
+        return (
+          <Dialog className="lib-dialog lib-pick" label={t("library.addFolder")} onCancel={() => setPickOffer(null)}>
+            <h3>{t("library.pickTitle")}</h3>
+            <p>{t("library.pickBody", { name: pickOffer.name })}</p>
+            <label className="lib-pick-all">
+              <input type="checkbox" checked={all} onChange={() => setPickOffer({ ...pickOffer, on: pickOffer.items.map(() => !all) })} />
+              <span>{t("library.pickCount", { n: count, total: pickOffer.items.length, size: formatLibrarySize(bytes, locale) })}</span>
+            </label>
+            <ul className="lib-pick-list">
+              {pickOffer.items.map((item, i) => (
+                <li key={i}><label>
+                  <input type="checkbox" checked={pickOffer.on[i]} onChange={() => setPickOffer({ ...pickOffer, on: pickOffer.on.map((v, k) => (k === i ? !v : v)) })} />
+                  <span className="lib-pick-name">{item.file.name}</span>
+                  <small>{formatLibrarySize(item.file.size, locale)}</small>
+                </label></li>
+              ))}
+            </ul>
+            <div className="lib-dialog-buttons">
+              <button type="button" className="lib-secondary" onClick={() => setPickOffer(null)}>{t("action.cancel")}</button>
+              <button type="button" className="lib-primary" disabled={!count} onClick={() => importPicked(pickOffer)}>{t("library.pickOk", { n: count })}</button>
+            </div>
+          </Dialog>
+        );
+      })() : null}
       {folderOffer ? (
         <Dialog className="lib-dialog" label={t("library.addFolder")} onCancel={() => setFolderOffer(null)}>
           <h3>{t("library.folderConfirmTitle", { name: folderOffer.name })}</h3>

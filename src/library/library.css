@@ -385,3 +385,11 @@
 .lib-field-row { display: flex; align-items: center; gap: 6px; }
 .lib-field-row input { flex: 1; min-width: 0; }
 .lib-field-ext { color: var(--lib-muted); font-size: 14px; }
+/* Phones: files picked instead of a folder, each with its tick (all on to start). */
+.lib-pick { display: flex; flex-direction: column; }
+.lib-pick-all { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--lib-line); font-weight: 700; }
+.lib-pick-list { list-style: none; margin: 0; padding: 0; max-height: min(45dvh, 360px); overflow: auto; }
+.lib-pick-list label { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 2px; border-bottom: 1px solid var(--lib-line); }
+.lib-pick-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.lib-pick-list small { flex: none; color: var(--lib-muted); }
+.lib-pick input[type="checkbox"] { flex: none; width: 22px; height: 22px; accent-color: #ffb547; }

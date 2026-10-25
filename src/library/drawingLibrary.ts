@@ -590,6 +590,8 @@ export function folderNameOf(files: readonly File[]): string {
 /** Import checked archive items into a new folder (one transaction, all or nothing). */
 export async function importArchiveToLibrary(
   items: readonly ArchiveImportItem[], parentId: string, archiveName: string, signal?: AbortSignal,
+  /** false: the files came from a browser multi-pick, so there is no real source to record (shown as 瀏覽器不提供). */
+  sourceFromArchive = true,
 ): Promise<{ folder: LibraryFolderEntry; drawings: LibraryDrawingEntry[] }> {
   if (signal?.aborted) throw abortError();
   if (items.length === 0) throw fail("INVALID_FILE", "nothing to import");
@@ -638,7 +640,7 @@ export async function importArchiveToLibrary(
       const entry: LibraryDrawingEntry = {
         id: newId(), kind: "drawing", parentId: parent, name: p.name, createdAt: now, updatedAt: now,
         format: p.format, mimeType, size: p.file.size, lastModified: sourceDate(p.file.lastModified), lastOpenedAt: 0,
-        originalSourcePath: fileSource(p.file).path || `${archiveName} / ${p.path}`,
+        originalSourcePath: fileSource(p.file).path || (sourceFromArchive ? `${archiveName} / ${p.path}` : ""),
       };
       await req(entriesOf(tx).add(entry));
       await req(contentsOf(tx).add({ id: entry.id, blob: p.file.slice(0, p.file.size, mimeType) } satisfies ContentRecord));
