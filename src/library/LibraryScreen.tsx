@@ -10,6 +10,7 @@ import {
 } from "../components/Icons";
 import { openArchive, type ArchiveItem, type ArchiveSession } from "../files/archives";
 import { FILE_ACCEPT, detectDrawingFormat, isArchiveFormat } from "../files/fileTypes";
+import { cannotPickFolder } from "../files/folderPick";
 import { useI18n } from "../i18n/translations";
 import {
   MAX_NAME_LENGTH, ROOT_ID, copyLibraryEntry, createLibraryFolder, deleteLibraryEntry, importArchiveToLibrary,
@@ -55,13 +56,6 @@ type ArchiveState = {
 };
 
 const TOAST_MS = 3200;
-
-/** Android and iPhone/iPad browsers and web views ignore webkitdirectory; desktop browsers support it. */
-const cannotPickFolder = () => {
-  const nav = navigator as Navigator & { userAgentData?: { mobile?: boolean } };
-  return nav.userAgentData?.mobile === true || /Android|iPhone|iPad|iPod/i.test(nav.userAgent)
-    || (/Macintosh/.test(nav.userAgent) && nav.maxTouchPoints > 1); // iPadOS reports a Mac
-};
 
 export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken }: LibraryScreenProps) {
   const { locale, t } = useI18n();

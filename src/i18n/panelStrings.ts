@@ -46,6 +46,7 @@ export const PANEL_STRINGS = {
   "cad.xref.forget": { zh: "不再記住「{name}」", en: "Forget \"{name}\"" },
   "cad.xref.pickFiles": { zh: "選擇外參檔", en: "Choose xref files" },
   "cad.xref.pickFolder": { zh: "選擇外參資料夾", en: "Choose an xref folder" },
+  "cad.xref.pickMany": { zh: "多選外參檔（圖框等一次選齊）", en: "Pick several xref files (frames and all)" },
   "cad.xref.noFolderIos": { zh: "iPhone／iPad 不支援選資料夾；請按「選擇外參檔」一次多選所有外參檔。", en: "iPhone / iPad can't pick folders; tap \"Choose xref files\" and select all xref files at once." },
   "cad.xref.overlay": { zh: "覆疊", en: "Overlay" },
   "cad.xref.attach": { zh: "附加", en: "Attach" },
