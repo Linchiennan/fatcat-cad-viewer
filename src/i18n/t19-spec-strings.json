@@ -209,6 +209,11 @@
   "en": "The DXF file can't be opened.",
   "section": "錯誤畫面（20 鍵）"
  },
+ "error.loadTimeout": {
+  "zh": "圖面太大，這台裝置在 10 分鐘內畫不完。請改用電腦開啟，或在 CAD 把圖面拆小後再開。",
+  "en": "The drawing is too large for this device to draw within 10 minutes. Open it on a computer, or split it in CAD and open the parts.",
+  "section": "錯誤畫面補充（載入逾時）"
+ },
  "error.emptyFile": {
   "zh": "檔案是空的，請選擇完整檔案。",
   "en": "The file is empty. Choose a complete file.",

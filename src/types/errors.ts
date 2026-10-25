@@ -12,6 +12,9 @@ export type DwgErrorCode =
 /** Viewer / PDF / archive errors shown on the error screen (T20 5.1). */
 export type ViewerErrorCode = "DXF_OPEN_FAILED" | "PDF_OPEN_FAILED" | "PDF_PASSWORD" | "ARCHIVE_OPEN_FAILED" | "RENDER_FAILED";
 
+/** Message of the drawing load timeout, which the error screen tells apart from other open failures. */
+export const LOAD_TIMEOUT_MESSAGE = "Drawing loading timed out.";
+
 /** Every code the error screen can show. */
 export type AppErrorCode = FileErrorCode | DwgErrorCode | ViewerErrorCode;
 

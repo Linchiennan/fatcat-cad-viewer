@@ -3,7 +3,7 @@
 // reading position and layer memory, and reports picks for measuring. One engine per canvas element.
 import { DxfViewer } from "dxf-viewer";
 import { Color, MOUSE } from "three";
-import { AppError } from "../types/errors";
+import { AppError, LOAD_TIMEOUT_MESSAGE } from "../types/errors";
 import { MODEL_SPACE, type CadSpace, type DiagnosticCapture, type DrawingBounds, type DrawingPoint, type EngineReport, type LoadProgress, type LoadStage, type ViewCommand } from "../types/drawing";
 import type { CadEngine, MeasurePick, MeasurePreview } from "../types/engine";
 import { buildMeasurementGeometry, type MeasurementGeometry, type MeasurementIndex, type MeasurementSettings, type MeasurableEntity } from "./measurementGeometry";
@@ -29,8 +29,9 @@ import { fallbackPadding, fitInArea, freeArea, initialBounds, savedViewCamera, v
 
 type Any = any;
 
-/** Load time limit (T14 6-1). */
-export const LOAD_TIMEOUT_MS = 180_000;
+/** Load time limit (T14 6-1). Was 3 minutes; a phone needs longer than that to prepare 上晴 B區-2 (about 75 seconds on
+ * a desktop), and the loading screen can be cancelled at any time. */
+export const LOAD_TIMEOUT_MS = 600_000;
 /** Bundled fonts, in fallback order (T14 3.3-10). */
 export const ENGINE_FONTS = ["fonts/LiberationSans-Regular.ttf", "fonts/NotoSansCJKtc-Regular.otf"];
 /** Prefix of the assembled-document files our xrefs module writes. */
@@ -214,7 +215,7 @@ export class DxfCadEngine implements FatcatCadEngine {
     const current = () => this.task === task && !this.disposed;
     const onAbort = () => task.fail(abortError());
     signal?.addEventListener("abort", onAbort, { once: true });
-    const timer = setTimeout(() => task.fail(new AppError("DXF_OPEN_FAILED", "Drawing loading timed out.")), LOAD_TIMEOUT_MS);
+    const timer = setTimeout(() => task.fail(new AppError("DXF_OPEN_FAILED", LOAD_TIMEOUT_MESSAGE)), LOAD_TIMEOUT_MS);
     const progress: LoadProgress = (stage, done, total) => { if (current()) { try { onProgress(stage, done, total); } catch { /* UI only */ } } };
     try {
       assertFileSize(file.size);
