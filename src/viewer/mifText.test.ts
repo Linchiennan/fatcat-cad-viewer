@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeMifEntities, decodeMifText } from "./mifText";
+import { decodeMifEntities, decodeMifNames, decodeMifText, dropReadPastTail, mifEncodingOf } from "./mifText";
 
 describe("legacy \\M+ multibyte text", () => {
   it("decodes Japanese Shift-JIS codes from a TOTO sheet", () => {
@@ -20,5 +20,42 @@ describe("legacy \\M+ multibyte text", () => {
     expect(decodeMifEntities(doc)).toBe(2);
     expect(doc.entities[0].text).toBe("(改)");
     expect(doc.blocks.B.entities[0].text).toBe("ペ");
+  });
+});
+
+describe("codes in names (上晴, a Big5 drawing LibreDWG wrote with \\M+5)", () => {
+  const big5 = "ANSI_950";
+  const layer = "09-\\M+5ACA1\\M+5B0CA\\M+5B3C3\\M+5ADD1"; // 09-活動傢俱 in Big5, garbage as GB
+  const arrow = "\\M+5A7F7\\M+5AEC6\\M+5A4DE\\M+5BD75"; // 材料引線
+  const xref = "\\M+5CDE2\\M+5B2BF\\M+585A2\\M+5BFBC20150601$0$1F"; // 外部參考…: 85A2 is no Big5 character, so GB as written
+
+  it("decodes with the drawing's code page first, and as written when that fails part-way", () => {
+    expect(decodeMifText(layer, "big5")).toBe("09-活動傢俱");
+    expect(decodeMifText(xref, "big5")).toBe("外部參考20150601$0$1F");
+    expect(mifEncodingOf({ header: { $DWGCODEPAGE: big5 } })).toBe("big5");
+    expect(mifEncodingOf({ header: { $DWGCODEPAGE: "ANSI_1252" } })).toBeUndefined();
+  });
+
+  it("cuts bytes read past the end after the last code, only when they hold a control character", () => {
+    expect(dropReadPastTail(arrow + "<\u0001")).toBe(arrow);
+    expect(dropReadPastTail(arrow + "-AR111")).toBe(arrow + "-AR111");
+    expect(dropReadPastTail("樣式 " + arrow + "<\u0001 以實心箭頭近似")).toBe("樣式 " + arrow + " 以實心箭頭近似");
+  });
+
+  it("renames table keys and every reference the same way", () => {
+    const doc: any = {
+      header: { $DWGCODEPAGE: big5 },
+      tables: { layer: { layers: { [layer]: { name: layer } } } },
+      blocks: { [arrow]: { name: arrow, entities: [{ type: "LINE", layer }] } },
+      entities: [{ type: "INSERT", name: arrow, layer }],
+      cadDiagnostics: [`舊式引線 D21CB 箭頭樣式 ${arrow}<\u0001 以實心箭頭近似`],
+    };
+    expect(decodeMifNames(doc)).toBeGreaterThan(0);
+    expect(Object.keys(doc.tables.layer.layers)).toEqual(["09-活動傢俱"]);
+    expect(doc.tables.layer.layers["09-活動傢俱"].name).toBe("09-活動傢俱");
+    expect(Object.keys(doc.blocks)).toEqual(["材料引線"]);
+    expect(doc.blocks["材料引線"].entities[0].layer).toBe("09-活動傢俱");
+    expect(doc.entities[0]).toMatchObject({ name: "材料引線", layer: "09-活動傢俱" });
+    expect(doc.cadDiagnostics[0]).toBe("舊式引線 D21CB 箭頭樣式 材料引線 以實心箭頭近似");
   });
 });
