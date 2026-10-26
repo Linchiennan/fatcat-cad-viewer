@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector2 } from "three";
-import { bigFontPitch, fallbackMetrics, fittedShape, pitchedShape } from "./shxBigFontMetrics";
+import { bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape } from "./shxBigFontMetrics";
 
 // Bundled outline glyph stand-in: a full-width square 1.389 text heights wide.
 const glyph = () => ({
@@ -30,6 +30,20 @@ describe("SHX big font fallback pitch", () => {
     expect(s.bounds!.xMax).toBeCloseTo(1.3 * 1.25 / 1.389, 9);
     expect(s.GetVertices({ x: 10, y: 0 }, 2)[1].x).toBeCloseTo(10 + 2 * 1.3 * 1.25 / 1.389, 9);
     expect(g.vertices[1].x).toBe(1.3); // the cached original glyph is untouched
+  });
+
+  it("stands Chinese glyphs where each big font draws them (t4 鴻群: CHINA lines ran into each other)", () => {
+    const [cs, cl] = bigFontFit("\\RUBON\\CHINA"), [gs, gl] = bigFontFit("genie");
+    // the outline font's Chinese span (-0.111 to 1.167 text heights) lands on the big font's span
+    expect(-0.111 * cs + cl).toBeCloseTo(0.042, 6);
+    expect(1.167 * cs + cl).toBeCloseTo(0.958, 6);
+    expect(-0.111 * gs + gl).toBeCloseTo(-0.1, 6);
+    expect(1.167 * gs + gl).toBeCloseTo(1.075, 6);
+    const m = fallbackMetrics({ font: "c2", bigFont: "china" })!;
+    const s = fittedShape("設", glyph(), m);
+    expect(s.vertices![2].y).toBeCloseTo(1 * cs + cl, 9);
+    expect(s.bounds!.yMax).toBeCloseTo(1.1 * cs + cl, 9);
+    expect(fittedShape("m", glyph(), m).vertices![2].y).toBe(1); // Latin keeps its height
   });
 
   it("leaves Latin glyphs alone", () => {
