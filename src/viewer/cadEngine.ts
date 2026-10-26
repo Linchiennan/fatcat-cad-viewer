@@ -475,6 +475,16 @@ export class DxfCadEngine implements FatcatCadEngine {
   }
 
   private allBounds(): DrawingBounds | null {
+    // A sheet shows model space through clipped viewports: each viewport block holds the whole model, so the scene's
+    // bounds are the model's and the sheet itself shrank to a dot (惠宇 X01 配置: 65 units of paper in a 12,000-wide
+    // view). The measurement index keeps only what the clips show, so a sheet fits to that.
+    const index = this.index;
+    if (this.space !== MODEL_SPACE && index?.fitComplete && index.fitBounds?.length) {
+      const sheet = index.fitBounds.filter(validBounds).reduce<DrawingBounds | null>((u, b) => !u ? { ...b } : {
+        minX: Math.min(u.minX, b.minX), minY: Math.min(u.minY, b.minY), maxX: Math.max(u.maxX, b.maxX), maxY: Math.max(u.maxY, b.maxY),
+      }, null);
+      if (validBounds(sheet)) return sheet;
+    }
     const b = this.viewer.GetBounds?.();
     return validBounds(b) ? { minX: b.minX, minY: b.minY, maxX: b.maxX, maxY: b.maxY } : null;
   }

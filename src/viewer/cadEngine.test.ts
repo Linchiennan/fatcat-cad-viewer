@@ -179,7 +179,7 @@ describe("CAD engine", () => {
     expect(error.message).toContain("size exceeds");
   });
 
-  it("times out after 180 s", async () => {
+  it("times out after the load limit", async () => {
     engine = make();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const load = engine.load(jsonFile(), () => {});
@@ -224,6 +224,20 @@ describe("CAD engine", () => {
     viewer.canvas.dispatchEvent(lost);
     expect(lost.defaultPrevented).toBe(true);
     expect(errors.map((e) => e.code)).toEqual(["RENDER_FAILED"]);
+  });
+
+  it("fits a sheet to what its clipped viewports show, not to the whole model inside them (惠宇 X01 配置)", async () => {
+    engine = make();
+    const file = jsonFile("sheet.dxf", { cadLayouts: [{ name: "Model", order: 0 }, { name: "配置1", order: 1 }], entities: [{ type: "LINE", handle: "1", layer: "A", cadSpace: "配置1", vertices: [{ x: 0, y: 0 }, { x: 65, y: 0 }] }] });
+    const load = engine.load(file, () => {}, "配置1");
+    await until(() => viewer.pending.length === 1);
+    const sheet = { minX: 0, minY: 0, maxX: 65, maxY: 49 };
+    viewer.finish({ bounds: { minX: -9000, minY: -9000, maxX: 12000, maxY: 50 }, origin: { x: 0, y: 0 }, dxf: { ...sceneResult(), cadMeasurement: { ...sceneResult().cadMeasurement, fitBounds: [sheet], fitComplete: true } } });
+    await load;
+    expect(viewer.camera.position.x).toBeCloseTo(32.5, 6);
+    expect(viewer.camera.right - viewer.camera.left).toBeLessThan(100);
+    engine.command("fit");
+    expect(viewer.camera.right - viewer.camera.left).toBeLessThan(100);
   });
 
   it("opens with a full fit even with a CAD saved view; reset goes to the saved view", async () => {

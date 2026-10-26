@@ -8,7 +8,10 @@ export function widePolyline(vertices:V[],closed:boolean,width:number,pattern:nu
  const pat=pattern.map(n=>n*scale),cycle=pat.reduce((s,v)=>s+Math.abs(v),0);let k=0,left=cycle?Math.abs(pat[0])||Math.max(cycle*.001,1e-7):Infinity;
  const active=cycle>1e-10;let total=0;
  for(let i=0;i<(closed?vertices.length:vertices.length-1);i++){
-  const a=vertices[i],b=vertices[(i+1)%vertices.length],dx=b.x-a.x,dy=b.y-a.y,chord=Math.hypot(dx,dy);if(chord<1e-12)continue;
+  // A segment far shorter than the width cannot be seen, and its direction is rounding noise: its join would throw the
+  // offset edges out by 10^11 (A04 配置: a width-2 line with two vertices 6e-11 apart blanked the whole sheet).
+  const a=vertices[i],b=vertices[(i+1)%vertices.length],dx=b.x-a.x,dy=b.y-a.y,chord=Math.hypot(dx,dy);
+  if(chord<Math.max(1e-12,1e-6*Math.max(width,a.startWidth??0,a.endWidth??0)))continue;
   const bulge=a.bulge??0,theta=4*Math.atan(bulge),arc=Math.abs(theta)>1e-10;
   const r=arc?chord*(1+bulge*bulge)/(4*Math.abs(bulge)):0;
   const off=arc?chord*(1-bulge*bulge)/(4*bulge):0;
@@ -34,7 +37,9 @@ export function widePolyline(vertices:V[],closed:boolean,width:number,pattern:nu
   const a=groups[(i+groups.length-1)%groups.length],b=groups[i];
   for(const side of ['left','right'] as const){const p=a[side],q=b[side],A=p.at(-1)!,B=q[0];
    if(!a.arc&&!b.arc){const U={x:A.x-p.at(-2)!.x,y:A.y-p.at(-2)!.y},V={x:q[1].x-B.x,y:q[1].y-B.y},den=cross(U,V);
-    if(Math.abs(den)>1e-12*Math.hypot(U.x,U.y)*Math.hypot(V.x,V.y)){const t=cross({x:B.x-A.x,y:B.y-A.y},V)/den,M={x:A.x+t*U.x,y:A.y+t*U.y};p[p.length-1]=M;q[0]=M;continue;}
+    // A miter point far beyond both segments (nearly parallel edges) is left for the bounded bevel below.
+    if(Math.abs(den)>1e-12*Math.hypot(U.x,U.y)*Math.hypot(V.x,V.y)){const t=cross({x:B.x-A.x,y:B.y-A.y},V)/den,M={x:A.x+t*U.x,y:A.y+t*U.y};
+     if(Math.hypot(M.x-A.x,M.y-A.y)<=100*Math.max(Math.hypot(U.x,U.y),Math.hypot(V.x,V.y),Math.hypot(B.x-A.x,B.y-A.y))){p[p.length-1]=M;q[0]=M;continue;}}
    }
    if(a.arc||b.arc){
     // Intersect the actual radial/tapered offset curves, not the display chords.
