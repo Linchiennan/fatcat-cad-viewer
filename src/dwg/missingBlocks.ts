@@ -50,6 +50,9 @@ function common(e: Any): Any {
   if (Number.isInteger(e.color) && e.color >= 0) out.trueColor = e.color & 0xffffff;
   else out.color = getAcadColor(Math.abs(out.colorIndex));
   if (e.isVisible === false) out.hidden = true;
+  // A downward normal turns circles, arcs, polylines and hatches over, as parsed entities carry it.
+  const n = e.extrusionDirection;
+  if (n && Number.isFinite(n.z) && n.z < 0) out.extrusionDirection = { x: n.x ?? 0, y: n.y ?? 0, z: n.z };
   return out;
 }
 

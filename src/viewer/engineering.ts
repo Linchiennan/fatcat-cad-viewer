@@ -2,6 +2,7 @@ import type { DrawingPoint } from './savedView';
 import {widePolyline} from './widePolyline';
 import {complexLinePrimitives} from './complexLineType';
 import {Entity} from 'dxf-viewer/src/DxfScene.js';
+import {dimensionBlockOffset} from './dimensionBlock';
 import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
@@ -147,6 +148,13 @@ export function installEngineeringScene(ctor:Any):void {
  // A hatch past DENSE_HATCH_SEGMENTS is drawn as its boundary only, and once the drawing has spent HATCH_BUDGET
  // segments on patterns, any hatch past SMALL_HATCH_SEGMENTS is too. Copies of a block hold copies of a hatch with
  // the same handle, so once one is drawn as its boundary the others go straight to that.
+ // A dimension's *D block goes at its group-12 point, as CAD places it (see dimensionBlock.ts).
+ const decomposeDimension=p._DecomposeDimension;
+ p._DecomposeDimension=function*(e:Any,ctx:Any){
+  const at=dimensionBlockOffset(e);
+  if((at.x||at.y)&&e.block!=null&&this.blocks?.has?.(e.block)){this._ProcessInsert({name:e.block,position:at,layer:e.layer,color:e.color,colorIndex:e.colorIndex},ctx);return;}
+  yield* decomposeDimension.call(this,e,ctx);
+ };
  const decomposeHatch=p._DecomposeHatch;
  p._DecomposeHatch=function*(e:Any,ctx:Any){
   const outlined:Set<string>=this.cadDenseHatches??=new Set();

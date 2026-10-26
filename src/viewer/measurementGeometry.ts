@@ -3,6 +3,7 @@
 // Advanced snaps (intersection / perpendicular) stay in our engineering.advancedSnap + curveSnaps.
 import type { DrawingBounds, DrawingPoint, EngineReport } from "../types/drawing";
 import type { SnapCurve, SnapPrimitive } from "./curveSnaps";
+import { dimensionBlockOffset } from "./dimensionBlock";
 
 /** "drawing" = unknown drawing unit (no conversion). */
 export type MeasurementUnit = "drawing" | "mm" | "cm" | "m" | "in" | "ft";
@@ -142,6 +143,9 @@ export function measuredAngle(points: readonly DrawingPoint[]): number | null {
 type Mat = readonly [number, number, number, number, number, number];
 const IDENTITY: Mat = [1, 0, 0, 1, 0, 0];
 const MIRROR_X: Mat = [-1, 0, 0, 1, 0, 0];
+/** Types whose points are in their own coordinate system, which a downward normal turns over (INSERT has its own matrix).
+ * TEXT, HATCH, SOLID… are indexed from the shapes the renderer drew, already turned over. */
+const OCS_TYPES = new Set(["CIRCLE", "ARC", "LWPOLYLINE", "POLYLINE"]);
 const apply = (m: Mat, p: DrawingPoint): DrawingPoint => ({ x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] });
 const linear = (m: Mat, p: DrawingPoint): DrawingPoint => ({ x: m[0] * p.x + m[2] * p.y, y: m[1] * p.x + m[3] * p.y });
 /** m ∘ n: apply n first. */
@@ -438,7 +442,10 @@ class IndexBuilder {
     const layer = e.layer && e.layer !== "0" ? String(e.layer) : ctx.layer;
     if (!this.layerShown(layer)) return;
     const mirrored = !!ext && ext.z < 0;
-    const m: Mat = mirrored && e.type !== "INSERT" ? compose(ctx.m, MIRROR_X) : ctx.m;
+    // Only types drawn in their own coordinate system (OCS) turn over with a downward normal; LINE, POINT, ELLIPSE,
+    // SPLINE, MTEXT… are in world coordinates, as the renderer draws them (超級圖庫 閘閥: five LINEs of a valve stem
+    // landed 40 units off when mirrored). An ELLIPSE with that normal runs its angles the other way.
+    const m: Mat = mirrored && OCS_TYPES.has(e.type) ? compose(ctx.m, MIRROR_X) : ctx.m;
     switch (e.type) {
       case "LINE": return this.polyline(e, ctx, layer, m, e.vertices ?? [e.start, e.end], false);
       case "LWPOLYLINE":
@@ -447,7 +454,7 @@ class IndexBuilder {
         return this.polyline(e, ctx, layer, m, e.vertices ?? [], !!e.shape);
       case "CIRCLE": return this.circle(e, ctx, layer, m);
       case "ARC": if (!this.angBase) this.arc(e, ctx, layer, m); return;
-      case "ELLIPSE": if (!this.angBase && !mirrored) this.ellipse(e, ctx, layer, m); return;
+      case "ELLIPSE": if (!this.angBase) this.ellipse(e, ctx, layer, m, mirrored); return;
       case "POINT":
         if (this.pdMode === 1 || (this.pdMode !== 0 && this.pdSize <= 0) || !finite(e.position)) return;
         this.snap(apply(m, e.position), "endpoint", layer, ctx);
@@ -604,7 +611,7 @@ class IndexBuilder {
     this.conic(e, ctx, layer, curve, 2, s !== null ? { length: r * sweep * s, approximate: false } : {});
   }
 
-  private ellipse(e: Any, ctx: Context, layer: string, m: Mat): void {
+  private ellipse(e: Any, ctx: Context, layer: string, m: Mat, clockwise = false): void {
     const major = e.majorAxisEndPoint, ratio = num(e.axisRatio, 0);
     if (!finite(e.center) || !finite(major) || !(ratio > 0) || !(major.x || major.y)) return;
     const open = e.endAngle !== undefined && e.endAngle !== null;
@@ -613,7 +620,8 @@ class IndexBuilder {
     while (end <= start) end += TAU;
     const full = !open || Math.abs(end - start - TAU) < 1e-6;
     const sweep = full ? TAU : end - start, from = full ? 0 : start;
-    const minor = { x: -major.y * ratio, y: major.x * ratio };
+    // The minor axis is the normal × major: a downward normal puts it on the other side, so angles run clockwise.
+    const minor = clockwise ? { x: major.y * ratio, y: -major.x * ratio } : { x: -major.y * ratio, y: major.x * ratio };
     const curve = mapConic(m, e.center, major, minor, from, sweep);
     const local: SnapCurve = { center: e.center, u: major, v: minor, start: from, sweep };
     this.snap(apply(m, e.center), "center", layer, ctx);
@@ -664,7 +672,8 @@ class IndexBuilder {
       const h = num(text.textHeight ?? text.height, 0) * (uniformScale(m) ?? 1);
       if (h > 0) props.textHeight = h;
     }
-    const child: Context = { ...ctx, m, layer, dimension: props, stack: [...ctx.stack, e.block] };
+    const at = dimensionBlockOffset(e);
+    const child: Context = { ...ctx, m: compose(m, [1, 0, 0, 1, at.x, at.y]), layer, dimension: props, stack: [...ctx.stack, e.block] };
     for (const c of block.entities ?? []) {
       if (this.stopped) return;
       this.visit(c, child);

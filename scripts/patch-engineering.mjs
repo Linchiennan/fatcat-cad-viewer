@@ -31,3 +31,6 @@ patch('parser/entities/text.js','case 50: // Rotation in degrees','case 51: enti
 console.log('工程parser/原色/線寬修補已套用');
 // Nested block references skipped _FilterEntity, so hidden entities and frozen layers inside nested blocks still drew.
 patch('DxfScene.js','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    if (!this._FilterEntity(entity)) continue /* fatcat nested filter */\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }');
+// HATCH dropped its extrusion (210/220/230), so a hatch drawn with a downward normal stayed unmirrored while its circle
+// boundary's own CIRCLE turned over (超級圖庫 閘閥: the solid wheel hub landed 56 units off the hub circle).
+patch('parser/entities/hatch.js','        case 98: // Number of seed points','        case 210:\n            entity.extrusionDirection = helpers.parsePoint(scanner);\n            break;\n\n        case 98: // Number of seed points');

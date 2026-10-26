@@ -116,18 +116,20 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
   if(e&&['TEXT','MTEXT','ATTRIB','ATTDEF'].includes(r.type)&&r.tags.some(t=>t[0]===360)){const t=fieldTemplate(r,recordsByHandle);if(t)e.cadFieldTemplate=t;}
   if(r.type==='MLINE'){
    const ci=num(r,62,256),made=mlineEntities(r.tags,{handle,layer:text(r,8,'0'),color:ci===256?{}:ci===0?{colorIndex:0}:{colorIndex:ci,color:colorTable[ci]},style:mlineStyles.get(text(r,340))??mlineStyles.get(text(r,2)),elementByBlockUnreliable:newDwg});
-   for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
+   // A hidden one stays hidden: dynamic blocks hide the other visibility states this way (超級圖庫 排水-OYT: three
+   // MLINEs of another state drew an extra elbow on the YT branch).
+   for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';if(num(r,60)===1)m.hidden=true;(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
    (doc.cadDiagnostics??=[]).push(...made.notes);continue;
   }
   if(r.type==='LEADER'){
    const made=leaderEntities(r.tags,{handle,layer:text(r,8,'0'),style:dimStyles.get(text(r,3)),blockName:h=>blockNames.get(h),arrowFlagUnreliable:newDwg});
-   for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
+   for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';if(num(r,60)===1)m.hidden=true;(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
    (doc.cadDiagnostics??=[]).push(...made.notes);continue;
   }
   if(r.type==='MULTILEADER'){
    // Leader lines, arrowheads and MTEXT replace the unsupported entity in its own space/block.
    const made=multileaderEntities(r.tags,{handle,layer:text(r,8,'0'),styleName:h=>styleNames.get(h)});
-   for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
+   for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';if(num(r,60)===1)m.hidden=true;(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
    (doc.cadDiagnostics??=[]).push(...made.notes);continue;
   }
   if(r.type==='WIPEOUT'){
