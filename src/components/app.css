@@ -296,6 +296,9 @@ button { cursor: pointer; }
   border: 1.5px solid var(--tile-line); border-radius: 14px; background: var(--tile-bg); color: #fff;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; transition: transform 0.1s;
 }
+/* Wider screens keep the phone's row: five cells of at most 84 px, centred. */
+.glove-bar { justify-content: center; }
+.glove-bar > .glove-btn { max-width: 84px; }
 .glove-btn:active:not([aria-disabled="true"]) { transform: scale(0.96); }
 .glove-btn > span:not(.glove-tip) { position: relative; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; line-height: normal; }
 .glove-icon { position: relative; width: 30px; height: 30px; }
@@ -315,8 +318,10 @@ button { cursor: pointer; }
 .glove-ear.is-on .glove-whiskers { stroke: #6b4a10; }
 /* the centre paw */
 /* Icon + caption sit in the middle of the pad: the pad grows with the cell width (cell = (bar - 4 gaps) / 5),
-   its centre is 36% of the paw height above the paw bottom, the group is 45.9 px tall. */
-.glove-btn.glove-paw { min-height: 93px; margin-top: -25px; justify-content: flex-end; padding-bottom: calc(0.4118 * (100cqw - 24px) / 5 - 23.92px); border-color: transparent; background: none; color: #ffd1e0; }
+   its centre is 36% of the paw height above the paw bottom, the group is 45.9 px tall.
+   Cells stop at 84 px and the row is centred (see .glove-bar > .glove-btn): on a tablet or a turned phone the paw
+   grew with the bar to 195-280 px and stood 100-160 px over the drawing (V1). */
+.glove-btn.glove-paw { --paw-cell: min((100cqw - 24px) / 5, 84px); min-height: 93px; margin-top: -25px; justify-content: flex-end; padding-bottom: calc(0.4118 * var(--paw-cell) - 23.92px); border-color: transparent; background: none; color: #ffd1e0; }
 .glove-paw .glove-paw { position: absolute; left: -7%; bottom: 0; width: 114%; height: auto; aspect-ratio: 1; overflow: visible; }
 .glove-paw .paw-toes { fill: #f4a6c0; stroke: #ffd1e0; stroke-width: 2.4; vector-effect: non-scaling-stroke; }
 .glove-paw .paw-toes ellipse, .glove-paw .paw-pad { vector-effect: non-scaling-stroke; }
