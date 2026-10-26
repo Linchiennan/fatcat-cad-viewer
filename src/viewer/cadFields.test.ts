@@ -36,6 +36,21 @@ describe("layout-name fields", () => {
   });
 });
 
+describe("the tab a drawing was saved on (61 of 85 惠宇／上晴 drawings open on a layout in CAD)", () => {
+  const sheets = [
+    "0", "SECTION", "2", "TABLES",
+    "0", "BLOCK_RECORD", "5", "1E", "2", "*Paper_Space", "0", "BLOCK_RECORD", "5", "2A", "2", "*Paper_Space0", "0", "BLOCK_RECORD", "5", "1F", "2", "*Model_Space",
+    "0", "ENDSEC", "0", "SECTION", "2", "OBJECTS",
+    "0", "LAYOUT", "5", "30", "100", "AcDbLayout", "1", "配置A", "71", "1", "330", "2A",
+    "0", "LAYOUT", "5", "31", "100", "AcDbLayout", "1", "配置B", "71", "2", "330", "1E",
+    "0", "ENDSEC", "0", "EOF",
+  ].join("\n");
+  it("is the layout that owns *Paper_Space when TILEMODE is 0, else the model", () => {
+    expect(preserveCadMetadata({ header: { $TILEMODE: 0 }, entities: [], blocks: {} }, sheets).cadSavedSpace).toBe("配置B");
+    expect(preserveCadMetadata({ header: { $TILEMODE: 1 }, entities: [], blocks: {} }, sheets).cadSavedSpace).toBe("Model");
+  });
+});
+
 describe("xref matching and usage", () => {
   const file = (name: string) => new File(["x"], name);
   it("matches a reference saved without an extension to the .dwg of the same name", () => {

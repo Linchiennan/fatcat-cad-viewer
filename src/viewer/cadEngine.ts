@@ -199,7 +199,8 @@ export class DxfCadEngine implements FatcatCadEngine {
 
   // ---- loading ---------------------------------------------------------------------------------
 
-  async load(file: File, onProgress: LoadProgress, space: string = MODEL_SPACE, signal?: AbortSignal): Promise<void> {
+  /** `space` left out opens the tab the drawing was saved on, as CAD does (61 of 85 drawings were saved on a layout). */
+  async load(file: File, onProgress: LoadProgress, requested?: string, signal?: AbortSignal): Promise<void> {
     if (this.disposed) throw abortError();
     if (signal?.aborted) throw abortError();
     this.flushPosition();
@@ -220,13 +221,14 @@ export class DxfCadEngine implements FatcatCadEngine {
     try {
       assertFileSize(file.size);
       if (this.file !== file) { this.file = file; this.parsed = null; }
-      const saved = space === MODEL_SPACE ? savedViewFor(file) : null;
-      const key = sheetKey(await guard(drawingIdentity(file)), space);
-      const position = await guard(loadPosition(key));
       progress("loading", 0, 0);
       if (!this.parsed) this.parsed = await guard(parseCadFile(file));
       const parsed = this.parsed;
       this.spaceList = (parsed.cadLayouts ?? [{ name: MODEL_SPACE, order: 0 }]).map((l: Any) => ({ name: l.name, order: l.order, ...(l.owner ? { owner: l.owner } : {}) }));
+      const space = requested ?? (this.spaceList.some((s) => s.name === parsed.cadSavedSpace) ? parsed.cadSavedSpace : MODEL_SPACE);
+      const saved = space === MODEL_SPACE ? savedViewFor(file) : null;
+      const key = sheetKey(await guard(drawingIdentity(file)), space);
+      const position = await guard(loadPosition(key));
       const doc = selectCadSpace(parsed, space);
       const memory = readLayerMemory(key);
       doc.cadLayerVisibility = memory;

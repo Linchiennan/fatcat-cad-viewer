@@ -226,6 +226,21 @@ describe("CAD engine", () => {
     expect(errors.map((e) => e.code)).toEqual(["RENDER_FAILED"]);
   });
 
+  it("opens on the tab the drawing was saved on unless a tab is asked for", async () => {
+    engine = make();
+    const file = jsonFile("saved-tab.dxf", { cadSavedSpace: "配置1", cadLayouts: [{ name: "Model", order: 0 }, { name: "配置1", order: 1 }] });
+    const first = engine.load(file, () => {});
+    await until(() => viewer.pending.length === 1);
+    viewer.finish();
+    await first;
+    expect(engine.currentSpace()).toBe("配置1");
+    const model = engine.load(file, () => {}, "Model");
+    await until(() => viewer.pending.length === 1);
+    viewer.finish();
+    await model;
+    expect(engine.currentSpace()).toBe("Model");
+  });
+
   it("fits a sheet to what its clipped viewports show, not to the whole model inside them (惠宇 X01 配置)", async () => {
     engine = make();
     const file = jsonFile("sheet.dxf", { cadLayouts: [{ name: "Model", order: 0 }, { name: "配置1", order: 1 }], entities: [{ type: "LINE", handle: "1", layer: "A", cadSpace: "配置1", vertices: [{ x: 0, y: 0 }, { x: 65, y: 0 }] }] });

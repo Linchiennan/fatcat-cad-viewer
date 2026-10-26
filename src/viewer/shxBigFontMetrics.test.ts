@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector2 } from "three";
-import { bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape } from "./shxBigFontMetrics";
+import { bigFontFile, bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape } from "./shxBigFontMetrics";
 
 // Bundled outline glyph stand-in: a full-width square 1.389 text heights wide.
 const glyph = () => ({
@@ -108,5 +108,15 @@ describe("SHX Latin fallback width (鴻群 8.34m³、摩擦損失(h3)=)", () => 
   it("uses romans for an SHX font it has no table for, and leaves CJK-only styles' Latin alone", () => {
     expect(fallbackMetrics({ font: "cn1.shx" })?.latin).toEqual(fallbackMetrics({ font: "romans" })?.latin);
     expect(fittedShape("A", glyph(), { key: "", cjk: 1.25, latin: null }).advance).toBe(1.389);
+  });
+});
+
+describe("big fonts named with a folder (t4 鴻群 \\RUBON\\CHINA)", () => {
+  it("are drawn with chineset.shx, as ZWCAD fills in a big font it cannot find", () => {
+    expect(bigFontFile("\\RUBON\\CHINA")).toBe("chineset.shx");
+    expect(bigFontFile("/rubon/rubonu")).toBe("chineset.shx");
+    expect(bigFontFile("china")).toBe("china.shx");
+    expect(bigFontPitch("\\RUBON\\CHINA")).toBe(1); // ZWCAD advances these 1.0 text heights; china.shx would give 1.125
+    expect(bigFontPitch("china")).toBe(1.125);
   });
 });

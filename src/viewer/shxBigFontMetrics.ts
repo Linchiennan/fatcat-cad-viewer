@@ -16,15 +16,25 @@ const OUTLINE_CJK_Y: [number, number] = [-0.111, 1.167];
 
 /** Scale and lift that put the outline font's Chinese characters where the big font draws them. */
 export function bigFontFit(bigFont: string): [number, number] {
-  const key = fontKey(bigFont), [lo, hi] = BIG_FONT_CJK_Y[key.endsWith(".shx") ? key : key + ".shx"] ?? DEFAULT_CJK_Y;
+  const [lo, hi] = BIG_FONT_CJK_Y[bigFontFile(bigFont)] ?? DEFAULT_CJK_Y;
   const scale = (hi - lo) / (OUTLINE_CJK_Y[1] - OUTLINE_CJK_Y[0]);
   return [scale, lo - scale * OUTLINE_CJK_Y[0]];
 }
 const FULL_WIDTH = /[⺀-鿿가-힯豈-﫿︰-﹏＀-｠￠-￦]/u;
 
 export function bigFontPitch(bigFont: string): number {
+  return BIG_FONT_PITCH[bigFontFile(bigFont)] ?? DEFAULT_PITCH;
+}
+
+/**
+ * The big font CAD draws with. A name with a folder ("\RUBON\CHINA") points at a folder that is not on this machine, so
+ * ZWCAD finds no font and the start-up script fills in chineset.shx: t4 鴻群's CHINA texts advance 1.0 text heights in
+ * ZWCAD, chineset's pitch, where china.shx would give 1.125.
+ */
+export function bigFontFile(bigFont: string): string {
+  if (/[\\/]/.test(bigFont)) return "chineset.shx";
   const key = fontKey(bigFont);
-  return BIG_FONT_PITCH[key.endsWith(".shx") ? key : key + ".shx"] ?? DEFAULT_PITCH;
+  return key.endsWith(".shx") ? key : key + ".shx";
 }
 
 // Character advance of ASCII 32-126 for common SHX text fonts, in thousandths of the text height,
@@ -42,7 +52,7 @@ export function fallbackMetrics(style: { font?: string; bigFont?: string }): Fal
   const cjk = style.bigFont ? bigFontPitch(style.bigFont) : null;
   const latin = name ? LATIN_ADVANCE[name] ?? LATIN_ADVANCE["romans.shx"] : null;
   if (cjk === null && !latin) return null;
-  return { key: name + "|" + (style.bigFont ? fontKey(style.bigFont) : ""), cjk, latin, fit: style.bigFont ? bigFontFit(style.bigFont) : null };
+  return { key: name + "|" + (style.bigFont ? bigFontFile(style.bigFont) : ""), cjk, latin, fit: style.bigFont ? bigFontFit(style.bigFont) : null };
 }
 
 /** The glyph a fallback character should use: CJK narrowed to the big font pitch, Latin re-spaced. */
@@ -81,7 +91,7 @@ const NO_VERTICAL = new Set(["acadchn6.shx", "china.shx", "chs.shx", "dayump.shx
 export function verticalPitch(style: { font?: string; bigFont?: string; standardFlag?: number }): number | null {
   if (!((style.standardFlag ?? 0) & 4) || /\.(ttf|ttc|otf)$/i.test(style.font ?? "")) return null;
   if (!style.bigFont) return DEFAULT_PITCH;
-  const key = fontKey(style.bigFont), name = key.endsWith(".shx") ? key : key + ".shx";
+  const name = bigFontFile(style.bigFont);
   return NO_VERTICAL.has(name) ? null : VERTICAL_PITCH[name] ?? DEFAULT_PITCH;
 }
 

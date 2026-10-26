@@ -93,6 +93,10 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  }}
  const ownerSpace=new Map(layouts.filter(l=>l.owner).map(l=>[l.owner,l.name]));
  for(const r of rows.filter(r=>r.type==='BLOCK_RECORD')){const name=text(r,2);if(name.toLowerCase()==='*model_space')ownerSpace.set(text(r,5),'Model');}
+ // The tab the drawing was saved on, which CAD opens it on: a layout when TILEMODE is 0, the one that owns *Paper_Space.
+ const activePaper=rows.find(r=>r.type==='BLOCK_RECORD'&&text(r,2).toLowerCase()==='*paper_space');
+ const savedLayout=activePaper?layouts.find(l=>l.owner&&l.owner===text(activePaper,5))?.name:undefined;
+ doc.cadSavedSpace=Number(doc.header?.$TILEMODE??1)===0&&savedLayout?savedLayout:'Model';
  const byHandle=new Map<string,Any>();for(const e of [...(doc.entities??[]),...Object.values(doc.blocks??{}).flatMap((b:Any)=>b.entities??[])])if(e.handle)byHandle.set(String(e.handle),e);
  const paperViewportCounts=new Map<string,number>();
  // Arrow inputs the pinned parser drops: DIMLDRBLK handles and block-record names.
