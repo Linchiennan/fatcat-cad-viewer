@@ -4,6 +4,7 @@
 // conversion worker rebuilds just those blocks from it in the shape DxfParser produces.
 import { getAcadColor } from "dxf-viewer/src/parser/ParseHelpers.js";
 import { arrowheadEntities } from "../viewer/leader";
+import { wipeoutPolygon } from "../viewer/wipeout";
 
 type Any = any;
 type P = { x: number; y: number; z?: number };
@@ -68,6 +69,26 @@ function hatchLoop(p: Any): Any {
   return loop;
 }
 
+/** Points of a smooth curve through `p` (centripetal Catmull-Rom, 8 steps per span). */
+export function throughPoints(p: P[], closed: boolean): P[] {
+  const n = p.length, at = (i: number) => closed ? p[(i + n) % n] : p[Math.max(0, Math.min(n - 1, i))];
+  const out: P[] = [];
+  for (let i = 0; i < (closed ? n : n - 1); i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    const d = (a: P, b: P) => Math.max(Math.sqrt(Math.hypot(b.x - a.x, b.y - a.y)), 1e-9);
+    const t1 = d(p0, p1), t2 = t1 + d(p1, p2), t3 = t2 + d(p2, p3);
+    for (let k = 0; k < 8; k++) {
+      const t = t1 + (t2 - t1) * k / 8;
+      const lerp = (a: P, b: P, ta: number, tb: number) => ({ x: (a.x * (tb - t) + b.x * (t - ta)) / (tb - ta), y: (a.y * (tb - t) + b.y * (t - ta)) / (tb - ta) });
+      const a1 = lerp(p0, p1, 0, t1), a2 = lerp(p1, p2, t1, t2), a3 = lerp(p2, p3, t2, t3);
+      const b1 = lerp(a1, a2, 0, t2), b2 = lerp(a2, a3, t1, t3);
+      out.push(lerp(b1, b2, t1, t2));
+    }
+  }
+  if (!closed) out.push(p[n - 1]);
+  return out;
+}
+
 /** DxfParser-shaped entities for one converter entity (an INSERT brings its ATTRIBs along). */
 export function viewerEntities(e: Any, arrowSize = 2.5): Any[] {
   const c = common(e);
@@ -80,6 +101,28 @@ export function viewerEntities(e: Any, arrowSize = 2.5): Any[] {
     case "SOLID": return [{ ...c, points: [e.corner1, e.corner2, e.corner3, e.corner4 ?? e.corner3].map(pt) }];
     case "LWPOLYLINE": return [{ ...c, shape: ((e.flag ?? 0) & 512) !== 0, ...(e.constantWidth ? { width: e.constantWidth } : {}), elevation: e.elevation,
       vertices: (e.vertices ?? []).map((v: Any) => ({ x: v.x, y: v.y, ...(v.bulge ? { bulge: v.bulge } : {}), ...(v.startWidth ? { startWidth: v.startWidth } : {}), ...(v.endWidth ? { endWidth: v.endWidth } : {}) })) }];
+    case "WIPEOUT": { // 上晴 B區-2: 78 in rebuilt blocks; masked like a parsed one once the blocks are merged
+      const clip = (e.clippingBoundaryPath ?? []).map(pt);
+      return [{ ...c, type: "WIPEOUT", polygon: wipeoutPolygon({ position: pt(e.position), u: pt(e.uPixel), v: pt(e.vPixel), clip }) }];
+    }
+    case "POLYLINE2D": // 惠宇 B14: 1436 of them in rebuilt blocks; drawn as the light polyline it is (spline-frame vertices left out)
+    case "POLYLINE3D": { // 上晴 B區-2: 32; seen from above, as CAD's plan view shows it
+      const at = (v: Any, k: "startWidth" | "endWidth") => v[k] || e[k] || 0;
+      const vertices = (e.vertices ?? []).filter((v: Any) => ((v.flag ?? 0) & 16) === 0).map((v: Any) => ({ x: v.x, y: v.y,
+        ...(v.bulge ? { bulge: v.bulge } : {}), ...(at(v, "startWidth") ? { startWidth: at(v, "startWidth") } : {}), ...(at(v, "endWidth") ? { endWidth: at(v, "endWidth") } : {}) }));
+      return vertices.length < 2 ? [] : [{ ...c, type: "LWPOLYLINE", shape: ((e.flag ?? 0) & 1) !== 0, elevation: e.elevation, vertices }];
+    }
+    case "SPLINE": { // 惠宇 B14: 109 in rebuilt blocks
+      const flag = e.flag ?? 0;
+      // The reader gives a fit-point spline (上晴 B區-2: 21 in rebuilt blocks) no control points; CAD's curve passes
+      // through every fit point, so draw a smooth curve through them (centripetal Catmull-Rom, close to CAD's shape).
+      if ((e.controlPoints ?? []).length < 2) {
+        const fit = (e.fitPoints ?? []).map(pt);
+        return fit.length < 2 ? [] : [{ ...c, type: "LWPOLYLINE", shape: (flag & 1) !== 0, vertices: throughPoints(fit, (flag & 1) !== 0) }];
+      }
+      return [{ ...c, controlPoints: e.controlPoints.map(pt), degreeOfSplineCurve: e.degree, knotValues: e.knots ?? [],
+        fitPoints: (e.fitPoints ?? []).map(pt), ...(e.weights?.length ? { weights: e.weights } : {}), closed: (flag & 1) !== 0, periodic: (flag & 2) !== 0, rational: (flag & 4) !== 0 }];
+    }
     case "TEXT": return [{ ...c, ...textFields(e) }];
     case "MTEXT": return [{ ...c, text: e.text ?? "", position: pt(e.insertionPoint), height: e.textHeight, width: e.rectWidth, rotation: deg(e.rotation),
       ...(e.direction && (e.direction.x || e.direction.y) ? { direction: pt(e.direction) } : {}), styleName: e.styleName, attachmentPoint: e.attachmentPoint, drawingDirection: e.drawingDirection, lineSpacing: e.lineSpacing }];

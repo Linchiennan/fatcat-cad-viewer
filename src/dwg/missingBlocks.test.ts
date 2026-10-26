@@ -28,6 +28,26 @@ describe("blocks LibreDWG's DXF writer left out (拾山 16B+16C electrical symbo
     expect(b.entities[2]).toMatchObject({ shape: true, vertices: [{ x: 0, y: -15 }, { x: 30, y: -15, bulge: 0.5 }] });
   });
 
+  it("rebuilds old-style polylines, splines and wipeouts too (惠宇 B14, 上晴 B區-2)", () => {
+    const [p2] = viewerEntities({ type: "POLYLINE2D", layer: "0", flag: 1, startWidth: 2, endWidth: 2, vertices: [
+      { x: 0, y: 0, flag: 0 }, { x: 9, y: 9, flag: 16 }, { x: 10, y: 0, flag: 0, bulge: 0.5 }, { x: 10, y: 10, flag: 0 }] });
+    expect(p2).toMatchObject({ type: "LWPOLYLINE", shape: true, vertices: [{ x: 0, y: 0, startWidth: 2 }, { x: 10, y: 0, bulge: 0.5 }, { x: 10, y: 10 }] });
+    expect(p2.vertices).toHaveLength(3); // the spline-frame vertex is not part of the line
+    const [p3] = viewerEntities({ type: "POLYLINE3D", layer: "0", flag: 0, vertices: [{ x: 1, y: 2, z: 5, flag: 32 }, { x: 3, y: 4, z: 6, flag: 32 }] });
+    expect(p3).toMatchObject({ type: "LWPOLYLINE", shape: false, vertices: [{ x: 1, y: 2 }, { x: 3, y: 4 }] });
+    const [s] = viewerEntities({ type: "SPLINE", layer: "0", flag: 8, degree: 3, knots: [0, 0, 0, 0, 1, 1, 1, 1], controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 0 }], fitPoints: [] });
+    expect(s).toMatchObject({ type: "SPLINE", degreeOfSplineCurve: 3, knotValues: [0, 0, 0, 0, 1, 1, 1, 1], closed: false, controlPoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 0 }] });
+    // a fit-point spline (no control points from the reader) becomes a smooth line through its fit points
+    const fit = [{ x: 0, y: 0 }, { x: 10, y: 5 }, { x: 20, y: 0 }];
+    const [f] = viewerEntities({ type: "SPLINE", layer: "0", flag: 8, degree: 3, controlPoints: [], fitPoints: fit });
+    expect(f.type).toBe("LWPOLYLINE");
+    for (const q of fit) expect(f.vertices.some((v: any) => Math.hypot(v.x - q.x, v.y - q.y) < 1e-9)).toBe(true);
+    expect(f.vertices.length).toBeGreaterThan(fit.length);
+    const [w] = viewerEntities({ type: "WIPEOUT", layer: "0", position: { x: 0, y: 0 }, uPixel: { x: 10, y: 0 }, vPixel: { x: 0, y: 10 }, clippingBoundaryPath: [{ x: -0.5, y: -0.5 }, { x: 0.5, y: 0.5 }] });
+    expect(w.type).toBe("WIPEOUT");
+    expect(w.polygon).toEqual([{ x: 0, y: 10 }, { x: 10, y: 10 }, { x: 10, y: 0 }, { x: 0, y: 0 }]);
+  });
+
   it("keeps attribute values of nested inserts as ATTRIB entities", () => {
     const out = viewerEntities({ type: "INSERT", layer: "E", name: "JK29D2D", insertionPoint: { x: 1, y: 2 }, xScale: 1.2, yScale: 1.2, zScale: 1.2, rotation: Math.PI,
       attribs: [{ type: "ATTRIB", layer: "0", flags: 1, tag: "KENCAD", text: { text: "JK29D2D00", startPoint: { x: 1, y: 2 }, textHeight: 1.2, rotation: Math.PI, styleName: "AE", halign: 4 }, alignmentPoint: { x: 1, y: 2 } }] });

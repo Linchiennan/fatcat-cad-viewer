@@ -36,6 +36,22 @@ describe("codes in names (上晴, a Big5 drawing LibreDWG wrote with \\M+5)", ()
     expect(mifEncodingOf({ header: { $DWGCODEPAGE: "ANSI_1252" } })).toBeUndefined();
   });
 
+  it("leaves a name in codes when it would take the place of one the table already has (上晴 B區 0818)", () => {
+    const doc: any = { header: { $DWGCODEPAGE: big5 }, blocks: { [arrow]: { name: arrow, entities: [{ type: "TEXT", text: "DXF" }] }, "材料引線": { name: "材料引線", entities: [{ type: "TEXT", text: "補回" }] } },
+      entities: [{ type: "INSERT", name: arrow }, { type: "INSERT", name: "材料引線" }] };
+    decodeMifNames(doc);
+    expect(Object.keys(doc.blocks).sort()).toEqual([arrow, "材料引線"].sort());
+    expect(doc.blocks[arrow].entities[0].text).toBe("DXF");
+    expect(doc.entities.map((e: any) => e.name)).toEqual([arrow, "材料引線"]);
+  });
+
+  it("decodes text content as written even in a Big5 drawing (上晴 C區: 小盒子修改 is held in GB codes)", () => {
+    const doc: any = { header: { $DWGCODEPAGE: big5 }, entities: [{ type: "TEXT", text: "20160810\\M+5D0A1\\M+5BAD0\\M+5D7D3\\M+5D0DE\\M+5B8C4" }], blocks: {} };
+    decodeMifEntities(doc);
+    expect(doc.entities[0].text).toBe("20160810小盒子修改");
+    expect(decodeMifNames(doc)).toBe(0); // nothing left for the name pass to re-read
+  });
+
   it("cuts bytes read past the end after the last code, only when they hold a control character", () => {
     expect(dropReadPastTail(arrow + "<\u0001")).toBe(arrow);
     expect(dropReadPastTail(arrow + "-AR111")).toBe(arrow + "-AR111");
