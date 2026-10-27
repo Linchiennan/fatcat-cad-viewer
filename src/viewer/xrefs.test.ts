@@ -45,4 +45,14 @@ describe("references saved unloaded (世舜 A1至A18施工平面圖: ZWCAD leave
     expect(doc.blocks["A"].entities).toEqual([]);
     expect(doc.blocks["B"].entities.length).toBeGreaterThan(0);
   });
+
+  it("loads them when the user picked the file in the panel (用戶 2026-10-27：11F 給水, ZWCAD loads all three)", async () => {
+    const root = new File([level(0, 1)], "L0.dxf"), child = new File([level(1, 1)], "L1.dxf");
+    conversionUnloadedXrefs.set(root, ["A"]);
+    const { file, statuses } = await assembleXrefs(root, [child], {}, new Set(), new Set([child]));
+    expect(statuses.find((s) => s.name === "A")!.status).toMatch(/^已載入：L1\.dxf（存檔時標為卸載，依選的檔載入）/);
+    const text = await file.text();
+    const doc = JSON.parse(text.slice(text.indexOf("\n") + 1));
+    expect(doc.blocks["A"].entities.length).toBeGreaterThan(0);
+  });
 });

@@ -58,7 +58,8 @@ export async function parseCadFile(file:File):Promise<Any>{
  const parsed:Any=preserveCadMetadata(raw,dxfText);parsed.cadLayerStates=readLayerStates(dxfText);if(restored)(parsed.cadDiagnostics??=[]).push(`${restored} 個圖塊在 DWG 轉檔時遺漏，已改用備援讀取補回`);if(rebuilt?.error)(parsed.cadDiagnostics??=[]).push(`漏寫圖塊或文字的備援讀取失敗：${rebuilt.error}`);const textFixed=rebuilt?.texts?applyReaderTexts(parsed,rebuilt.texts):0;if(textFixed)(parsed.cadDiagnostics??=[]).push(`${textFixed} 段文字在 DWG 轉檔時解碼錯誤，已改用備援讀取修正`);for(const [type,n] of Object.entries(rebuilt?.skipped??{}))(parsed.cadDiagnostics??=[]).push(`補回的圖塊中有 ${n} 個 ${type} 尚未支援顯示`);if(repaired)(parsed.cadDiagnostics??=[]).push(repairWarning(repaired));await resolveOleImages(parsed);decodeMifEntities(parsed);decodeMifNames(parsed);markUnloadedXrefs(parsed,conversionUnloadedXrefs.get(source));decodeCaretEntities(parsed);if(conversionWarnings.get(source))(parsed.cadDiagnostics??=[]).push(file.name+'：DWG解析傳回 '+conversionWarnings.get(source)+' 筆診斷');return parsed;
 }
 /** Import into existing INSERT/BLOCK path; no network or alternate renderer. */
-export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<string,string>={},disabled:Set<string>=new Set()):Promise<{file:File;statuses:XrefStatus[]}> {
+/** `manual`: files the user picked in the xref panel; only these (or a manual mapping) load a reference saved unloaded. */
+export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<string,string>={},disabled:Set<string>=new Set(),manual:ReadonlySet<File>=new Set()):Promise<{file:File;statuses:XrefStatus[]}> {
  if(files.length>64||files.reduce((sum,f)=>sum+f.size,0)>128*1024*1024)throw Error('外參超過64檔或128MB安全上限');
  const root=await parseCadFile(rootFile),statuses:XrefStatus[]=[],topLevel=new Map<XrefStatus,string>();
  // Each reference file is read and assembled once and reused wherever it is referenced. 昭盛 給水-7F: 22 references
@@ -78,10 +79,13 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
   for(const [name,block] of initial){if(!block.xrefPath||!(block.type&4))continue;
    const path=block.xrefPath,key=parent+'|'+name,status:XrefStatus={name,path,key,overlay:!!(block.type&8),status:'未載入'};statuses.push(status);if(depth===0)topLevel.set(status,name);
    if(disabled.has(key)||disabled.has(path)){block.entities=[];status.status='已關閉';continue;}
-   // Saved unloaded: CAD keeps it unloaded on open (ZWCAD: 12 of 12), so it is not drawn here either.
-   if(block.cadXrefUnloaded){block.entities=[];status.status='存檔時已卸載（CAD 開圖也不顯示）';continue;}
-   if(depth>0&&status.overlay){block.entities=[];status.status='巢狀覆疊不傳遞';continue;}
    const file=matchXref(path,parent,files,mapping,key);
+   // Saved unloaded: CAD keeps it unloaded on open (ZWCAD: 12 of 12), so it is not drawn here either, unless the user
+   // picked a file for it in the panel: the flag is not always what CAD acts on (用戶 2026-10-27：有手動選檔就載入；11F 給水
+   // has all three references flagged so and ZWCAD loads them). Files found automatically keep the ZWCAD-matched rule.
+   const picked=!!file&&(manual.has(file)||!!mapping[key]||!!mapping[path]);
+   if(block.cadXrefUnloaded&&!picked){block.entities=[];status.status='存檔時已卸載（CAD 開圖也不顯示）';continue;}
+   if(depth>0&&status.overlay){block.entities=[];status.status='巢狀覆疊不傳遞';continue;}
    if(!file){block.entities=[];status.status='找不到或同名衝突，請逐檔對應';continue;}
    if(stack.includes(file)||depth>=16){block.entities=[];status.status='循環／深度上限已阻擋';continue;}
    let child=assembled.get(file);
@@ -105,7 +109,7 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
     }
     block.entities=(child.entities??[]).filter((e:Any)=>!e.inPaperSpace).map(rename);
     block.position=child.header?.$INSBASE??block.position??{x:0,y:0,z:0};
-    status.status='已載入：'+(file.webkitRelativePath||file.name);
+    status.status='已載入：'+(file.webkitRelativePath||file.name)+(block.cadXrefUnloaded?'（存檔時標為卸載，依選的檔載入）':'');
    }catch(error){block.entities=[];status.status='讀取失敗：'+(error instanceof Error?error.message:String(error));}
   }
  }

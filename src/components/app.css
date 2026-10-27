@@ -533,6 +533,14 @@ button { cursor: pointer; }
 .layer-state-list::-webkit-scrollbar-thumb { background: var(--tile-line); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
 @supports not selector(::-webkit-scrollbar) { .layer-state-list { scrollbar-color: var(--tile-line) transparent; } }
 .cad-xref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+/* 已選的外參檔：每次選檔累加，逐一可移除（用戶 2026-10-27） */
+.cad-xref-picked { margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); }
+.cad-xref-picked-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.cad-xref-file { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.cad-xref-file > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cad-xref-file small { display: block; color: var(--muted); }
+.cad-xref-file > button { flex: none; min-width: 44px; }
+.cad-xref-hint { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
 .cad-missing { margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 181, 71, 0.35); }
 .cad-missing-title { color: var(--accent-hi); font-weight: 700; }
 .cad-notes { color: var(--muted); }
