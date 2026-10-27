@@ -7,6 +7,10 @@ Built by `.github/workflows/build-libredwg-wasm.yml` on branch `build-libredwg` 
 - one fix of ours in src/bits.c, `bit_read_H`: the handle size was checked against `sizeof (BITCODE_RC *)`,
   which is 4 on wasm32, so 5–8 byte handles were rejected and every later object misread
   (世舜 10180 門窗圖.dwg, HANDSEED 0x10527E5B4: layer names empty, 0 objects). The limit is 8.
+- one fix of ours in src/decode_r2007.c, the R2007 section map: a section may decompress to 100 × the file size
+  instead of 10 × (an upstream "debugging sanity" check). DGN linestyle junk compresses far better than 10 ×:
+  11F 建築底圖.dwg (AC1021, 1.3 MB) has a 21.7 MB section and was rejected outright; with the fix it and 08-11F-給水.dwg
+  read with the same model-space objects as ZWCAD (2,123 and 1,227). Built on branch `build-libredwg`, run 40525925079.
 
 Same build commands and flags as libredwg-web's package.json (emscripten latest, `--enable-release --enable-debug`,
 linked with em++). `scripts/copy-runtime.mjs` copies these files into public/runtime/libredwg instead of the ones
