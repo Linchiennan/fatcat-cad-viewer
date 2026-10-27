@@ -1,5 +1,5 @@
 // Drawing library overlay (T11 2, 4, 8.5; exports area spec 005). Owner: P4 group A.
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { DragRow } from "../components/DragRow";
 import { IS_WEB_BUILD } from "../app/platform";
 import { MarqueeText } from "../components/MarqueeText";
@@ -26,7 +26,7 @@ import {
 import { Dialog } from "./LibraryDialog";
 import { ImportVersionDialog } from "./ImportVersionDialog";
 import { importDrawingWithDecision, type ImportConflict, type ImportChoice } from "./drawingLibrary";
-import { ExportsView, type ExportPopup } from "./ExportsView";
+import { ExportsView, LONG_PRESS_MS, type ExportPopup } from "./ExportsView";
 import "./library.css";
 
 export type LibraryScreenProps = {
@@ -73,6 +73,15 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   const [sortMode, setSortMode] = useState<LibrarySort>("name");
   const [archive, setArchive] = useState<ArchiveState | null>(null);
   const [reload, setReload] = useState(0);
+  // Hold a row to select several and delete them together, as 歷史輸出 does (用戶 2026-10-27：長按出現全選刪除).
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
+  const press = useRef<{ id: string; x: number; y: number; timer: ReturnType<typeof setTimeout>; fired: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const cancelPress = () => { if (press.current) clearTimeout(press.current.timer); press.current = null; };
+  const exitSelection = () => { setSelecting(false); setSelected(new Set()); };
+  useEffect(() => () => cancelPress(), []);
   // Exports area (spec 005): replaces the old "new folder" button.
   const [exportsOpen, setExportsOpen] = useState(false);
   const [exportPopup, setExportPopup] = useState<ExportPopup>(null);
@@ -260,6 +269,34 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
     });
   };
 
+  // Hold a row (LONG_PRESS_MS, finger moved under 10 px) to start selecting with it; while selecting a tap toggles.
+  const toggleSelected = (id: string) => setSelected((old) => { const next = new Set(old); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  const rowDown = (entry: LibraryEntry, e: ReactPointerEvent) => {
+    cancelPress(); suppressClick.current = false;
+    if (busy || selecting || (e.pointerType === "mouse" && e.button !== 0)) return;
+    const timer = setTimeout(() => {
+      if (press.current?.id !== entry.id) return;
+      press.current.fired = true;
+      suppressClick.current = true;
+      setSelecting(true); setSelected(new Set([entry.id]));
+    }, LONG_PRESS_MS);
+    press.current = { id: entry.id, x: e.clientX, y: e.clientY, timer, fired: false };
+  };
+  const rowMove = (e: ReactPointerEvent) => {
+    const p = press.current;
+    if (p && (e.type === "pointercancel" || Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10)) { clearTimeout(p.timer); press.current = null; }
+  };
+  const rowClick = (entry: LibraryEntry) => {
+    const p = press.current;
+    press.current = null;
+    if (p) clearTimeout(p.timer);
+    if (p?.fired || suppressClick.current) { suppressClick.current = false; return; }
+    if (selecting) { toggleSelected(entry.id); return; }
+    openEntry(entry);
+  };
+  // Another folder or a new search shows other rows: the selection does not follow.
+  useEffect(() => { setSelecting(false); setSelected(new Set()); }, [folderId, exportsOpen]);
+
   const onAddFiles = (list: FileList | null) => {
     const files = list ? Array.from(list) : [];
     if (addInput.current) addInput.current.value = "";
@@ -355,6 +392,9 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   // ---- back key / Esc (T11 4.2) ----
   const back = useCallback(() => {
     if (choiceRef.current) { chooseImport('cancel'); return; }
+    // the delete question first, then selecting itself (as Esc leaves 歷史輸出 selection)
+    if (deleteIds && !busyRef.current) { setDeleteIds(null); return; }
+    if (selecting && !busyRef.current) { setSelecting(false); setSelected(new Set()); return; }
     const action = decideLibraryBack({
       archiveOpen: archive !== null, busy: busyRef.current, textDialogOpen: popup?.kind === "text",
       destinationOpen: popup?.kind === "destination", deleteOpen: popup?.kind === "delete",
@@ -371,7 +411,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
       case "close-library": onClose(); break;
       default: break;
     }
-  }, [archive, popup, exportPopup, exportsOpen, searchText, folderId, crumbs, cancelArchive, onClose, chooseImport]);
+  }, [archive, popup, exportPopup, exportsOpen, searchText, folderId, crumbs, cancelArchive, onClose, chooseImport, deleteIds, selecting]);
 
   useEffect(() => {
     setLibraryBackHandler(back);
@@ -388,7 +428,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   // ---- derived ----
   const visible = useMemo(() => sortLibraryEntries(filterLibraryEntries(children, searchText, locale), sortMode, locale), [children, searchText, sortMode, locale]);
   const showRecent = folderId === ROOT_ID && searchText.trim() === "" && recent.length > 0;
-  const blocked = popup !== null || archive !== null || exportPopup !== null || importConflict !== null;
+  const blocked = popup !== null || archive !== null || exportPopup !== null || importConflict !== null || deleteIds !== null;
   const describe = (entry: LibraryEntry) => entry.kind === "folder"
     ? formatLibraryDate(entry.updatedAt, locale)
     : `${entry.format.toUpperCase()} · ${formatLibrarySize(entry.size, locale)} · ${formatLibraryDate(entry.updatedAt, locale)}`;
@@ -487,7 +527,18 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           </div>
         </div>
 
-        <div className="lib-list" aria-busy={loading}>
+        {selecting ? (
+          <div className="export-selection lib-selection" role="toolbar" aria-label={t("library.selection")}>
+            <strong role="status">{t("library.selectedCount", { N: selected.size })}</strong>
+            <button type="button" disabled={busy} onClick={() => setSelected(new Set(visible.map((e) => e.id)))}>{t("library.selectAll")}</button>
+            <button type="button" disabled={busy} onClick={() => setSelected(new Set())}>{t("library.selectNone")}</button>
+            <button type="button" disabled={busy || !selected.size} onClick={() => setDeleteIds([...selected])}>{t("action.delete")}</button>
+            <button type="button" disabled={busy} onClick={exitSelection}>{t("library.exitSelection")}</button>
+          </div>
+        ) : null}
+        <div className="lib-list" aria-busy={loading}
+          onPointerDownCapture={() => { suppressClick.current = false; }}
+          onClickCapture={(e) => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; cancelPress(); } }}>
           {loading ? (
             <div className="lib-skeleton" aria-label={t("load.opening")}><span /><span /><span /></div>
           ) : visible.length === 0 && searchText.trim() !== "" ? (
@@ -505,8 +556,14 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           ) : (
             <ul>
               {visible.map((entry) => (
-                <li key={entry.id} className={`lib-row ${entry.kind}`}>
-                  <button type="button" className="lib-row-main" disabled={busy} onClick={() => openEntry(entry)}>
+                <li key={entry.id} className={`lib-row ${entry.kind}`} data-selected={selecting && selected.has(entry.id)}>
+                  {selecting ? (
+                    <input className="lib-row-check" type="checkbox" aria-label={`${t("library.select")} ${entry.name}`}
+                      checked={selected.has(entry.id)} disabled={busy} onChange={() => toggleSelected(entry.id)} />
+                  ) : null}
+                  <button type="button" className="lib-row-main" disabled={busy} onClick={() => rowClick(entry)}
+                    onPointerDown={(e) => rowDown(entry, e)} onPointerMove={rowMove} onPointerCancel={rowMove}
+                    onContextMenu={(e) => { if (press.current) e.preventDefault(); }}>
                     <span className="lib-row-icon">{entry.kind === "folder" ? <FolderIcon /> : <FileIcon />}</span>
                     <span className="lib-row-text">
                       <MarqueeText text={entry.name} />
@@ -514,13 +571,13 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
                     </span>
                     {entry.kind === "folder" ? <ChevronRightIcon className="lib-row-chevron" /> : null}
                   </button>
-                  <button
+                  {selecting ? null : <button
                     type="button" className="lib-icon-btn lib-more" title={t("library.itemActions")}
                     aria-label={`${t("library.itemActions")}: ${entry.name}`} disabled={busy}
                     onClick={() => setPopup({ kind: "actions", entry })}
                   >
                     <MoreIcon />
-                  </button>
+                  </button>}
                 </li>
               ))}
             </ul>
@@ -605,6 +662,33 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           </div>
         </Dialog>
       ) : null}
+
+      {deleteIds ? (() => {
+        const folderCount = children.filter((e) => e.kind === "folder" && deleteIds.includes(e.id)).length;
+        return (
+          <Dialog className="lib-dialog" role="alertdialog" label={t("library.deleteSelectedTitle")} onCancel={() => setDeleteIds(null)}>
+            <h3>{t("library.deleteSelectedTitle")}</h3>
+            <p>{t("library.deleteSelectedBody", { N: deleteIds.length })}{folderCount ? ` ${t("library.deleteSelectedFolders", { N: folderCount })}` : ""}</p>
+            <div className="lib-dialog-buttons">
+              <button type="button" className="lib-secondary" onClick={() => setDeleteIds(null)}>{t("action.cancel")}</button>
+              <button
+                type="button" className="lib-danger" disabled={busy}
+                onClick={() => {
+                  const ids = deleteIds;
+                  setDeleteIds(null);
+                  void runBusy(async () => {
+                    try { for (const id of ids) await deleteLibraryEntry(id); }
+                    finally { exitSelection(); refresh(); }
+                    setNotice({ text: t("library.toast.deletedN", { N: ids.length }), error: false });
+                  });
+                }}
+              >
+                {t("library.confirmDelete")}
+              </button>
+            </div>
+          </Dialog>
+        );
+      })() : null}
 
       {archive ? (
         <ArchiveDialog

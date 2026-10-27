@@ -202,6 +202,11 @@
 .lib-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .lib-row-text small { font-size: 12px; color: var(--lib-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lib-row-chevron { color: var(--lib-muted); }
+/* 多選刪除：按住不跳出系統選字選單；勾選框在列首，選中的列加框（同歷史輸出） */
+.lib-row:not(.export) .lib-row-main { -webkit-touch-callout: none; user-select: none; }
+.lib-row-check { flex: none; width: 26px; height: 26px; margin: 0 4px 0 8px; cursor: pointer; }
+.lib-row[data-selected="true"] { outline: 2px solid var(--lib-accent, #4b99e8); outline-offset: -2px; border-radius: 10px; }
+.lib-selection { padding: 6px 4px; }
 
 .lib-skeleton { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
 .lib-skeleton span { height: 54px; border-radius: 12px; background: var(--lib-panel); animation: lib-shimmer 1.2s ease-in-out infinite; }

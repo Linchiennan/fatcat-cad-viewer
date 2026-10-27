@@ -189,4 +189,41 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     expect(m.host.querySelector(".lib-warning")).toBeNull();
     expect(m.host.querySelector(".lib-row.export")).not.toBeNull();
   });
+it("hold a row to select; all/none, back leaves selecting, confirmed delete removes only the selected (用戶 2026-10-27)", async () => {
+    const first = await mount();
+    await first.lib.createLibraryFolder("root", "Floor");
+    for (const name of ["a.dwg", "b.dwg", "c.dwg"]) await first.lib.importDrawingToLibrary(new File(["x"], name));
+    first.root.unmount();
+    const m = await mount();
+    const checks = () => m.host.querySelectorAll<HTMLInputElement>(".lib-row-check");
+    const checked = () => [...checks()].filter((c) => c.checked).length;
+    const button = (text: string) => [...m.host.querySelectorAll<HTMLButtonElement>("button")].find((b) => b.textContent === text)!;
+    const tap = (el: HTMLElement) => { el.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 1, clientY: 1 })); el.dispatchEvent(new MouseEvent("pointerup", { bubbles: true })); el.click(); };
+    const rowOf = (name: string) => [...m.host.querySelectorAll<HTMLButtonElement>(".lib-row-main")].find((b) => b.textContent?.includes(name))!;
+    expect(checks()).toHaveLength(0);
+    // hold: selecting starts with that row; the more buttons go away
+    await act(async () => { rowOf("b.dwg").dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 1, clientY: 1 })); await new Promise((r) => setTimeout(r, 650)); });
+    expect(checks()).toHaveLength(4);
+    expect(checked()).toBe(1);
+    expect(m.host.querySelector(".lib-more")).toBeNull();
+    await act(async () => tap(rowOf("c.dwg")));
+    expect(checked()).toBe(2);
+    await act(async () => button("全部選擇").click());
+    expect(checked()).toBe(4);
+    await act(async () => button("全部取消").click());
+    expect(checked()).toBe(0);
+    await act(async () => { m.view.handleLibraryBack(); });
+    expect(checks()).toHaveLength(0);
+    expect(m.onClose).not.toHaveBeenCalled();
+    // select b and c, delete: confirm first, then only those two go
+    await act(async () => { rowOf("b.dwg").dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, clientX: 1, clientY: 1 })); await new Promise((r) => setTimeout(r, 650)); });
+    await act(async () => tap(rowOf("c.dwg")));
+    await act(async () => button("刪除").click());
+    expect(m.host.querySelector("[role=alertdialog]")?.textContent).toContain("刪除所選項目");
+    expect((await m.lib.listLibraryChildren("root"))).toHaveLength(4);
+    await act(async () => button("確認刪除").click());
+    await m.settle();
+    expect((await m.lib.listLibraryChildren("root")).map((e) => e.name).sort()).toEqual(["Floor", "a.dwg"]);
+    expect(checks()).toHaveLength(0);
+  });
 });
