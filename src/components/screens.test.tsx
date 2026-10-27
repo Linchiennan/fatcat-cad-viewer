@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AppError } from "../types/errors";
 import { I18nProvider } from "../i18n/translations";
 import { LoadingScreen } from "./LoadingScreen";
 import { ErrorScreen } from "./ErrorScreen";
 import { RecoveryScreen } from "./ErrorBoundary";
-import { GloveBar, ViewerDock } from "./ViewerToolbar";
+import { GloveBar } from "./ViewerToolbar";
 import { HomeScreen } from "../app/HomeScreen";
 import { CheckStrip, FileBar } from "../app/ViewerChrome";
 import * as Icons from "./Icons";
@@ -96,7 +98,8 @@ describe("bottom tools (T18)", () => {
     expect(html.match(/aria-disabled="true"/g)).toHaveLength(4);
     expect(html).toContain("這個檔案不能量測（PDF 只能看）");
     expect(html).toContain("glove-paw");
-    expect(html.match(/glove-ear/g)).toHaveLength(2);
+    expect(html.match(/glove-ear(?!s)/g)).toHaveLength(2); // the two ear buttons (glove-ears is their drawn outline)
+    expect(html.match(/class="glove-ears"/g)).toHaveLength(2);
   });
   it("measuring bar: 結束 pressed, 清除／復原／保留 off until there is something to act on", () => {
     const tools = { mode: "distance" as const, onMode: noop, onUndo: noop, canUndo: false, onKeep: noop, canKeep: false, onClearAll: noop, canClearAll: false };
@@ -108,15 +111,11 @@ describe("bottom tools (T18)", () => {
     const html = en(<GloveBar {...base} />);
     for (const s of ["Measure", "Markup", "Start", "Search", "Select"]) expect(html).toContain(`<span>${s}</span>`);
   });
-  it("dock: fit, reset, separator and four tools; PDF only fit and reset; no start button", () => {
-    const html = renderToStaticMarkup(<ViewerDock {...base} />);
-    expect(html.match(/class="dock-item/g)).toHaveLength(6);
-    expect(html).toContain("dock-sep");
-    expect(html).toContain("符合螢幕：整張圖置中放到畫面內");
-    expect(html).not.toContain("回到初始畫面");
-    const pdf = renderToStaticMarkup(<ViewerDock {...base} canMeasure={false} />);
-    expect(pdf.match(/class="dock-item/g)).toHaveLength(2);
-    expect(pdf).not.toContain("dock-sep");
+  it("the old desktop dock is gone: desktop uses the same paw bar (用戶 2026-10-27)", async () => {
+    const toolbar = await import("./ViewerToolbar");
+    expect("ViewerDock" in toolbar).toBe(false);
+    const app = readFileSync(fileURLToPath(new URL("../app/App.tsx", import.meta.url)), "utf8");
+    expect(app).not.toMatch(/glove \? <GloveBar/);
   });
 });
 

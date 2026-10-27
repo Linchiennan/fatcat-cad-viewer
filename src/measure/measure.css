@@ -18,11 +18,12 @@
   bottom: calc(var(--glove-bar-height, 90px) + env(safe-area-inset-bottom, 0px));
   border-radius: 14px 14px 0 0; border-width: 1px 0 0;
 }
-.measure-head { position: sticky; top: 0; z-index: 1; background: #101e2a; padding: 0 12px 4px; }
-.measure-panel .panel-drag { height: 22px; display: flex; align-items: center; justify-content: center; cursor: ns-resize; touch-action: none; }
-.measure-panel .panel-drag i { display: block; width: 80px; height: 5px; border-radius: 3px; background: #fff; }
-.measure-panel.coarse .panel-drag { height: 30px; }
-.measure-panel.coarse .panel-drag i { width: 100px; height: 6px; }
+.measure-head { position: sticky; top: 0; z-index: 1; background: #101e2a; padding: 0 12px 0; }
+/* Low header so the drawing keeps more room (用戶 2026-10-27：壓縮高度、白色拉桿跟量測同排): one row of title, drag bar, close.
+   The grip fills the middle of the row, so it stays easy to catch with a finger. */
+.measure-panel .panel-drag { flex: 1; align-self: stretch; height: auto; min-height: 30px; }
+.measure-panel .measure-title-row { min-height: 30px; padding-top: 4px; }
+.measure-panel .measure-close { width: 30px; height: 30px; }
 .measure-title-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .measure-close { background: none; border: 0; color: inherit; width: 36px; height: 36px; display: grid; place-items: center; cursor: pointer; }
 .measure-close svg { width: 22px; height: 22px; }

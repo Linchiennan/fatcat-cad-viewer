@@ -20,6 +20,8 @@ export const conversionWarnings = new WeakMap<File, number>();
 
 /** Fallback data for a converted DXF, if the fallback ran. */
 export const conversionRebuiltBlocks = new WeakMap<File, FallbackData>();
+/** Names of external references the DWG was saved with unloaded, per converted DXF File. */
+export const conversionUnloadedXrefs = new WeakMap<File, string[]>();
 
 /** Conversion time limit (T13 6-2). */
 export const DWG_TIMEOUT_MS = 180_000;
@@ -143,6 +145,7 @@ async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
   conversionWarnings.set(out, Number(reply.diagnostics) || 0);
   const fallback = parseFallback(reply.fallback);
   if (fallback) conversionRebuiltBlocks.set(out, fallback);
+  if (reply.unloadedXrefs?.length) conversionUnloadedXrefs.set(out, reply.unloadedXrefs);
   await bindDrawingIdentity(file, out);
   if (signal?.aborted) throw abortError();
   return out;

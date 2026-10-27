@@ -1,13 +1,14 @@
-// Bottom tools of the viewer: the phone glove bar and the desktop dock (T18 2.1-2.4). Owner: P4 group D.
+// Bottom tools of the viewer: the cat-paw glove bar, on phone and desktop alike (T18 2.1-2.3; the desktop dock was dropped 2026-10-27). Owner: P4 group D.
 // GloveBar.test.tsx (ours) fixes the glove bar's accessible names, order and two-character captions.
 import { useState, type ComponentType, type ReactNode } from "react";
 import type { ViewCommand } from "../types/drawing";
 import type { MeasurementMode } from "../viewer/measurementGeometry";
 import { useI18n, type TranslationKey } from "../i18n/translations";
 import { IconTile } from "./IconTile";
+import { YarnLine } from "./YarnLine";
 import {
-  AngleIcon, AreaIcon, ArrowLeftIcon, DistanceIcon, ExitIcon, FitIcon, HomeIcon, PathIcon, PenIcon, PlusIcon,
-  ResetIcon, RulerIcon, SearchIcon, TrashIcon, type IconProps,
+  AngleIcon, AreaIcon, ArrowLeftIcon, DistanceIcon, ExitIcon, HomeIcon, PathIcon, PenIcon, PlusIcon,
+  RulerIcon, SearchIcon, TrashIcon, type IconProps,
 } from "./Icons";
 
 export function SelectionIcon(props: IconProps) {
@@ -77,6 +78,24 @@ function Whiskers() {
   );
 }
 
+/**
+ * Two round-tipped ears leaning outwards, drawn as one outline that meets the head line on both sides (用戶 2026-10-27：
+ * 貓耳往上移後破口). y = 20 is the button's top border; the fill hides that border under each ear.
+ */
+function Ears() {
+  return (
+    <svg className="glove-ears" viewBox="0 0 100 22" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      {/* both run on to y = 22 (the inside of the border), so the head line never shows under an ear */}
+      {/* Same ears as chosen; only the feet are tidied (用戶 2026-10-27：貓耳下方不要有細細的線): the fill also covers the
+          button's rounded corner under the outer foot (it showed as a thin half-covered line), the outer side runs down to
+          meet that corner's border, and the inner sides stop on the head line instead of poking below it. */}
+      {/* the fill reaches ~1 px below the border: scaled views (the layout preview at 74 %) left a faint line otherwise */}
+      <path className="ear-fill" d="M8.3 25.8 12.4 7.5C14 .5 19 -.5 24 4.2L42.7 22 43.6 23.6 17.5 23.6 14 23.8 11 24.8ZM91.7 25.8 89 24.8 86 23.8 82.5 23.6 56.4 23.6 57.3 22 76 4.2C81 -.5 86 .5 87.6 7.5Z" />
+      <path className="ear-line" d="M8.35 23.6 12.4 7.5C14 .5 19 -.5 24 4.2L40.6 20M59.4 20 76 4.2C81 -.5 86 .5 87.6 7.5L91.65 23.6" />
+    </svg>
+  );
+}
+
 /** The cat paw drawn behind the centre button: four toe beans and a big two-lobed pad. */
 export function PawShape({ className = "glove-paw" }: { className?: string }) {
   return (
@@ -112,7 +131,7 @@ function GloveSlot({ slot, place }: { slot: Slot; place: number }) {
   return (
     <IconTile name={slot.name} label={slot.label} tip={slot.tip} pressed={slot.pressed} expanded={slot.expanded}
       disabled={slot.disabled} className={className} onClick={slot.onClick}>
-      {shape === "paw" ? <PawShape /> : shape === "ear" ? <Whiskers /> : null}
+      {shape === "paw" ? <PawShape /> : shape === "ear" ? <><Ears /><Whiskers /></> : null}
       <slot.Icon className="glove-icon" />
       {slot.after}
     </IconTile>
@@ -188,41 +207,8 @@ export function GloveBar(props: ToolbarProps) {
       ) : null}
       <nav className={`glove-bar${tools ? " is-measuring" : ""}`} aria-label={tools ? tr("bar.measureLabel") : tr("bar.label")} data-fit="toolbar">
         {slots.map((slot, i) => <GloveSlot key={slot.key} slot={slot} place={i} />)}
+        <YarnLine />
       </nav>
     </>
-  );
-}
-
-type DockItem = { key: string; name: string; short: string; tip: string; Icon: ComponentType<IconProps>; pressed?: boolean; onClick(): void };
-
-/** Desktop dock (fit, reset, measure, info, markup, search). PDF: fit and reset only. */
-export function ViewerDock(props: ToolbarProps & { spaces?: { name: string }[]; space?: string; onSpace?(name: string): void }) {
-  const { t } = useI18n();
-  const sep = t("tip.joiner");
-  const view: DockItem[] = [
-    { key: "fit", name: t("viewer.fit"), short: t("dock.fitShort"), tip: t("dock.fitTip"), Icon: FitIcon, onClick: () => props.onCommand("fit") },
-    { key: "reset", name: t("viewer.resetView"), short: t("dock.resetShort"), tip: t("dock.resetTip"), Icon: ResetIcon, onClick: () => props.onCommand("reset") },
-  ];
-  const tools: DockItem[] = props.canMeasure ? [
-    { key: "measure", name: props.measuring ? t("bar.measureEnd") : t("bar.measure"), short: t("bar.measure"), tip: t("dock.measureTip"), Icon: RulerIcon, pressed: !!props.measuring, onClick: props.onMeasure },
-    { key: "select", name: t(props.selecting ? 'select.end' : 'select.title'), short: t('select.title'), tip: t('select.tip'), Icon: SelectionIcon, pressed: !!props.selecting, onClick: () => props.onSelect?.() },
-    { key: "markup", name: props.marking ? t("bar.markupEnd") : t("bar.markup"), short: t("bar.markup"), tip: t("dock.markupTip"), Icon: PenIcon, pressed: !!props.marking, onClick: props.onMarkup },
-    { key: "search", name: props.searching ? t("bar.searchEnd") : t("bar.search"), short: t("bar.search"), tip: t("dock.searchTip"), Icon: SearchIcon, pressed: !!props.searching, onClick: props.onSearch },
-  ] : [];
-  const item = (d: DockItem) => (
-    <button key={d.key} type="button" className={`dock-item${d.pressed ? " is-on" : ""}`} aria-label={d.name} aria-pressed={d.pressed}
-      title={`${d.name}${sep}${d.tip}`} onClick={d.onClick}>
-      <span className="dock-tile"><d.Icon /></span>
-      <span className="dock-caption">{d.short}</span>
-      <span className="dock-tip" role="tooltip">{d.name}{sep}{d.tip}</span>
-    </button>
-  );
-  return (
-    <nav className="viewer-dock" aria-label={t("viewer.controlsLabel")} data-fit="toolbar">
-      {view.map(item)}
-      {props.marking ? <button type="button" className="dock-item" aria-label={t("markup.clear")} title={t("markup.clearTip")} disabled={!props.canClearMarks} onClick={props.onClearMarks}><span className="dock-tile"><TrashIcon /></span><span className="dock-caption">{t("markup.clearShort")}</span></button> : null}
-      {tools.length ? <span className="dock-sep" aria-hidden="true" /> : null}
-      {tools.map(item)}
-    </nav>
   );
 }

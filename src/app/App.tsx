@@ -42,7 +42,7 @@ import { MarkupBar, MarkupTextDialog } from "../components/MarkupBar";
 import { MeasureStrip } from "../components/MeasureStrip";
 import { SearchPanel, SearchStepper } from "../components/SearchPanel";
 import { SnapToast } from "../components/SnapToast";
-import { GloveBar, ViewerDock, type MeasureTools } from "../components/ViewerToolbar";
+import { GloveBar, type MeasureTools } from "../components/ViewerToolbar";
 import { SelectionBar } from '../components/SelectionBar';
 import { removeSelected } from '../canvas/selection';
 import { CloseIcon } from "../components/Icons";
@@ -353,7 +353,7 @@ export function App() {
     if (xrefsTried.current.has(was.file) || hasXrefSession(was.file)) return;
     xrefsTried.current.add(was.file);
     const paths = [
-      ...report.xrefs.filter((x) => !x.loaded && !x.disabled).map((x) => x.path),
+      ...report.xrefs.filter((x) => !x.loaded && !x.disabled && !x.savedUnloaded).map((x) => x.path),
       ...(report.images ?? []).map((i) => i.path),
     ].filter(Boolean);
     if (!paths.length) return;
@@ -606,7 +606,7 @@ export function App() {
   // ---- render ----------------------------------------------------------------------------------------------
   const blocked = libraryOpen || closeConfirm;
   const missingCount = report ? splitCadWarnings(report.warnings).missing.length : 0;
-  const xrefsUnloaded = report ? report.xrefs.filter((x) => !x.loaded && !x.disabled).length : 0;
+  const xrefsUnloaded = report ? report.xrefs.filter((x) => !x.loaded && !x.disabled && !x.savedUnloaded).length : 0;
   const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking && !selecting;
   const searching = searchOpen || !!search;
 
@@ -745,7 +745,8 @@ export function App() {
             {saveFailed ? <p className="save-failed" role="status">{t("viewer.librarySaveFailed")}</p> : null}
             {measureSaveFailed ? <p className="save-failed" role="status">量測保存失敗；目前仍顯示，關閉圖面前請確認裝置儲存空間。</p> : null}
 
-            {exportStage === "box" ? null : glove ? <GloveBar {...toolbarProps} /> : <ViewerDock {...toolbarProps} />}
+            {/* One cat-paw bar on phone and desktop alike (用戶 2026-10-27：電腦版與手機版統一貓咪風格). */}
+            {exportStage === "box" ? null : <GloveBar {...toolbarProps} />}
 
             {exportStage === "sheet" ? (
               <ExportSheet choice={exportChoice} onChange={(next) => { setExportChoice(next); saveExportChoice(next); }} onExport={startExport} onClose={closeExport} />

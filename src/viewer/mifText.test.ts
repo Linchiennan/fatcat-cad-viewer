@@ -52,6 +52,16 @@ describe("codes in names (上晴, a Big5 drawing LibreDWG wrote with \\M+5)", ()
     expect(decodeMifNames(doc)).toBe(0); // nothing left for the name pass to re-read
   });
 
+  it("decodes \\U+ codes in names and xref paths (世舜 太原段: 参 is no Big5 character)", () => {
+    const name = "\\U+53C2層平面圖";
+    const doc: any = { header: { $DWGCODEPAGE: big5 }, blocks: { [name]: { name, type: 4, xrefPath: "..\\001-XS-建築\\\\U+53C2層平面圖.dwg", entities: [] } },
+      entities: [{ type: "INSERT", name }] };
+    decodeMifNames(doc);
+    expect(Object.keys(doc.blocks)).toEqual(["参層平面圖"]);
+    expect(doc.blocks["参層平面圖"].xrefPath).toBe("..\\001-XS-建築\\参層平面圖.dwg");
+    expect(doc.entities[0].name).toBe("参層平面圖");
+  });
+
   it("cuts bytes read past the end after the last code, only when they hold a control character", () => {
     expect(dropReadPastTail(arrow + "<\u0001")).toBe(arrow);
     expect(dropReadPastTail(arrow + "-AR111")).toBe(arrow + "-AR111");

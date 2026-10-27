@@ -35,3 +35,8 @@ export function typedPage(value: string, pages: number): number | null {
 export const zoomIn = (z: number) => Math.min(ZOOM_MAX, z * ZOOM_STEP);
 export const zoomOut = (z: number) => Math.max(ZOOM_MIN, z / ZOOM_STEP);
 export const zoomText = (z: number) => `${Math.round(z * 100)}%`;
+
+/** Zoom multiplied by a gesture factor (pinch distance ratio, wheel steps), kept within ZOOM_MIN…ZOOM_MAX. */
+export const zoomBy = (z: number, factor: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z * (Number.isFinite(factor) && factor > 0 ? factor : 1)));
+/** Factor for one wheel event: up (negative deltaY) zooms in; a mouse notch (≈ 100) is about one ZOOM_STEP. */
+export const wheelFactor = (deltaY: number) => Math.exp(-deltaY * (Math.log(ZOOM_STEP) / 100));

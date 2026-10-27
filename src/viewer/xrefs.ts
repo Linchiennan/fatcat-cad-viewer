@@ -6,7 +6,7 @@ import { decodeCaretEntities } from './caretText';
 import { annotateDxfXclips } from '../dwg/xclipMetadata';
 import { bindDrawingIdentity } from './readingPosition';
 import DxfParser from 'dxf-viewer/src/parser/DxfParser.js';
-import { convertDwgToDxf,conversionWarnings,conversionRebuiltBlocks } from '../dwg/convertDwg';
+import { convertDwgToDxf,conversionWarnings,conversionRebuiltBlocks,conversionUnloadedXrefs } from '../dwg/convertDwg';
 import { detectDxfEncoding } from './dxfEncoding';
 import { repairDxfText, repairWarning } from './dxfRepair';
 import { applyReaderTexts } from '../dwg/missingBlocks';
@@ -43,17 +43,27 @@ const usageNote=(spaces:Set<string>)=>{
  if(spaces.has('Model'))return '';
  return `；用在圖紙「${[...spaces].join('」「')}」，請在下方 Dock 切換配置查看`;
 };
+/** Mark the xref blocks the DWG was saved with unloaded (names as the engine read them, \U+ codes decoded like the DXF names). */
+export function markUnloadedXrefs(doc:Any,names:readonly string[]|undefined):void{
+ if(!names?.length)return;
+ const wanted=new Set(names.map(n=>n.replace(/\\U\+([0-9A-Fa-f]{4})/g,(_,h:string)=>String.fromCharCode(parseInt(h,16)))));
+ for(const [name,block] of Object.entries(doc.blocks??{}) as [string,Any][])if((block.type&4)&&wanted.has(name))block.cadXrefUnloaded=true;
+}
 export async function parseCadFile(file:File):Promise<Any>{
  if(/\.(png|jpe?g)$/i.test(file.name))return standaloneRaster(file);
  const source=/\.dwg$/i.test(file.name)?await convertDwgToDxf(file):file;
  const bytes=annotateDxfXclips(new Uint8Array(await source.arrayBuffer()));const text=new TextDecoder(detectDxfEncoding(bytes.subarray(0,65536))).decode(bytes);let dxfText=text,repaired=0;let raw:Any;try{raw=new DxfParser().parseSync(dxfText);}catch(error){if(!/Cannot parse group code/.test(String(error)))throw error;const fixed=repairDxfText(text);dxfText=fixed.text;repaired=fixed.dropped;raw=new DxfParser().parseSync(dxfText);}
  const rebuilt=conversionRebuiltBlocks.get(source);let restored=0;if(rebuilt){raw.blocks??={};for(const [n,b] of Object.entries(rebuilt.blocks))if(!raw.blocks[n]){raw.blocks[n]=b;restored++;}}
- const parsed:Any=preserveCadMetadata(raw,dxfText);if(restored)(parsed.cadDiagnostics??=[]).push(`${restored} 個圖塊在 DWG 轉檔時遺漏，已改用備援讀取補回`);if(rebuilt?.error)(parsed.cadDiagnostics??=[]).push(`漏寫圖塊或文字的備援讀取失敗：${rebuilt.error}`);const textFixed=rebuilt?.texts?applyReaderTexts(parsed,rebuilt.texts):0;if(textFixed)(parsed.cadDiagnostics??=[]).push(`${textFixed} 段文字在 DWG 轉檔時解碼錯誤，已改用備援讀取修正`);for(const [type,n] of Object.entries(rebuilt?.skipped??{}))(parsed.cadDiagnostics??=[]).push(`補回的圖塊中有 ${n} 個 ${type} 尚未支援顯示`);if(repaired)(parsed.cadDiagnostics??=[]).push(repairWarning(repaired));await resolveOleImages(parsed);decodeMifEntities(parsed);decodeMifNames(parsed);decodeCaretEntities(parsed);if(conversionWarnings.get(source))(parsed.cadDiagnostics??=[]).push(file.name+'：DWG解析傳回 '+conversionWarnings.get(source)+' 筆診斷');return parsed;
+ const parsed:Any=preserveCadMetadata(raw,dxfText);if(restored)(parsed.cadDiagnostics??=[]).push(`${restored} 個圖塊在 DWG 轉檔時遺漏，已改用備援讀取補回`);if(rebuilt?.error)(parsed.cadDiagnostics??=[]).push(`漏寫圖塊或文字的備援讀取失敗：${rebuilt.error}`);const textFixed=rebuilt?.texts?applyReaderTexts(parsed,rebuilt.texts):0;if(textFixed)(parsed.cadDiagnostics??=[]).push(`${textFixed} 段文字在 DWG 轉檔時解碼錯誤，已改用備援讀取修正`);for(const [type,n] of Object.entries(rebuilt?.skipped??{}))(parsed.cadDiagnostics??=[]).push(`補回的圖塊中有 ${n} 個 ${type} 尚未支援顯示`);if(repaired)(parsed.cadDiagnostics??=[]).push(repairWarning(repaired));await resolveOleImages(parsed);decodeMifEntities(parsed);decodeMifNames(parsed);markUnloadedXrefs(parsed,conversionUnloadedXrefs.get(source));decodeCaretEntities(parsed);if(conversionWarnings.get(source))(parsed.cadDiagnostics??=[]).push(file.name+'：DWG解析傳回 '+conversionWarnings.get(source)+' 筆診斷');return parsed;
 }
 /** Import into existing INSERT/BLOCK path; no network or alternate renderer. */
 export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<string,string>={},disabled:Set<string>=new Set()):Promise<{file:File;statuses:XrefStatus[]}> {
  if(files.length>64||files.reduce((sum,f)=>sum+f.size,0)>128*1024*1024)throw Error('外參超過64檔或128MB安全上限');
- const root=await parseCadFile(rootFile),statuses:XrefStatus[]=[],cache=new Map<File,Any>(),topLevel=new Map<XrefStatus,string>();let count=0;
+ const root=await parseCadFile(rootFile),statuses:XrefStatus[]=[],topLevel=new Map<XrefStatus,string>();
+ // Each reference file is read and assembled once and reused wherever it is referenced. 昭盛 給水-7F: 22 references
+ // pulled in 33 files 413 times through nesting, so counting (and rebuilding) per reference hit the cap and the whole
+ // drawing failed; ZWCAD loads it. The cap counts different files.
+ const assembled=new Map<File,Any>();
  async function resolve(doc:Any,parent:string,stack:File[],depth:number):Promise<void>{
   const images=[...(doc.entities??[]),...Object.values(doc.blocks??{}).flatMap((b:Any)=>b.entities??[])].filter((e:Any)=>e.type==='IMAGE'&&!e.cadOleImage);
   for(const image of new Set(images)){if(/\.(png|jpe?g)$/i.test(rootFile.name)&&image.imageData)continue;const path=image.imagePath,key=parent+'|IMAGE:'+image.handle,status:XrefStatus={name:'圖片 '+(image.handle??path),path,key,overlay:false,status:'未載入'};statuses.push(status);delete image.imageData;
@@ -67,14 +77,19 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
   for(const [name,block] of initial){if(!block.xrefPath||!(block.type&4))continue;
    const path=block.xrefPath,key=parent+'|'+name,status:XrefStatus={name,path,key,overlay:!!(block.type&8),status:'未載入'};statuses.push(status);if(depth===0)topLevel.set(status,name);
    if(disabled.has(key)||disabled.has(path)){block.entities=[];status.status='已關閉';continue;}
+   // Saved unloaded: CAD keeps it unloaded on open (ZWCAD: 12 of 12), so it is not drawn here either.
+   if(block.cadXrefUnloaded){block.entities=[];status.status='存檔時已卸載（CAD 開圖也不顯示）';continue;}
    if(depth>0&&status.overlay){block.entities=[];status.status='巢狀覆疊不傳遞';continue;}
    const file=matchXref(path,parent,files,mapping,key);
    if(!file){block.entities=[];status.status='找不到或同名衝突，請逐檔對應';continue;}
    if(stack.includes(file)||depth>=16){block.entities=[];status.status='循環／深度上限已阻擋';continue;}
-   if(++count>64)throw Error('外參超過64筆安全上限');
+   let child=assembled.get(file);
+   if(!child&&assembled.size>=64){block.entities=[];status.status='外參檔超過64個安全上限，未載入';continue;}
    try{
-    let parsed=cache.get(file);if(!parsed){parsed=await parseCadFile(file);cache.set(file,parsed);}
-    const child=structuredClone(parsed);root.cadDiagnostics??=[];root.cadDiagnostics.push(...(child.cadDiagnostics??[]));for(const [type,n] of Object.entries(child.cadUnsupported??{}))root.cadDiagnostics.push(file.name+'：未支援物件 '+type+' '+n+' 筆');await resolve(child,file.webkitRelativePath||file.name,[...stack,file],depth+1);
+    if(!child){
+     child=await parseCadFile(file);root.cadDiagnostics??=[];root.cadDiagnostics.push(...(child.cadDiagnostics??[]));for(const [type,n] of Object.entries(child.cadUnsupported??{}))root.cadDiagnostics.push(file.name+'：未支援物件 '+type+' '+n+' 筆');await resolve(child,file.webkitRelativePath||file.name,[...stack,file],depth+1);
+     assembled.set(file,child);
+    }
     const ns=name+'|';const rename=(e:Any)=>{
      const q={...e,layer:ns+(e.layer??'0'),handle:ns+(e.handle??'')};
      for(const k of ['name','block'])if(q[k]&&child.blocks?.[q[k]])q[k]=ns+q[k];

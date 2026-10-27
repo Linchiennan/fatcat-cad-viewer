@@ -66,6 +66,14 @@ export function dropReadPastTail(text: string): string {
   return last < 0 ? text : text.slice(0, end) + text.slice(last + 1);
 }
 
+// A character the drawing's code page has no byte for is kept in a name as \U+XXXX (世舜 太原段: the reference to
+// 参層平面圖, 参 not being Big5, showed as "\U+53C2層平面圖" in the 外參 panel; ZWCAD shows 参).
+const UNICODE = /\\U\+([0-9A-Fa-f]{4})/g;
+const coded = (s: string) => s.includes("\\M+") || s.includes("\\U+");
+function decodeUnicodeCodes(text: string): string {
+  return text.includes("\\U+") ? text.replace(UNICODE, (_, h: string) => String.fromCharCode(parseInt(h, 16))) : text;
+}
+
 /**
  * Decode the codes in names too: layer, block, text style, line type and dimension style names, as table keys and
  * wherever an entity or a report names them (上晴: "09-\M+5ACA1\M+5B0CA…" for every layer of the 圖層 panel).
@@ -76,21 +84,21 @@ export function dropReadPastTail(text: string): string {
 export function decodeMifNames(doc: Any): number {
   let changed = 0;
   const encoding = mifEncodingOf(doc);
-  const decode = (s: string) => decodeMifText(dropReadPastTail(s), encoding);
+  const decode = (s: string) => decodeUnicodeCodes(s.includes("\\M+") ? decodeMifText(dropReadPastTail(s), encoding) : s);
   const keep = new Set<string>();
   const scan = (node: Any, seen: Set<object>): void => {
     if (!node || typeof node !== "object" || seen.has(node) || ArrayBuffer.isView(node)) return;
     seen.add(node);
     const keys = Array.isArray(node) ? [] : Object.keys(node);
-    const taken = new Set(keys.filter((k) => !k.includes("\\M+")));
-    for (const k of keys) if (k.includes("\\M+")) { const nk = decode(k); if (taken.has(nk)) keep.add(k); else taken.add(nk); }
+    const taken = new Set(keys.filter((k) => !coded(k)));
+    for (const k of keys) if (coded(k)) { const nk = decode(k); if (taken.has(nk)) keep.add(k); else taken.add(nk); }
     for (const v of Array.isArray(node) ? node : Object.values(node)) scan(v, seen);
   };
   scan(doc, new Set());
   const seen = new Set<object>();
   const walk = (node: Any): Any => {
     if (typeof node === "string") {
-      if (!node.includes("\\M+") || keep.has(node)) return node;
+      if (!coded(node) || keep.has(node)) return node;
       const next = decode(node);
       if (next !== node) changed++;
       return next;
@@ -101,7 +109,7 @@ export function decodeMifNames(doc: Any): number {
     let rekey = false;
     for (const k of Object.keys(node)) {
       node[k] = walk(node[k]);
-      if (k.includes("\\M+")) rekey = true;
+      if (coded(k)) rekey = true;
     }
     if (rekey) {
       const entries = Object.entries(node);

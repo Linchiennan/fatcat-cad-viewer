@@ -27,11 +27,17 @@ it('keeps native and phone browsers outside the desktop host', () => {
   vi.stubGlobal('navigator', {userAgent:'Mozilla/5.0 (iPhone)'});
   expect(shouldHostPreview(false)).toBe(false);
 });
-it('offers six unique fixed sizes with bilingual shell text', () => {
-  expect(DEVICE_PRESETS.length).toBe(6);
-  expect(new Set(DEVICE_PRESETS.map(p => p.id)).size).toBe(6);
-  for (const key of ['preview.label','preview.desktop','preview.note','preview.frame'] as const) {
+it('offers seven unique fixed sizes with bilingual shell text', () => {
+  expect(DEVICE_PRESETS.length).toBe(7);
+  expect(new Set(DEVICE_PRESETS.map(p => p.id)).size).toBe(7);
+  for (const key of ['preview.label','preview.desktop','preview.note','preview.frame','preview.chromeNote'] as const) {
     expect(translate('zh-TW',key).length).toBeGreaterThan(0);
     expect(translate('en',key)).not.toBe(translate('zh-TW',key));
   }
+});
+it("has the user's own phone with its system and Brave bars: 412x915 screen, 412x708 page", async () => {
+  const { barsHeight } = await import('./devicePreview');
+  const own = DEVICE_PRESETS.find(p => p.id === 'zenfone-11-ultra') as { width: number; height: number; chrome?: boolean } | undefined;
+  expect(own).toMatchObject({ width: 412, height: 915, chrome: true });
+  expect(own!.height - barsHeight()).toBe(708);
 });

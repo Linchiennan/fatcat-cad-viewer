@@ -43,6 +43,12 @@ describe("measuring panel", () => {
     expect(html).toContain("<span>總長</span>");
   });
 
+  it("desktop has no 物件 tile (用戶 2026-10-27：不實用); the phone panel keeps it", () => {
+    const st = measureReducer(initialMeasureState(), { type: "toggle-measure" });
+    expect(renderToStaticMarkup(<MeasurePanel {...props(st)} />)).not.toContain("<span>物件</span>");
+    expect(renderToStaticMarkup(<MeasurePanel {...props(st)} glove />)).toContain("<span>物件</span>");
+  });
+
   it("explains a property-only object and hints the unit", () => {
     let st = measureReducer(initialMeasureState(), { type: "toggle-measure" });
     st = measureReducer(st, { type: "mode", mode: "object" });

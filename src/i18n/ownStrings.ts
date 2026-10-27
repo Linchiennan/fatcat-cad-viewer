@@ -30,6 +30,7 @@ export const OWN_STRINGS = {
   "preview.desktop": { zh: "電腦原尺寸", en: "Desktop · original size" },
   "preview.note": { zh: "整頁自動縮放，保留手機版面尺寸；非 Safari／iOS 引擎模擬。", en: "Auto-fit whole screen; phone viewport preserved. Not Safari/iOS emulation." },
   "preview.frame": { zh: "大肥貓 CAD 版面預覽", en: "Fat Cat CAD layout preview" },
+  "preview.chromeNote": { zh: "螢幕 {w}×{h}，扣掉系統列與 Brave 瀏覽器列，網頁可用 {w}×{vh}（依實機截圖）。", en: "Screen {w}×{h}; with the system and Brave bars the page gets {w}×{vh} (from a real phone)." },
   // App shell
   "viewer.fileSizeLine": { zh: "檔案大小: {size}", en: "File size: {size}" },
   "viewer.libraryButton": { zh: "我的圖面", en: "My drawings" },

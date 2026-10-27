@@ -54,6 +54,10 @@ describe("panel height (T16 2.4-2)", () => {
     expect(clampPanelHeight(50, 800)).toBe(110);
     expect(clampPanelHeight(900, 800)).toBe(610);
     expect(clampPanelHeight(500, 250)).toBe(110);
+    // the panel's own floor (title + one row of mode tiles) wins over 110, even in a short window
+    expect(clampPanelHeight(120, 800, 168)).toBe(168);
+    expect(clampPanelHeight(300, 800, 168)).toBe(300);
+    expect(clampPanelHeight(500, 250, 168)).toBe(168);
     expect(loadPanelHeight()).toBeNull();
     savePanelHeight(321.6);
     expect(loadPanelHeight()).toBe(322);

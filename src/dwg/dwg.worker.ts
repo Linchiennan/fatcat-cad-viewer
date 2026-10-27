@@ -8,7 +8,7 @@ import { looksLikeMemory } from "./dwgDiagnostics";
 
 export type DwgRequest = { id: number; bytes: ArrayBuffer; base: string };
 export type DwgReply =
-  | { id: number; ok: true; dxf: ArrayBuffer; savedView: unknown; diagnostics: number; fallback: string | null }
+  | { id: number; ok: true; dxf: ArrayBuffer; savedView: unknown; diagnostics: number; fallback: string | null; unloadedXrefs?: string[] }
   | { id: number; ok: false; code: string; message: string; engineError?: number };
 
 type Scope = { onmessage: ((event: MessageEvent<DwgRequest>) => void) | null; postMessage(message: DwgReply, transfer?: Transferable[]): void };
@@ -57,7 +57,7 @@ scope.onmessage = async (event) => {
     const result = await convertDwgBytes(new Uint8Array(bytes), engineFactory(base));
     const dxf = result.dxf.byteOffset === 0 && result.dxf.byteLength === result.dxf.buffer.byteLength
       ? (result.dxf.buffer as ArrayBuffer) : (result.dxf.slice().buffer as ArrayBuffer);
-    scope.postMessage({ id, ok: true, dxf, savedView: result.savedView, diagnostics: result.diagnostics, fallback: result.fallback }, [dxf]);
+    scope.postMessage({ id, ok: true, dxf, savedView: result.savedView, diagnostics: result.diagnostics, fallback: result.fallback, unloadedXrefs: result.unloadedXrefs }, [dxf]);
   } catch (error) {
     if (error instanceof DwgFailure) scope.postMessage({ id, ok: false, code: error.code, message: error.message, engineError: error.engineError });
     else scope.postMessage({ id, ok: false, code: "DWG_CONVERSION_FAILED", message: String(error instanceof Error ? error.message : error) });

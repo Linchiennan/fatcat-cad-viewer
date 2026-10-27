@@ -37,16 +37,18 @@ export type ConversionResult = {
   diagnostics: number;
   /** Fallback data as JSON (blocks / skipped / texts / error), or null when not needed. */
   fallback: string | null;
+  /** External references saved unloaded (not resolved when the drawing was saved); CAD does not load them on open. */
+  unloadedXrefs: string[];
 };
 
-type Metadata = { layers: Map<string, LayerState> | null; view: SavedView | null; nonFatal: boolean };
+type Metadata = { layers: Map<string, LayerState> | null; view: SavedView | null; nonFatal: boolean; unloadedXrefs: string[] };
 type ViewCandidate = SavedView & { active: boolean };
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v));
 
 /** First pass: layer states and the saved view from the object reader (T13 4.2-3). Never throws. */
 export function readDwgMetadata(module: Any, path: string): Metadata {
-  const none: Metadata = { layers: null, view: null, nonFatal: false };
+  const none: Metadata = { layers: null, view: null, nonFatal: false, unloadedXrefs: [] };
   let data = 0;
   try {
     const read = module.dwg_read_file(path);
@@ -56,16 +58,22 @@ export function readDwgMetadata(module: Any, path: string): Metadata {
     const lib: Any = LibreDwg.createByWasmInstance(module);
     try { lib.decoder = new TextDecoder(dwgCodePageToEncoding(module.dwg_get_codepage(data))); } catch { /* names stay as decoded by the engine */ }
     const field = (tio: number, name: string) => lib.dwg_dynapi_entity_value(tio, name)?.data;
-    const layers = new Map<string, LayerState>(), views: ViewCandidate[] = [];
+    const layers = new Map<string, LayerState>(), views: ViewCandidate[] = [], unloadedXrefs: string[] = [];
     const count = module.dwg_get_num_objects(data);
     for (let i = 0; i < count; i++) {
       const obj = module.dwg_get_object(data, i);
       if (!obj) continue;
       const type = module.dwg_object_get_fixedtype(obj);
-      if (type !== Dwg_Object_Type.DWG_TYPE_LAYER && type !== Dwg_Object_Type.DWG_TYPE_VPORT) continue;
+      if (type !== Dwg_Object_Type.DWG_TYPE_LAYER && type !== Dwg_Object_Type.DWG_TYPE_VPORT && type !== Dwg_Object_Type.DWG_TYPE_BLOCK_HEADER) continue;
       const tio = module.dwg_object_to_object_tio(obj);
       if (!tio) continue;
       const name = String(field(tio, "name") ?? "");
+      if (type === Dwg_Object_Type.DWG_TYPE_BLOCK_HEADER) {
+        // The DXF writer drops this state (flags 12 either way). 世舜 太原段 etc.: every xref saved unresolved stayed
+        // unloaded in ZWCAD and every resolved one loaded (450 of 450 with the file present).
+        if (name && num(field(tio, "blkisxref")) && !num(field(tio, "is_xref_resolved"))) unloadedXrefs.push(name);
+        continue;
+      }
       if (type === Dwg_Object_Type.DWG_TYPE_LAYER) {
         if (name) layers.set(name, { off: !!num(field(tio, "off")), frozen: !!num(field(tio, "frozen")), frozenInNew: !!num(field(tio, "frozen_in_new")) });
         continue;
@@ -83,7 +91,7 @@ export function readDwgMetadata(module: Any, path: string): Metadata {
     const chosen = [...views].reverse().find((v) => v.active) ?? views[0] ?? null;
     let view: SavedView | null = null;
     if (chosen) { const { active: _active, ...rest } = chosen; void _active; view = rest; }
-    return { layers, view, nonFatal: error !== 0 };
+    return { layers, view, nonFatal: error !== 0, unloadedXrefs };
   } catch {
     return none;
   } finally {
@@ -154,7 +162,7 @@ export async function convertDwgBytes(dwg: Uint8Array, createEngine: EngineFacto
     dxf = annotateDxfXclips(dxf);
     if (!validDxfOutput(dxf)) throw new DwgFailure("DWG_EXPORT_FAILED", "The DWG was read but the DXF output is not valid.");
     const fallback = await readFallback(dxf, encoding, dwg, createEngine);
-    return { dxf, savedView: meta.view, diagnostics: stderrLines + (meta.nonFatal ? 1 : 0), fallback };
+    return { dxf, savedView: meta.view, diagnostics: stderrLines + (meta.nonFatal ? 1 : 0), fallback, unloadedXrefs: meta.unloadedXrefs };
   } catch (error) {
     if (error instanceof DwgFailure) throw error;
     const message = error instanceof Error ? error.message : String(error);

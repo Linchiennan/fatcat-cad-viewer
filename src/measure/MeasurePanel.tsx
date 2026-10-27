@@ -106,9 +106,24 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
   const drag = useRef<{ id: number; y: number; h: number } | null>(null);
   const panel = useRef<HTMLElement | null>(null);
 
+  // A desktop measure left in 物件 mode (from before it was dropped there) starts in 距離 instead.
+  useEffect(() => {
+    if (!glove && !s.info && s.mode === "object") dispatch({ type: "mode", mode: "distance" });
+  }, [glove, s.info, s.mode]);
+  // Shortest height: the title and one whole row of mode tiles, captions included (用戶 2026-10-27：拖到最小剛好一排圖示).
+  const minHeight = () => {
+    const p = panel.current, row = p?.querySelector(".measure-modes > *");
+    if (!p || !row) return undefined;
+    const pad = parseFloat(getComputedStyle(p.querySelector(".measure-body") ?? p).paddingBottom) || 0;
+    return Math.ceil(row.getBoundingClientRect().bottom - p.getBoundingClientRect().top + p.scrollTop + pad + 2);
+  };
+  useEffect(() => {
+    // A remembered height below one row of tiles (saved before the floor existed) opens at that row.
+    setHeight((h) => (h === null ? h : clampPanelHeight(h, viewportHeight(), minHeight())));
+  }, []);
   useEffect(() => {
     // Keep a remembered height inside the window when it shrinks.
-    const fit = () => setHeight((h) => (h === null ? h : clampPanelHeight(h, viewportHeight())));
+    const fit = () => setHeight((h) => (h === null ? h : clampPanelHeight(h, viewportHeight(), minHeight())));
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, []);
@@ -121,13 +136,13 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
   const move = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
-    setHeight(clampPanelHeight(d.h + (d.y - e.clientY), viewportHeight()));
+    setHeight(clampPanelHeight(d.h + (d.y - e.clientY), viewportHeight(), minHeight()));
   };
   const up = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
     drag.current = null;
-    const h = clampPanelHeight(d.h + (d.y - e.clientY), viewportHeight());
+    const h = clampPanelHeight(d.h + (d.y - e.clientY), viewportHeight(), minHeight());
     setHeight(h);
     savePanelHeight(h);
   };
@@ -156,16 +171,18 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
   return (
     <section ref={panel} className={`measure-panel${glove ? " glove" : ""}${coarse() ? " coarse" : ""}`} style={style} aria-label={t("measure.title")}>
       <header className="measure-head">
-        <div className="panel-drag" role="separator" aria-orientation="horizontal" aria-label={t("measure.dragLabel")} title={t("measure.dragLabel")}
-          onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}><i /></div>
+        {/* The drag bar shares the title's row (用戶 2026-10-27：白色拉桿跟量測同排); the whole middle of the row is the grip. */}
         <div className="measure-title-row">
           <strong>{t("measure.title")}</strong>
+          <div className="panel-drag" role="separator" aria-orientation="horizontal" aria-label={t("measure.dragLabel")} title={t("measure.dragLabel")}
+            onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} />
           <button type="button" className="measure-close" aria-label={t("measure.close")} title={t("measure.close")} onClick={onClose}><CloseIcon /></button>
         </div>
       </header>
       <div className="measure-body">
         <div className="measure-modes" role="group">
-          {MODES.map(({ mode, Icon }) => (
+          {/* Desktop leaves out 物件 (用戶 2026-10-27：電腦版量測的物件按鈕拿掉，不實用); 選取 still reads an object's data. */}
+          {MODES.filter(({ mode }) => glove || mode !== "object").map(({ mode, Icon }) => (
             <IconTile key={mode} name={t(MODE_KEYS[mode])} label={t(`measure.tile.${mode}.short` as TranslationKey)} tip={t(`measure.tile.${mode}.tip` as TranslationKey)} pressed={s.mode === mode} onClick={() => dispatch({ type: "mode", mode })}><Icon /></IconTile>
           ))}
         </div>

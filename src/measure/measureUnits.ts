@@ -60,7 +60,9 @@ export const PANEL_MIN_HEIGHT = 110;
 
 /** Largest panel height for a window: window height − 190, never below 110. */
 export const panelMaxHeight = (viewportHeight: number) => Math.max(PANEL_MIN_HEIGHT, viewportHeight - 190);
-export const clampPanelHeight = (h: number, viewportHeight: number) => Math.round(Math.min(panelMaxHeight(viewportHeight), Math.max(PANEL_MIN_HEIGHT, h)));
+/** `min`: the panel's own shortest useful height (title + one full row of mode tiles), when it is known. */
+export const clampPanelHeight = (h: number, viewportHeight: number, min = PANEL_MIN_HEIGHT) =>
+  Math.round(Math.min(Math.max(min, panelMaxHeight(viewportHeight)), Math.max(min, h)));
 
 /** Saved panel height, or null (nothing saved, unreadable, or below 110). */
 export function loadPanelHeight(): number | null {

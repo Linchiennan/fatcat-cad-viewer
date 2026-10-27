@@ -1,5 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { canvasSize, pageScale, pixelRatio, typedPage, zoomIn, zoomOut, zoomText } from "./pdfLayout";
+import { canvasSize, pageScale, pixelRatio, typedPage, wheelFactor, zoomBy, zoomIn, zoomOut, zoomText } from "./pdfLayout";
+
+describe("PDF zoom by hand (用戶 2026-10-27：看 PDF 要能縮放)", () => {
+  it("multiplies by a pinch / wheel factor within 25 %…600 %", () => {
+    expect(zoomBy(1, 2)).toBe(2);
+    expect(zoomBy(4, 3)).toBe(6);
+    expect(zoomBy(0.5, 0.1)).toBe(0.25);
+    expect(zoomBy(1, NaN)).toBe(1);
+  });
+  it("one wheel notch up is one zoom step, down undoes it", () => {
+    expect(wheelFactor(-100)).toBeCloseTo(1.25, 6);
+    expect(wheelFactor(-100) * wheelFactor(100)).toBeCloseTo(1, 9);
+  });
+});
 
 describe("PDF page layout (T17 3.3)", () => {
   it("fits the page width to the scroll area minus 36 px", () => {
