@@ -24,7 +24,7 @@
     "@capacitor/android": "8.4.3",
     "@capacitor/browser": "8.0.4",
     "@capacitor/core": "8.4.3",
-    "@mlightcad/libredwg-web": "0.7.9",
+    "@mlightcad/libredwg-web": "0.8.2",
     "@mlightcad/shx-parser": "1.4.5",
     "dxf-viewer": "1.0.48",
     "fflate": "0.8.3",

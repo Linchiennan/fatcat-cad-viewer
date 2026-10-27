@@ -1,0 +1,13 @@
+# DWG engine (libredwg-web wasm, patched)
+
+Built by `.github/workflows/build-libredwg-wasm.yml` on branch `build-libredwg` of this repository:
+
+- @mlightcad/libredwg-web v0.8.2 (the JS bindings in node_modules, same version)
+- merged with LibreDWG 0.14.8625 (R2004 sections larger than num_sections × max_decomp_size, 665b8dde)
+- one fix of ours in src/bits.c, `bit_read_H`: the handle size was checked against `sizeof (BITCODE_RC *)`,
+  which is 4 on wasm32, so 5–8 byte handles were rejected and every later object misread
+  (世舜 10180 門窗圖.dwg, HANDSEED 0x10527E5B4: layer names empty, 0 objects). The limit is 8.
+
+Same build commands and flags as libredwg-web's package.json (emscripten latest, `--enable-release --enable-debug`,
+linked with em++). `scripts/copy-runtime.mjs` copies these files into public/runtime/libredwg instead of the ones
+in node_modules. Licence: GPL-3.0-or-later, as LibreDWG (node_modules/@mlightcad/libredwg-web/LICENSE).

@@ -1,6 +1,7 @@
 // Copies the third-party runtime files the app loads at run time (DWG engine, archive reader, PDF worker and
 // its data) from node_modules into public/runtime, so the built app works fully offline.
-// Every source is the published npm package itself; their license files are copied alongside.
+// Every source is the published npm package itself (the DWG engine: our patched build in vendor/); their license files
+// are copied alongside.
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,8 +16,9 @@ const out = join(root, "public", "runtime");
 
 // [from, to] — a folder is copied whole.
 const items = [
-  [mod("@mlightcad/libredwg-web", "wasm", "libredwg-web.js"), "libredwg/libredwg-web.js"],
-  [mod("@mlightcad/libredwg-web", "wasm", "libredwg-web.wasm"), "libredwg/libredwg-web.wasm"],
+  // The DWG engine is our patched build (vendor/libredwg-web/README.md): LibreDWG 0.14.8625 with the 32-bit handle fix.
+  [join(root, "vendor", "libredwg-web", "libredwg-web.js"), "libredwg/libredwg-web.js"],
+  [join(root, "vendor", "libredwg-web", "libredwg-web.wasm"), "libredwg/libredwg-web.wasm"],
   [mod("@mlightcad/libredwg-web", "LICENSE"), "libredwg/LICENSE"],
   [mod("libarchive-wasm", "dist", "libarchive.wasm"), "libarchive/libarchive.wasm"],
   [mod("libarchive-wasm", "LICENSE"), "libarchive/LICENSE"],
