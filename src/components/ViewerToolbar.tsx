@@ -207,7 +207,8 @@ export function GloveBar(props: ToolbarProps) {
       ) : null}
       <nav className={`glove-bar${tools ? " is-measuring" : ""}`} aria-label={tools ? tr("bar.measureLabel") : tr("bar.label")} data-fit="toolbar">
         {slots.map((slot, i) => <GloveSlot key={slot.key} slot={slot} place={i} />)}
-        <YarnLine />
+        {/* the outline depends only on how many slots there are (shapes go by place: plain, ear, paw, ear, plain) */}
+        <YarnLine shape={String(slots.length)} />
       </nav>
     </>
   );

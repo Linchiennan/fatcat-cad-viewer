@@ -55,7 +55,7 @@ function measure(bar: HTMLElement): { top: Float64Array; width: number; paw: [nu
     for (const el of Array.from(btn.querySelectorAll<SVGGeometryElement>(".glove-ears path, .glove-paw path, .glove-paw ellipse"))) {
       const m = el.getScreenCTM(), paw = !!el.closest(".glove-paw");
       if (!m || typeof el.getTotalLength !== "function") continue;
-      const len = el.getTotalLength(), steps = Math.max(24, Math.ceil(len * Math.hypot(m.a, m.b) * 1.5));
+      const len = el.getTotalLength(), steps = Math.max(16, Math.ceil(len * Math.hypot(m.a, m.b) * 0.5)); // a point every ~2 px is plenty
       for (let i = 0; i <= steps; i++) {
         const p = el.getPointAtLength((len * i) / steps), q = new DOMPoint(p.x, p.y).matrixTransform(m);
         if (!paw) { put(q.x, q.y); continue; }
@@ -109,7 +109,12 @@ export function strandLine(top: Float64Array, paw: [number, number] | null = nul
   return out;
 }
 
-export function YarnLine() {
+/**
+ * `shape`: what decides the outline (how many buttons; their shapes follow from their places). The strand is measured and
+ * drawn again only when it changes or the bar is resized, not when labels or states change (measuring mode included); a measuring tap re-renders the bar, and redrawing then cost ~0.3 s per tap on a phone
+ * (用戶 2026-10-27：點量測第一點、第二點有停頓).
+ */
+export function YarnLine({ shape }: { shape: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   useLayoutEffect(() => {
     const c = canvas.current, bar = c?.parentElement;
@@ -148,6 +153,6 @@ export function YarnLine() {
     for (const btn of Array.from(bar.children)) watch.observe(btn);
     schedule();
     return () => { watch.disconnect(); if (frame) cancelAnimationFrame(frame); };
-  });
+  }, [shape]);
   return <canvas className="glove-yarn" ref={canvas} aria-hidden="true" />;
 }
