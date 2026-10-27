@@ -11,8 +11,9 @@ out = w / 'dist-web'
 identity = w / 'src/app/buildIdentity.ts'
 logs = w / 'build-logs'
 
-# Build id = hash of every input, so the same sources always give the same id.
-inputs = sorted(p for base in ['src', 'public', 'web', 'scripts', 'licenses'] for p in (w / base).rglob('*')
+# Build id = hash of every input, so the same sources always give the same id. vendor/ holds the DWG engine: a new
+# engine alone must give a new id, or the offline cache keeps serving the old one (2026-10-28: 02e89fb kept 8a4d5efb7c08).
+inputs = sorted(p for base in ['src', 'public', 'web', 'scripts', 'licenses', 'vendor'] for p in (w / base).rglob('*')
                 if p.is_file() and p != identity and p.name != 'build-apk.py' and '__pycache__' not in p.parts
                 and not p.relative_to(w).as_posix().startswith(('public/runtime/', 'public/licenses/')))
 inputs += [w / n for n in ['package.json', 'package-lock.json', 'vite.config.ts', 'index.html', 'usage.html', 'WEB_PRIVACY.md', 'firestore.rules', 'LICENSE', 'NOTICE.md', 'THIRD_PARTY_LICENSES.md', 'PRIVACY_POLICY.md'] if (w / n).is_file()]
