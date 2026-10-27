@@ -26,6 +26,8 @@ export interface CadEngine {
   command(command: ViewCommand): void;
   /** Show or hide a layer; resolves true when the scene had to be rebuilt. */
   showLayer(name: string, visible: boolean): Promise<boolean>;
+  /** Restore a named layer state of the drawing (on/off, frozen, colour, as CAD does); resolves true when the scene was rebuilt. */
+  applyLayerState?(name: string): Promise<boolean>;
   report(): EngineReport | null;
   /** Canvas CSS px (from the canvas top-left) → drawing point. */
   unproject(x: number, y: number): DrawingPoint;
@@ -74,6 +76,7 @@ export interface DrawingCanvasHandle extends ViewerHandle {
   clearSearchHit(): void;
   switchSpace(name: string): void;
   showLayer(name: string, visible: boolean): void;
+  applyLayerState(name: string): void;
   captureDiagnostics(): DiagnosticCapture | null;
 }
 

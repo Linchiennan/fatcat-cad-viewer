@@ -15,6 +15,8 @@ export const PANEL_STRINGS = {
   "cad.layers.unisolate": { zh: "取消隔離", en: "End isolation" },
   "cad.layers.restore": { zh: "恢復原始開關", en: "Restore original on/off" },
   "cad.layers.allOn": { zh: "全部開啟", en: "Turn all on" },
+  "cad.layers.states": { zh: "圖層狀態", en: "Layer states" },
+  "cad.layers.stateTip": { zh: "還原圖層狀態「{name}」：開關、凍結、顏色照 CAD 存的套用", en: "Restore layer state \"{name}\": on/off, frozen and colours as saved in CAD" },
   "cad.layers.isolate": { zh: "隔離", en: "Isolate" },
 
   // 缺件警告

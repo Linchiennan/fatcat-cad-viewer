@@ -5,8 +5,9 @@ import {Entity} from 'dxf-viewer/src/DxfScene.js';
 import {dimensionBlockOffset} from './dimensionBlock';
 import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
+import type { CadLayerState } from "./layerStateTable";
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
-export type CadReport = { layers:CadLayer[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
+export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
 type Any = any;
 export function resolveCadColor(e:Any,layers:Any,inheritedLayer='0',inheritedColor=0xffffff):number {
  if(Number.isInteger(e.trueColor))return e.trueColor;

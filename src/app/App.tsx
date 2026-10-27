@@ -768,6 +768,7 @@ export function App() {
             {cadTab && report && last ? (
               <CadPanel report={report} audit={audit} source={last.file} initialTab={STRIP_TABS[cadTab]}
                 onLayer={(name, visible) => canvasRef.current?.showLayer(name, visible)}
+                onLayerState={(name) => canvasRef.current?.applyLayerState(name)}
                 onReload={(file) => setDrawable(file)} onClose={() => setCadTab(null)} />
             ) : null}
           </>

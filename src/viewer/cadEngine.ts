@@ -20,6 +20,7 @@ import { recordDiagnostic, getParseAudit } from "./parseAudit";
 import { conversionWarnings } from "../dwg/convertDwg";
 import { detectDxfEncoding } from "./dxfEncoding";
 import { savedViewFor, type SavedView } from "./savedView";
+import type { CadLayerState } from "./layerStateTable";
 import { drawingIdentity, loadPosition, readLayerMemory, saveLayerMemory, savePosition, sheetKey, type ReadingPosition } from "./readingPosition";
 import { installXclipViewer, XCLIP_LAYER_PREFIX, xclipBaseLayer } from "./xclipScene";
 import { VIEWER_WORKER_FAILED } from "./workerMessages";
@@ -258,6 +259,7 @@ export class DxfCadEngine implements FatcatCadEngine {
       report.images = rasterItems.filter((r) => !r.entity.cadOleImage && r.entity.handle !== "standalone-image").map((r) => ({ path: String(r.entity.imagePath ?? ""), handle: String(r.entity.handle ?? "") }));
       report.embeddedImageCount = rasterItems.filter((r) => r.entity.cadOleImage).length;
       report.space = space;
+      report.layerStates = parsed.cadLayerStates ?? [];
       report.shownImageCount = rasters.count;
       try { recordDiagnostic("font.selection", { fonts: report.fontDiagnostics ?? null }); } catch { /* diagnostics never block drawing */ }
       const diagnostics = conversionWarnings.get(file) ?? 0;
@@ -377,6 +379,36 @@ export class DxfCadEngine implements FatcatCadEngine {
       }, REBUILD_DELAY_MS);
       this.rebuild = { timer, waiters };
     });
+  }
+
+  /**
+   * Restore a named layer state of the drawing, as CAD's 圖層狀態管理員 還原 does: each layer it lists is turned on or off
+   * and takes its saved colour; layers it does not list stay as they are (用戶 2026-10-27). Colours are baked into the
+   * geometry, so a colour change (or a layer used inside blocks) rebuilds the sheet; on/off alone is switched on the GPU.
+   */
+  async applyLayerState(name: string): Promise<boolean> {
+    const report = this.reportValue, parsed = this.parsed, file = this.file;
+    const state: CadLayerState | undefined = parsed?.cadLayerStates?.find((s: CadLayerState) => s.name === name);
+    if (!report || !this.ready || !state || !file) return false;
+    const table = parsed.tables?.layer?.layers ?? {};
+    let recolor = false;
+    for (const [layerName, entry] of Object.entries(state.layers)) {
+      const layer = table[layerName];
+      if (layer && ((layer.trueColor ?? layer.color) !== entry.color || layer.colorIndex !== entry.colorIndex)) {
+        layer.color = entry.color; layer.colorIndex = entry.colorIndex; delete layer.trueColor; recolor = true;
+      }
+      const shown = report.layers.find((l) => l.name === layerName);
+      if (shown) shown.visible = entry.visible;
+    }
+    saveLayerMemory(this.key, Object.fromEntries(report.layers.map((l) => [l.name, l.visible])));
+    if (recolor || Object.keys(state.layers).some((n) => report.blockLayers?.includes(n))) {
+      this.savePositionNow();
+      await this.load(file, () => {}, this.space);
+      return true;
+    }
+    for (const l of report.layers) if (l.name in state.layers) this.applyLayer(l.name, l.visible);
+    this.render();
+    return false;
   }
 
   // ---- camera ----------------------------------------------------------------------------------

@@ -238,6 +238,14 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
         if (rebuilt) sheetReady(e); else redraw();
       }).catch((err) => { if (engine.current === e && !isAbort(err)) events.current.onError(err); });
     },
+    applyLayerState(name) {
+      const e = engine.current;
+      if (!e?.applyLayerState) return;
+      e.applyLayerState(name).then((rebuilt) => {
+        if (engine.current !== e) return;
+        if (rebuilt) sheetReady(e); else redraw();
+      }).catch((err) => { if (engine.current === e && !isAbort(err)) events.current.onError(err); });
+    },
     captureDiagnostics: () => engine.current?.captureDiagnostics() ?? null,
   }), [sheetReady, updateMarks, runExport, changeSelection]);
 
