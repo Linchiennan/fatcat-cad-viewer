@@ -508,13 +508,30 @@ button { cursor: pointer; }
 .cad-layer > input[type="checkbox"] { flex: none; width: 26px; height: 26px; margin: 0; }
 .cad-layer > button { flex: none; }
 .cad-layer > label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; cursor: pointer; }
-.cad-layer-state-match { margin: -4px 0 10px; font-size: 0.92rem; }
-.cad-layer-state-match.on { color: #7fd88a; }
-.cad-layer-state-match.off { color: var(--accent-hi); }
-/* 圖層狀態管理員：下拉選單選 CAD 存的圖層狀態，選了就還原（開關、凍結、顏色） */
-.cad-layer-states { display: flex; align-items: center; gap: 8px; padding: 0 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
-.cad-layer-states > span { flex: none; color: var(--muted); white-space: nowrap; }
-.cad-layer-states select { flex: 1; min-width: 0; color: var(--text); }
+/* 圖層狀態管理員：面板上一顆按鈕（旁邊寫上次還原的狀態），按下跳出 CAD 式清單；點兩下還原 */
+.cad-layer-states { display: flex; align-items: center; gap: 10px; padding: 0 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
+.cad-layer-states > span { min-width: 0; color: var(--muted); overflow-wrap: anywhere; }
+.layer-state-manager { display: flex; flex-direction: column; max-height: min(80vh, 640px); }
+.layer-state-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; scrollbar-width: auto; }
+.layer-state-list table { width: 100%; border-collapse: collapse; }
+.layer-state-list th { position: sticky; top: 0; background: #1d2a37; text-align: left; padding: 8px 12px; font-weight: 600; color: var(--muted); }
+.layer-state-list td { padding: 12px; border-top: 1px solid var(--line); cursor: pointer; user-select: none; -webkit-user-select: none; }
+.layer-state-list tr[aria-selected="true"] td { background: rgba(255, 181, 71, 0.18); }
+.layer-state-list td.same { color: #7fd88a; }
+.layer-state-list td.differs { color: var(--muted); }
+.layer-state-manager > p { margin: 0 0 12px; }
+.layer-state-more { display: block; margin-top: 4px; font-size: 14px; font-weight: 400; color: var(--accent-hi); }
+.layer-state-buttons { display: flex; gap: 12px; }
+.layer-state-buttons button { flex: 1; height: 52px; border-radius: 12px; font-size: 17px; font-weight: 700; }
+.layer-state-close { border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); }
+/* 面板的通用按鈕樣式會蓋掉「還原」的橘底，這裡指定回來 */
+.cad-sheet .layer-state-buttons .close-keep { border: 0; background: var(--accent); color: var(--on-accent); }
+.cad-sheet .layer-state-buttons .close-keep:disabled { opacity: 0.45; }
+/* 卷軸一直看得到（手機預設會藏起來，狀態多時看不出還能往下拉） */
+.layer-state-list::-webkit-scrollbar { width: 10px; }
+.layer-state-list::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+.layer-state-list::-webkit-scrollbar-thumb { background: var(--tile-line); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+@supports not selector(::-webkit-scrollbar) { .layer-state-list { scrollbar-color: var(--tile-line) transparent; } }
 .cad-xref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .cad-missing { margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 181, 71, 0.35); }
 .cad-missing-title { color: var(--accent-hi); font-weight: 700; }
