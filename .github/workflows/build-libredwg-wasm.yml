@@ -39,6 +39,12 @@ jobs:
           # outright while ZWCAD opens it. Other limits (790 MB per section, 0xf0000 pages) still guard bad data.
           sed -i 's/section->data_size > 10 [*] dat->size/section->data_size > 100 * dat->size/' src/decode_r2007.c
           grep -n 'section->data_size > 100 \* dat->size' src/decode_r2007.c
+          # Handle map: bit_read_UMC reads at most 8 bytes of 7 bits = 56 bits. 敦南 drawings carry handles like
+          # 0xFFF7D40F52A0262A (64 bits; ZWCAD keeps them on save), so the handle offset failed to parse, the stream
+          # went out of step and no object was found (error 1). 10 bytes cover 64 bits (9 x 7 + 1).
+          sed -i 's/#define MAX_BYTE_UMC 8/#define MAX_BYTE_UMC 10/; s/unsigned char byte\[MAX_BYTE_UMC\] = { 0, 0, 0, 0, 0, 0, 0, 0 };/unsigned char byte[MAX_BYTE_UMC] = { 0 };/' src/bits.c
+          grep -n 'MAX_BYTE_UMC 10' src/bits.c
+          grep -n 'byte\[MAX_BYTE_UMC\] = { 0 };' src/bits.c
           git log --oneline -3
       - name: Build
         run: |
