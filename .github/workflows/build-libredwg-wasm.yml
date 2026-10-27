@@ -1,0 +1,52 @@
+# Builds the DWG engine for 大肥貓CAD看圖: libredwg-web v0.8.2 (the JS bindings the app uses) merged with upstream
+# LibreDWG 0.14.8625, which reads R2004 drawings whose compressed sections are larger than expected (commit 665b8dde;
+# 世舜 門窗圖.dwg failed with error 2160 on 0.14.8608). Same build commands as libredwg-web's package.json.
+name: build-libredwg-wasm
+on:
+  workflow_dispatch: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # 門窗圖 still failed with the upstream fix merged: try the configure flags (Windows binaries read it).
+    strategy:
+      fail-fast: false
+      matrix:
+        flags: ['--enable-release --enable-debug']
+    steps:
+      - name: Tools
+        run: sudo apt-get update && sudo apt-get install -y autoconf automake libtool texinfo pkg-config
+      - name: Emscripten
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
+          cd "$HOME/emsdk" && ./emsdk install latest && ./emsdk activate latest
+      - name: Sources (libredwg-web v0.8.2 + LibreDWG 0.14.8625)
+        run: |
+          git clone https://github.com/mlightcad/libredwg-web.git src
+          cd src
+          git checkout v0.8.2
+          git config user.email ci@localhost && git config user.name ci
+          git remote add upstream https://github.com/LibreDWG/libredwg.git
+          git fetch upstream refs/tags/0.14.8625:refs/tags/0.14.8625
+          if ! git merge --no-edit 0.14.8625; then echo "衝突的檔案："; git diff --name-only --diff-filter=U; exit 1; fi
+          git submodule update --init --recursive || true
+          # 32-bit fix: handle size was checked against sizeof (BITCODE_RC *) = 4 on wasm32, so 5-8 byte handles
+          # (門窗圖 HANDSEED 0x10527E5B4) were rejected and every object after them misread. The intended limit is 8.
+          sed -i 's/handle->size > sizeof (BITCODE_RC [*])/handle->size > 8/' src/bits.c
+          grep -n 'handle->size > 8' src/bits.c
+          git log --oneline -3
+      - name: Build
+        run: |
+          source "$HOME/emsdk/emsdk_env.sh"
+          cd src && sh ./autogen.sh
+          mkdir -p build-wasm && cd build-wasm
+          emconfigure ../configure CFLAGS="-O2 -sUSE_ZLIB=1 -DNDEBUG" CC=emcc ${{ matrix.flags }} --disable-docs --disable-write --disable-python --disable-bindings --disable-shared --disable-json
+          emmake make -j4
+          # em++ (not emcc as in package.json): newer Emscripten links the C++ library only for em++
+          em++ ../bindings/javascript/embind/*.cpp src/*.o -O2 -lembind -std=c++17 -Isrc -I../src -I../include -o libredwg-web.js -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=1GB -s MAXIMUM_MEMORY=4GB -s MALLOC=mimalloc -s EXPORT_ES6=1 -s MODULARIZE=1 -s EXPORT_NAME="createModule" -sEXPORTED_RUNTIME_METHODS=FS,ENV,ccall,cwrap,UTF8ToString,stringToNewUTF8,setValue --emit-tsd libredwg-web.d.ts
+          ls -la libredwg-web.*
+          grep -ao "LibreDWG 0\.[0-9][0-9a-z._-]*" libredwg-web.wasm | head -1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libredwg-web-wasm-${{ strategy.job-index }}
+          path: src/build-wasm/libredwg-web.*
