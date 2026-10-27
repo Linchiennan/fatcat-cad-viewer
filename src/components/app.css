@@ -504,6 +504,13 @@ button { cursor: pointer; }
 .cad-sheet-body { flex: 1; overflow-y: auto; padding: 0 14px 14px; line-height: 1.5; }
 .cad-sheet-body input[type="search"], .cad-sheet-body input:not([type]) { width: 100%; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; }
 .cad-layer { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+/* 圖層列：勾選｜隔離｜色塊＋名稱（用戶 2026-10-27：隔離改到打勾右邊、名稱放最右） */
+.cad-layer > input[type="checkbox"] { flex: none; width: 26px; height: 26px; margin: 0; }
+.cad-layer > button { flex: none; }
+.cad-layer > label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere; cursor: pointer; }
+.cad-layer-state-match { margin: -4px 0 10px; font-size: 0.92rem; }
+.cad-layer-state-match.on { color: #7fd88a; }
+.cad-layer-state-match.off { color: var(--accent-hi); }
 /* 圖層狀態管理員：下拉選單選 CAD 存的圖層狀態，選了就還原（開關、凍結、顏色） */
 .cad-layer-states { display: flex; align-items: center; gap: 8px; padding: 0 0 10px; margin-bottom: 8px; border-bottom: 1px solid var(--line); }
 .cad-layer-states > span { flex: none; color: var(--muted); white-space: nowrap; }

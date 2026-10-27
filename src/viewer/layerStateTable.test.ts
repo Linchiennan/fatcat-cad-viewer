@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readLayerStates } from "./layerStateTable";
+import { layerStateDiff, readLayerStates } from "./layerStateTable";
 
 const dxf = (...pairs: (string | number)[]) => pairs.join("\n") + "\n";
 
@@ -52,5 +52,17 @@ describe("named layer states (圖層狀態管理員, 用戶 2026-10-27)", () => 
   it("no states: an empty list, also for broken data", () => {
     expect(readLayerStates(dxf(0, "SECTION", 2, "TABLES", 0, "ENDSEC", 0, "EOF"))).toEqual([]);
     expect(readLayerStates(dxf(0, "DICTIONARY", 5, "A", 3, "ACAD_LAYERSTATES", 360, "ZZ", 0, "EOF"))).toEqual([]);
+  });
+
+  it("tells whether the current layers match a state: on/off and colour of the layers it lists", () => {
+    const [one, two] = readLayerStates(libredwg);
+    const now = [
+      { name: "0", visible: true, color: 0xffffff }, { name: "A-OPEN", visible: false, color: 0x00ffff }, { name: "銷-圖框", visible: true, color: 0x808080 },
+      { name: "未列入", visible: false, color: 0x123456 },
+    ];
+    expect(layerStateDiff(one, now)).toEqual([]);
+    expect(layerStateDiff(two, now)).toEqual(["銷-圖框"]);
+    // a colour change alone is a difference too
+    expect(layerStateDiff(one, now.map((l) => (l.name === "0" ? { ...l, color: 0xff0000 } : l)))).toEqual(["0"]);
   });
 });

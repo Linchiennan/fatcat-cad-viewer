@@ -86,3 +86,14 @@ export function readLayerStates(text: string): CadLayerState[] {
     return [];
   }
 }
+
+/**
+ * Layers whose current on/off or colour differs from what `state` saved (layers it does not list are not compared,
+ * as restoring it would not touch them). Empty = the drawing shows exactly this state (用戶：顯示與目前圖層相符或不符).
+ */
+export function layerStateDiff(state: CadLayerState, layers: readonly { name: string; visible: boolean; color: number }[]): string[] {
+  const now = new Map(layers.map((l) => [l.name, l]));
+  return Object.entries(state.layers)
+    .filter(([name, saved]) => { const l = now.get(name); return !!l && (l.visible !== saved.visible || (l.color & 0xffffff) !== (saved.color & 0xffffff)); })
+    .map(([name]) => name);
+}

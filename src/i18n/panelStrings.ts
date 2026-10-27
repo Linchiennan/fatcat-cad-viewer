@@ -17,6 +17,10 @@ export const PANEL_STRINGS = {
   "cad.layers.allOn": { zh: "全部開啟", en: "Turn all on" },
   "cad.layers.states": { zh: "圖層狀態管理員", en: "Layer States Manager" },
   "cad.layers.statePick": { zh: "選擇要還原的圖層狀態", en: "Choose a layer state to restore" },
+  "cad.layers.stateMatch": { zh: "與目前圖層相符", en: "Matches the current layers" },
+  "cad.layers.stateDiff": { zh: "與目前圖層不符：{N} 個圖層不同（{names}）", en: "Differs from the current layers: {N} layers ({names})" },
+  "cad.layers.currentIs": { zh: "目前圖層與「{name}」相符", en: "The current layers match \"{name}\"" },
+  "cad.layers.currentNone": { zh: "目前圖層與已存的圖層狀態都不符", en: "The current layers match no saved layer state" },
   "cad.layers.stateTip": { zh: "還原 CAD 存的圖層狀態：開關、凍結、顏色一起套用", en: "Restore a layer state saved in CAD: on/off, frozen and colours" },
   "cad.layers.isolate": { zh: "隔離", en: "Isolate" },
 
