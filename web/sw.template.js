@@ -6,9 +6,12 @@ const RUNTIME = `${PREFIX}runtime-${BUILD}`;
 const PRECACHE = __PRECACHE__;
 const RUNTIME_PRECACHE = __RUNTIME_PRECACHE__;
 const assetURLs = new Set([...PRECACHE, ...RUNTIME_PRECACHE].map(p => new URL(p, self.registration.scope).href));
+// Fetched past the browser's HTTP cache: GitHub Pages lets it keep files 10 minutes, and the engine keeps its name
+// across versions, so a plain fetch could store the old engine under the new build (用戶 2026-10-27：更新後手機還是舊引擎).
+const fresh = list => list.map(p => new Request(p, { cache: 'reload' }));
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    await Promise.all([caches.open(CORE).then(c => c.addAll(PRECACHE)), caches.open(RUNTIME).then(c => c.addAll(RUNTIME_PRECACHE))]);
+    await Promise.all([caches.open(CORE).then(c => c.addAll(fresh(PRECACHE))), caches.open(RUNTIME).then(c => c.addAll(fresh(RUNTIME_PRECACHE)))]);
     await self.skipWaiting();
   })());
 });
