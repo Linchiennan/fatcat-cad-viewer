@@ -11,6 +11,10 @@ Built by `.github/workflows/build-libredwg-wasm.yml` on branch `build-libredwg` 
   instead of 10 × (an upstream "debugging sanity" check). DGN linestyle junk compresses far better than 10 ×:
   11F 建築底圖.dwg (AC1021, 1.3 MB) has a 21.7 MB section and was rejected outright; with the fix it and 08-11F-給水.dwg
   read with the same model-space objects as ZWCAD (2,123 and 1,227). Built on branch `build-libredwg`, run 40525925079.
+- one fix of ours in src/bits.c, `bit_read_UMC`: at most 10 bytes (64 bits) instead of 8 (56 bits). The handle map stores
+  handle offsets this way; 敦南 drawings carry handles like 0xFFF7D40F52A0262A, so the map went out of step and no object
+  was read (error 1; ZWCAD keeps the handles on save, WBLOCK renumbers them). 1051121 敦南-北向室外地坪修正.dwg now reads
+  1,164 objects, as ZWCAD. Run 40535135096.
 
 Same build commands and flags as libredwg-web's package.json (emscripten latest, `--enable-release --enable-debug`,
 linked with em++). `scripts/copy-runtime.mjs` copies these files into public/runtime/libredwg instead of the ones
