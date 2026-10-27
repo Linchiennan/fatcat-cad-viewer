@@ -57,8 +57,18 @@ export function looksLikeMemory(...texts: (string | null | undefined)[]): boolea
 }
 
 /** Diagnostics table data for an error screen (T13 3.3-4). */
-export function dwgDiagnostics(head: Uint8Array, bytes: number, engineError?: number): DwgDiagnostics {
+export function dwgDiagnostics(head: Uint8Array, bytes: number, engineError?: number, dgnObjects?: number): DwgDiagnostics {
   const out: DwgDiagnostics = { engine: "libredwg", version: dwgVersionLabel(head), bytes };
   if (engineError) out.engineCode = engineCodeName(engineError);
+  if (dgnObjects && dgnObjects > 0) out.dgnObjects = dgnObjects;
   return out;
 }
+
+/**
+ * From this many DGN linestyle objects the error screen says to clean the drawing in desktop CAD. 上晴 竣工圖 that did
+ * not open carried 17–47 萬 (插座圖 474,827 entries); a drawing that merely uses a MicroStation linetype has a handful.
+ */
+export const DGN_JUNK_OBJECTS = 10_000;
+
+/** DXF names of the DGN linestyle classes (AcDbLSDefinition and its components). */
+export const isDgnLinestyleClass = (dxfname: string) => /^LS(DEFINITION|[A-Z]*COMPONENT)$/.test(dxfname);

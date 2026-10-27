@@ -6,6 +6,14 @@ export type DrawingFormat = "dxf" | "dwg" | "pdf" | "png" | "jpg" | "jpeg" | "zi
 /** 128 MB for drawings, 64 MB for archives (exactly the limit is allowed). */
 export const MAX_DRAWING_BYTES = 134_217_728;
 export const MAX_ARCHIVE_BYTES = 67_108_864;
+/**
+ * DXF content (a .dxf file, or what a DWG converts to) may reach 160 MB: 128 MB turned away drawings that phones open
+ * (用戶 2026-10-27：現在手機記憶體隨便都超過 2G). 160 MB covers 排水 138 / 竣工圖 148 / 配電盤 149 MB; 256 MB was tried and
+ * 原山空調 (229 MB) did not open on a desktop in 15 minutes. Above LARGE_DXF_BYTES the viewer asks first, since an older
+ * phone may run out of memory on it.
+ */
+export const MAX_DXF_BYTES = 167_772_160;
+export const LARGE_DXF_BYTES = MAX_DRAWING_BYTES;
 
 /** A file that passed the pre-open check. */
 export type DrawingFile = { file: File; name: string; format: DrawingFormat; size: number };
@@ -36,7 +44,7 @@ export function isArchiveFormat(format: DrawingFormat): boolean {
 
 /** Byte limit for a format. */
 export function formatSizeLimit(format: DrawingFormat): number {
-  return isArchiveFormat(format) ? MAX_ARCHIVE_BYTES : MAX_DRAWING_BYTES;
+  return isArchiveFormat(format) ? MAX_ARCHIVE_BYTES : format === "dxf" ? MAX_DXF_BYTES : MAX_DRAWING_BYTES;
 }
 
 /** Throw AppError FILE_READ_FAILED / EMPTY_FILE / FILE_TOO_LARGE when `size` does not pass (default limit 128 MB). */

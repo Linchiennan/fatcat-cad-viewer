@@ -43,6 +43,13 @@ describe("error screen (T20 2.4)", () => {
     for (const s of ["DWG 版本", "AC1032", "引擎代碼", "E42"]) expect(html).toContain(s);
     expect(html).not.toContain("重試");
   });
+  it("DGN linestyle junk: names the count and how to fix it on a computer, by CAD version (用戶 2026-10-27)", () => {
+    const diag = (n: number) => new AppError("DWG_CORRUPT_OR_ENCRYPTED", "x", { diagnostics: { engine: "libredwg", version: "AC1027", bytes: 2048, engineCode: "WRONGCRC", dgnObjects: n } });
+    const html = renderToStaticMarkup(<ErrorScreen error={diag(274_681)} onLibrary={noop} />);
+    for (const s of ["274,681", "DGN 線型", "AutoCAD 2015 以後", "自動清除孤立資料", "AutoCAD 2014 以前", "中望 ZWCAD", "WBLOCK"]) expect(html).toContain(s);
+    // a drawing that merely uses a MicroStation linetype has a handful: no hint
+    expect(renderToStaticMarkup(<ErrorScreen error={diag(40)} onLibrary={noop} />)).not.toContain("DGN 線型");
+  });
   it("English", () => {
     const html = en(<ErrorScreen error={new AppError("EMPTY_FILE")} onLibrary={noop} />);
     expect(html).toContain("Fat Cat CAD Viewer");

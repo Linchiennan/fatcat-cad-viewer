@@ -11,7 +11,7 @@ import type { Mark } from "./markup";
 import { paintMarks } from "./markup";
 import { labelHeight } from "./measureResults";
 import { resolveMeasurePick, toleranceFor } from "../measure/resolvePick";
-import { assertFileSize } from "../files/fileTypes";
+import { assertFileSize, MAX_DXF_BYTES } from "../files/fileTypes";
 import { parseCadFile } from "./xrefs";
 import { selectCadSpace } from "./cadDocument";
 import { collectRasters, installRasters, replaceRasterEntities } from "./rasterImages";
@@ -219,7 +219,7 @@ export class DxfCadEngine implements FatcatCadEngine {
     const timer = setTimeout(() => task.fail(new AppError("DXF_OPEN_FAILED", LOAD_TIMEOUT_MESSAGE)), LOAD_TIMEOUT_MS);
     const progress: LoadProgress = (stage, done, total) => { if (current()) { try { onProgress(stage, done, total); } catch { /* UI only */ } } };
     try {
-      assertFileSize(file.size);
+      assertFileSize(file.size, MAX_DXF_BYTES); // the viewer only ever reads DXF (a .dxf, or what a DWG converted to): 160 MB
       if (this.file !== file) { this.file = file; this.parsed = null; }
       progress("loading", 0, 0);
       if (!this.parsed) this.parsed = await guard(parseCadFile(file));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  FILE_ACCEPT, MAX_ARCHIVE_BYTES, MAX_DRAWING_BYTES, assertFileSize, detectDrawingFormat, fileExtension,
+  FILE_ACCEPT, LARGE_DXF_BYTES, MAX_ARCHIVE_BYTES, MAX_DRAWING_BYTES, MAX_DXF_BYTES, assertFileSize, detectDrawingFormat, fileExtension,
   formatSizeLimit, isArchiveFormat, isCadFormat, prepareDrawingFile, replaceExtension, tooLargeLimit,
 } from "./fileTypes";
 
@@ -40,6 +40,16 @@ describe("format detection (T12 3.2)", () => {
     expect(formatSizeLimit("pdf")).toBe(MAX_DRAWING_BYTES);
     expect(MAX_DRAWING_BYTES).toBe(134_217_728);
     expect(MAX_ARCHIVE_BYTES).toBe(67_108_864);
+  });
+
+  it("DXF content may reach 160 MB, asked about above 128 MB (用戶 2026-10-27)", () => {
+    expect(formatSizeLimit("dxf")).toBe(MAX_DXF_BYTES);
+    expect(formatSizeLimit("dwg")).toBe(MAX_DRAWING_BYTES);
+    expect(MAX_DXF_BYTES).toBe(167_772_160);
+    expect(LARGE_DXF_BYTES).toBe(MAX_DRAWING_BYTES);
+    expect(code(() => prepareDrawingFile(sized("big.dxf", 150 * 1048576)))).toBe("ok");
+    expect(code(() => prepareDrawingFile(sized("big.dxf", MAX_DXF_BYTES + 1)))).toBe("FILE_TOO_LARGE");
+    expect(code(() => prepareDrawingFile(sized("big.dwg", MAX_DRAWING_BYTES + 1)))).toBe("FILE_TOO_LARGE");
   });
 });
 

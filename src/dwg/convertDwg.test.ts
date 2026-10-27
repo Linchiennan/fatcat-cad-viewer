@@ -149,8 +149,11 @@ describe("convertDwgToDxf", () => {
   });
 
   it("refuses output over the limit and ignores replies for other requests", async () => {
+    // 160 MB of DXF (用戶 2026-10-27): 128 MB + 1 now opens, 160 MB + 1 is refused and names its limit
     use((req) => ({ id: req.id, ok: true, dxf: new ArrayBuffer(134_217_729) }));
-    await expect(convertDwgToDxf(dwg())).rejects.toMatchObject({ code: "FILE_TOO_LARGE" });
+    expect((await convertDwgToDxf(dwg())).size).toBe(134_217_729);
+    use((req) => ({ id: req.id, ok: true, dxf: new ArrayBuffer(167_772_161) }));
+    await expect(convertDwgToDxf(dwg())).rejects.toMatchObject({ code: "FILE_TOO_LARGE", message: "File is larger than the 167772160 byte limit" });
 
     use((req) => ({ id: req.id + 1000, ok: true, dxf: dxfBytes() }));
     vi.useFakeTimers();

@@ -1,7 +1,7 @@
 // Small pure helpers of the App shell: error text keys (T20 5.1), loading stage keys (T20 2.1-4),
 // file size and version lines (T10 2.2-11, 2.4-2). Owner: P4 group D.
 import { AppError, LOAD_TIMEOUT_MESSAGE, type AppErrorCode } from "../types/errors";
-import { MAX_ARCHIVE_BYTES, tooLargeLimit } from "../files/fileTypes";
+import { MAX_ARCHIVE_BYTES, MAX_DXF_BYTES, tooLargeLimit } from "../files/fileTypes";
 import type { LoadStage } from "../types/drawing";
 import type { Locale, TranslationKey } from "../i18n/translations";
 
@@ -33,6 +33,7 @@ export function errorMessageKey(code: AppErrorCode): TranslationKey {
 /** Reason shown on the error screen; a too-large archive says 64 MB, not 128 MB (待決 A-6). */
 export function errorReasonKey(error: AppError): TranslationKey {
   if (error.code === "FILE_TOO_LARGE" && tooLargeLimit(error) === MAX_ARCHIVE_BYTES) return "archive.err.tooLarge";
+  if (error.code === "FILE_TOO_LARGE" && tooLargeLimit(error) === MAX_DXF_BYTES) return "error.dxfTooLarge";
   if (error.code === "DXF_OPEN_FAILED" && error.message === LOAD_TIMEOUT_MESSAGE) return "error.loadTimeout";
   return errorMessageKey(error.code);
 }

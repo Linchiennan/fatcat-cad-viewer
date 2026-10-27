@@ -61,7 +61,8 @@ describe("readIncomingDrawingFile (T21 9.1)", () => {
     const fetch = respond(DXF);
     vi.stubGlobal("fetch", fetch);
     expect(await code(readIncomingDrawingFile(incoming({ size: 0 })))).toBe("EMPTY_FILE");
-    expect(await code(readIncomingDrawingFile(incoming({ size: 134_217_728 + 1 })))).toBe("FILE_TOO_LARGE");
+    expect(await code(readIncomingDrawingFile(incoming({ size: 167_772_160 + 1 })))).toBe("FILE_TOO_LARGE"); // DXF: 160 MB (用戶 2026-10-27)
+    expect(await code(readIncomingDrawingFile(incoming({ name: "a.dwg", size: 134_217_728 + 1 })))).toBe("FILE_TOO_LARGE");
     expect(await code(readIncomingDrawingFile(incoming({ name: "a.zip", size: 67_108_864 + 1 })))).toBe("FILE_TOO_LARGE");
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -106,7 +107,7 @@ describe("readIncomingDrawingFile (T21 9.1)", () => {
   });
 
   it("uses a numeric content-length before streaming and reports HTTP failures", async () => {
-    vi.stubGlobal("fetch", respond(DXF, { headers: { "content-length": String(134_217_728 + 5) } }));
+    vi.stubGlobal("fetch", respond(DXF, { headers: { "content-length": String(167_772_160 + 5) } }));
     expect(await code(readIncomingDrawingFile(incoming()))).toBe("FILE_TOO_LARGE");
     vi.stubGlobal("fetch", respond("missing", { status: 404 }));
     expect(await code(readIncomingDrawingFile(incoming()))).toBe("FILE_READ_FAILED");

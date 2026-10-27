@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AppError, LOAD_TIMEOUT_MESSAGE } from "../types/errors";
 import { translate } from "../i18n/translations";
-import { tooLargeMessage, MAX_ARCHIVE_BYTES, MAX_DRAWING_BYTES } from "../files/fileTypes";
+import { tooLargeMessage, MAX_ARCHIVE_BYTES, MAX_DRAWING_BYTES, MAX_DXF_BYTES } from "../files/fileTypes";
 import { errorMessageKey, errorReasonKey, formatBadge, formatFileSize, isAbort, progressFraction, readFailureCode, shortVersion, stageKey, toAppError, viewerFailureCode } from "./shellText";
 
 describe("error text (T20 5.1)", () => {
@@ -15,6 +15,9 @@ describe("error text (T20 5.1)", () => {
   it("too large: archives say 64 MB, drawings 128 MB (待決 A-6)", () => {
     expect(translate("zh-TW", errorReasonKey(new AppError("FILE_TOO_LARGE", tooLargeMessage(MAX_ARCHIVE_BYTES))))).toContain("64 MB");
     expect(translate("zh-TW", errorReasonKey(new AppError("FILE_TOO_LARGE", tooLargeMessage(MAX_DRAWING_BYTES))))).toContain("128 MB");
+    // converted DXF over 160 MB names that limit and how to shrink the drawing (用戶 2026-10-27)
+    expect(translate("zh-TW", errorReasonKey(new AppError("FILE_TOO_LARGE", tooLargeMessage(MAX_DXF_BYTES))))).toContain("160 MB");
+    expect(translate("zh-TW", errorReasonKey(new AppError("FILE_TOO_LARGE", tooLargeMessage(MAX_DXF_BYTES))))).toContain("PURGE");
     // a load timeout says so (上晴 B區-2 on a phone showed only "無法開啟 DXF 檔案")
     expect(translate("zh-TW", errorReasonKey(new AppError("DXF_OPEN_FAILED", LOAD_TIMEOUT_MESSAGE)))).toContain("10 分鐘");
     expect(errorReasonKey(new AppError("DXF_OPEN_FAILED", "parse failed"))).toBe("error.dxfOpen");

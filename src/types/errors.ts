@@ -19,7 +19,11 @@ export const LOAD_TIMEOUT_MESSAGE = "Drawing loading timed out.";
 export type AppErrorCode = FileErrorCode | DwgErrorCode | ViewerErrorCode;
 
 /** DWG diagnostics shown in the error screen table (T13 3.3-4). */
-export type DwgDiagnostics = { engine: "libredwg"; version: string; bytes: number; engineCode?: string };
+export type DwgDiagnostics = {
+  engine: "libredwg"; version: string; bytes: number; engineCode?: string;
+  /** DGN linestyle objects (LS* classes) the reader counted: MicroStation leftovers that bloat a drawing (DGNPURGE). */
+  dgnObjects?: number;
+};
 
 /** Error carrying a code; `message` is an English developer message, never shown on screen. */
 export class AppError extends Error {

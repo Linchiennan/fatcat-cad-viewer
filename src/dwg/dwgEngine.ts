@@ -8,13 +8,14 @@ import { joinSplitChunks } from "./utf8Chunks";
 import { headerArrowSize, missingBlockNames, needsTextRecovery, readerTexts, rebuildBlocks } from "./missingBlocks";
 import { restoreLayerStates, type LayerState } from "./layerStates";
 import { annotateDxfXclips } from "./xclipMetadata";
-import { classifyEngineError, FATAL_READ_ERRORS, looksLikeMemory } from "./dwgDiagnostics";
+import { classifyEngineError, FATAL_READ_ERRORS, isDgnLinestyleClass, looksLikeMemory } from "./dwgDiagnostics";
 import { containsAscii } from "./dxfLines";
+import { MAX_DXF_BYTES, tooLargeMessage } from "../files/fileTypes";
 
 type Any = any;
 
-/** Largest DXF handed to the viewer (T13 3.2). */
-export const MAX_DXF_BYTES = 134_217_728;
+/** Largest DXF handed to the viewer (T13 3.2; 160 MB since 2026-10-27, see fileTypes). */
+export { MAX_DXF_BYTES };
 const INPUT = "/tmp/fatcat-input.dwg", OUTPUT = "/tmp/fatcat-output.dxf";
 
 /** Output hooks of one engine instance (emscripten print / printErr). */
@@ -24,6 +25,8 @@ export type EngineFactory = (hooks: EngineHooks) => Promise<Any>;
 
 /** Failure with a T13 code; `engineError` is the libredwg error value when there was one. */
 export class DwgFailure extends Error {
+  /** DGN linestyle objects the reader counted before the failure (shown with a DGNPURGE hint). */
+  dgnObjects?: number;
   constructor(readonly code: DwgErrorCode | "FILE_TOO_LARGE", message: string, readonly engineError?: number) {
     super(message);
     this.name = "DwgFailure";
@@ -41,19 +44,44 @@ export type ConversionResult = {
   unloadedXrefs: string[];
 };
 
-type Metadata = { layers: Map<string, LayerState> | null; view: SavedView | null; nonFatal: boolean; unloadedXrefs: string[] };
+type Metadata = { layers: Map<string, LayerState> | null; view: SavedView | null; nonFatal: boolean; unloadedXrefs: string[]; dgnObjects: number };
 type ViewCandidate = SavedView & { active: boolean };
 
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v));
 
+/**
+ * Objects of the DGN linestyle classes (LSDEFINITION, LS…COMPONENT). AutoCAD 2013–2014 copied them over and over in
+ * drawings that ever met a MicroStation linetype; hundreds of thousands of them derail LibreDWG's reader (上晴 竣工圖:
+ * 插座圖 had 27 萬, layers and *Model_Space were lost and the DXF came out empty). Never throws; 0 when unknown.
+ */
+export function countDgnObjects(module: Any, data: number): number {
+  try {
+    const dgn = new Set<number>();
+    for (let i = 0, n = module.dwg_get_num_classes(data); i < n; i++) {
+      const c = module.dwg_get_class(data, i);
+      if (c && isDgnLinestyleClass(String(c.dxfname ?? ""))) dgn.add(Number(c.num));
+    }
+    if (!dgn.size) return 0;
+    let count = 0;
+    for (let i = 0, n = module.dwg_get_num_objects(data); i < n; i++) {
+      const obj = module.dwg_get_object(data, i);
+      if (obj && dgn.has(module.dwg_object_get_type(obj))) count++;
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
 /** First pass: layer states and the saved view from the object reader (T13 4.2-3). Never throws. */
 export function readDwgMetadata(module: Any, path: string): Metadata {
-  const none: Metadata = { layers: null, view: null, nonFatal: false, unloadedXrefs: [] };
+  const none: Metadata = { layers: null, view: null, nonFatal: false, unloadedXrefs: [], dgnObjects: 0 };
   let data = 0;
   try {
     const read = module.dwg_read_file(path);
     data = read?.data ?? 0;
     const error = Number(read?.error ?? 0);
+    if (data) none.dgnObjects = countDgnObjects(module, data);
     if (!data || (error & FATAL_READ_ERRORS)) return none;
     const lib: Any = LibreDwg.createByWasmInstance(module);
     try { lib.decoder = new TextDecoder(dwgCodePageToEncoding(module.dwg_get_codepage(data))); } catch { /* names stay as decoded by the engine */ }
@@ -91,7 +119,7 @@ export function readDwgMetadata(module: Any, path: string): Metadata {
     const chosen = [...views].reverse().find((v) => v.active) ?? views[0] ?? null;
     let view: SavedView | null = null;
     if (chosen) { const { active: _active, ...rest } = chosen; void _active; view = rest; }
-    return { layers, view, nonFatal: error !== 0, unloadedXrefs };
+    return { layers, view, nonFatal: error !== 0, unloadedXrefs, dgnObjects: none.dgnObjects };
   } catch {
     return none;
   } finally {
@@ -148,13 +176,16 @@ export async function convertDwgBytes(dwg: Uint8Array, createEngine: EngineFacto
     const message = error instanceof Error ? error.message : String(error);
     throw new DwgFailure(looksLikeMemory(message) ? "DWG_MEMORY_LIMIT" : "DWG_RUNTIME_MISSING", "DWG runtime failed to start: " + message);
   }
+  let dgnObjects = 0;
   try {
     module.FS.writeFile(INPUT, dwg);
     const meta = readDwgMetadata(module, INPUT);
+    dgnObjects = meta.dgnObjects;
     const error = Number(module.dwg_write_dxf(INPUT, OUTPUT));
     if (error !== 0) throw new DwgFailure(classifyEngineError(error, dwg.length), `libredwg returned ${error}`, error);
     const size = module.FS.stat(OUTPUT).size;
-    if (size > MAX_DXF_BYTES) throw new DwgFailure("FILE_TOO_LARGE", "The converted drawing exceeds the viewer's file size limit.");
+    // The limit rides in the message so the error screen can name it (shellText.errorReasonKey).
+    if (size > MAX_DXF_BYTES) throw new DwgFailure("FILE_TOO_LARGE", tooLargeMessage(MAX_DXF_BYTES));
     let dxf: Uint8Array = module.FS.readFile(OUTPUT);
     const encoding = detectDxfEncoding(dxf.subarray(0, 65536));
     dxf = joinSplitChunks(dxf, encoding).bytes;
@@ -164,9 +195,11 @@ export async function convertDwgBytes(dwg: Uint8Array, createEngine: EngineFacto
     const fallback = await readFallback(dxf, encoding, dwg, createEngine);
     return { dxf, savedView: meta.view, diagnostics: stderrLines + (meta.nonFatal ? 1 : 0), fallback, unloadedXrefs: meta.unloadedXrefs };
   } catch (error) {
-    if (error instanceof DwgFailure) throw error;
-    const message = error instanceof Error ? error.message : String(error);
-    throw new DwgFailure(looksLikeMemory(message, lastErr) ? "DWG_MEMORY_LIMIT" : "DWG_CONVERSION_FAILED", "DWG conversion failed: " + message);
+    const failure = error instanceof DwgFailure ? error : new DwgFailure(
+      looksLikeMemory(error instanceof Error ? error.message : String(error), lastErr) ? "DWG_MEMORY_LIMIT" : "DWG_CONVERSION_FAILED",
+      "DWG conversion failed: " + (error instanceof Error ? error.message : String(error)));
+    if (dgnObjects) failure.dgnObjects = dgnObjects;
+    throw failure;
   } finally {
     unlink(module, INPUT);
     unlink(module, OUTPUT);

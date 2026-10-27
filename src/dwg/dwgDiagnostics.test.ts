@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyEngineError, dwgDiagnostics, dwgVersionLabel, engineCodeName, looksLikeMemory } from "./dwgDiagnostics";
+import { classifyEngineError, dwgDiagnostics, dwgVersionLabel, engineCodeName, isDgnLinestyleClass, looksLikeMemory } from "./dwgDiagnostics";
 
 const head = (s: string) => new TextEncoder().encode(s);
 
@@ -44,5 +44,14 @@ describe("DWG diagnostics (T13 3.3, 3.4, 5.2)", () => {
   it("builds the error screen table", () => {
     expect(dwgDiagnostics(head("AC1018"), 4096, 256)).toEqual({ engine: "libredwg", version: "AC1018 (AutoCAD 2004)", bytes: 4096, engineCode: "SECTIONNOTFOUND" });
     expect(dwgDiagnostics(head("hello "), 10)).toEqual({ engine: "libredwg", version: "hello ", bytes: 10 });
+    // DGN linestyle objects ride along for the DGNPURGE hint (上晴 插座圖 failed with 27 萬 of them)
+    expect(dwgDiagnostics(head("AC1027"), 10, 1, 274_681)).toMatchObject({ engineCode: "WRONGCRC", dgnObjects: 274_681 });
+    expect(dwgDiagnostics(head("AC1027"), 10, 1, 0)).not.toHaveProperty("dgnObjects");
+  });
+
+  it("knows the DGN linestyle classes", () => {
+    for (const name of ["LSDEFINITION", "LSSTROKEPATTERNCOMPONENT", "LSINTERNALCOMPONENT", "LSCOMPOUNDCOMPONENT", "LSPOINTCOMPONENT", "LSSYMBOLCOMPONENT"])
+      expect(isDgnLinestyleClass(name)).toBe(true);
+    for (const name of ["LAYOUT", "LSDEF", "SCALE", "LWPOLYLINE", ""]) expect(isDgnLinestyleClass(name)).toBe(false);
   });
 });

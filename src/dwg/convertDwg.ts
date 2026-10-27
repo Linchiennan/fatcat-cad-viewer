@@ -1,7 +1,7 @@
 // DWG → DXF conversion in a worker (T13). Owner: P4 group B.
 // Lookups are keyed by the output DXF File (WeakMap: entries go away with the file).
 import { AppError, type AppErrorCode } from "../types/errors";
-import { assertFileSize, MAX_DRAWING_BYTES, replaceExtension } from "../files/fileTypes";
+import { assertFileSize, MAX_DXF_BYTES, replaceExtension, tooLargeMessage } from "../files/fileTypes";
 import { registerSavedView, type SavedView } from "../viewer/savedView";
 import { bindDrawingIdentity } from "../viewer/readingPosition";
 import { dwgDiagnostics } from "./dwgDiagnostics";
@@ -89,8 +89,8 @@ async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
   }
   if (signal?.aborted) throw abortError();
   const head = new Uint8Array(bytes.slice(0, 6)), size = bytes.byteLength;
-  const fail = (code: AppErrorCode, message: string, engineError?: number) =>
-    new AppError(code, message, { diagnostics: dwgDiagnostics(head, size, engineError) });
+  const fail = (code: AppErrorCode, message: string, engineError?: number, dgnObjects?: number) =>
+    new AppError(code, message, { diagnostics: dwgDiagnostics(head, size, engineError, dgnObjects) });
 
   const reply = await new Promise<Extract<DwgReply, { ok: true }>>((resolve, reject) => {
     const id = ++requestSerial;
@@ -122,7 +122,7 @@ async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
       const data = event.data;
       if (!data || data.id !== id) return;
       if (data.ok) finish(() => resolve(data), true);
-      else finish(() => reject(fail(data.code as AppErrorCode, data.message, data.engineError)));
+      else finish(() => reject(fail(data.code as AppErrorCode, data.message, data.engineError, data.dgnObjects)));
     };
     const timer = setTimeout(() => finish(() => reject(fail("DWG_CONVERSION_TIMEOUT", "The DWG conversion took too long."))), DWG_TIMEOUT_MS);
     signal?.addEventListener("abort", onAbort, { once: true });
@@ -139,7 +139,7 @@ async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
 
   if (!(reply.dxf instanceof ArrayBuffer) || reply.dxf.byteLength === 0) throw fail("DWG_EXPORT_FAILED", "The DWG worker returned an empty drawing.");
   if (signal?.aborted) throw abortError();
-  if (reply.dxf.byteLength > MAX_DRAWING_BYTES) throw fail("FILE_TOO_LARGE", "The converted drawing exceeds the viewer's file size limit.");
+  if (reply.dxf.byteLength > MAX_DXF_BYTES) throw fail("FILE_TOO_LARGE", tooLargeMessage(MAX_DXF_BYTES));
   const out = new File([reply.dxf], replaceExtension(file.name, "dxf"), { type: "application/dxf", lastModified: Date.now() });
   if (reply.savedView) registerSavedView(out, reply.savedView as SavedView);
   conversionWarnings.set(out, Number(reply.diagnostics) || 0);

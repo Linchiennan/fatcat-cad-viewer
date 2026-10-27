@@ -23,6 +23,16 @@ export const OWN_STRINGS = {
   "select.count": { zh: "已選 {N} 件", en: "{N} selected" },
   "select.confirm": { zh: "刪除選取的 {N} 件註記／量測？原始圖面不會變更。", en: "Delete {N} selected markups/measurements? Original CAD is unchanged." },
   "select.confirmOk": { zh: "刪除選取", en: "Delete selected" },
+  "error.dxfTooLarge": { zh: "圖面轉換後超過 160 MB 安全上限，請在電腦 CAD 執行 PURGE（清除）後另存，再開啟另存的檔。", en: "The converted drawing is over the 160 MB safety limit. Run PURGE in desktop CAD, save, and open the saved file." },
+  // Versions checked 2026-10-27: AutoCAD 2015+ PURGE has 孤立資料 (Autodesk article for 2015); the 2012–2014 DGNPURGE hotfix
+  // is no longer offered; ZWCAD's PURGE leaves the data, and WBLOCK of everything to a new file cleared it (ZWCAD 2026,
+  // 插座圖: 474,827 → 0 entries, 166,657 objects kept, 50.7 → 19.5 MB, and the new file opens here).
+  "error.dgnJunk": {
+    zh: "原因：這張圖帶有 {N} 筆 DGN 線型垃圾（MicroStation 線型留下的資料，會讓圖檔異常變大、無法轉檔）。請在電腦修好後再開：AutoCAD 2015 以後的版本，執行 PURGE 並勾選「自動清除孤立資料」後存檔；AutoCAD 2014 以前或中望 ZWCAD 等其他 CAD，選取全部物件後用 WBLOCK 寫成新檔，開新檔即可。",
+    en: "Cause: this drawing carries {N} DGN linestyle records (left over from MicroStation linetypes; they bloat the file and stop conversion). Fix it on a computer first: in AutoCAD 2015 or later, run PURGE with \"Automatically purge orphaned data\" checked and save; in AutoCAD 2014 or earlier, or ZWCAD and other CAD, select everything and WBLOCK it to a new file, then open the new file.",
+  },
+  "large.confirm": { zh: "這張圖很大（{N} MB），記憶體較少的舊手機可能開不起來或閃退。要繼續開嗎？", en: "This drawing is large ({N} MB). Older phones with less memory may fail or crash. Open it anyway?" },
+  "large.confirmOk": { zh: "繼續開啟", en: "Open anyway" },
   ...PANEL_STRINGS,
   ...LEGAL_STRINGS,
   ...EXPORT_STRINGS,

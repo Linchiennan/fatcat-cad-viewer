@@ -2,6 +2,7 @@
 import type { AppError } from "../types/errors";
 import { useI18n } from "../i18n/translations";
 import { errorReasonKey } from "../app/shellText";
+import { DGN_JUNK_OBJECTS } from "../dwg/dwgDiagnostics";
 import { SlimTopBar } from "../app/LangSwitch";
 import { FolderCheckIcon } from "./Icons";
 
@@ -27,6 +28,9 @@ export function ErrorScreen({ error, onLibrary, onRetry, onBack }: {
         <p className="eyebrow">{t("error.brand")}</p>
         <h1 id="error-title" className="error-title">{t("error.title")}</h1>
         <p className="error-reason">{t(errorReasonKey(error))}</p>
+        {(d?.dgnObjects ?? 0) >= DGN_JUNK_OBJECTS ? (
+          <p className="error-reason error-dgn">{t("error.dgnJunk", { N: d!.dgnObjects!.toLocaleString() })}</p>
+        ) : null}
         {d ? (
           <dl className="error-diag" aria-label={t("error.diagLabel")}>
             <dt>{t("error.diag.dwgVersion")}</dt><dd>{d.version}</dd>

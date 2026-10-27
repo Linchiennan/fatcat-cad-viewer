@@ -10,7 +10,7 @@ import type { DrawingCanvasHandle, MeasurePick, MeasurePreview, ViewerHandle } f
 import type { ExportCapable } from "../export/types";
 import { useI18n, type TranslationKey } from "../i18n/translations";
 import { nativeErrorText } from "../i18n/nativeErrors";
-import { isArchiveFormat, prepareDrawingFile, type DrawingFormat } from "../files/fileTypes";
+import { isArchiveFormat, isCadFormat, LARGE_DXF_BYTES, prepareDrawingFile, type DrawingFormat } from "../files/fileTypes";
 import { convertDwgToDxf } from "../dwg/convertDwg";
 import { importDrawingToLibrary, migrateLegacyLibrary } from "../library/drawingLibrary";
 import { LibraryScreen } from "../library/LibraryScreen";
@@ -131,6 +131,8 @@ export function App() {
   // Overlays: confirms, the full file name card, problem report, and the library with an archive to show
   const [closeConfirm, setCloseConfirm] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const confirmRef = useRef(confirm);
+  confirmRef.current = confirm;
   const [nameCard, setNameCard] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [legal, setLegal] = useState<"privacy" | "source" | null>(null);
@@ -284,13 +286,22 @@ export function App() {
       }
       if (!ready) ready = format === "dwg" ? await convertDwgToDxf(file, controller.signal) : file;
       if (serial !== request.current) return;
+      // Over 128 MB of DXF an older phone may run out of memory: ask before parsing (用戶 2026-10-27).
+      if (isCadFormat(format) && ready.size > LARGE_DXF_BYTES) {
+        const mb = Math.round(ready.size / 1048576);
+        const go = await new Promise<boolean>((resolve) => setConfirm({
+          message: t("large.confirm", { N: mb }), okLabel: t("large.confirmOk"), onOk: () => resolve(true), onCancel: () => resolve(false),
+        }));
+        if (serial !== request.current) return;
+        if (!go) { goHome(); return; }
+      }
       setStage("loading");
       diagnosticPhase("loading");
       setDrawable(ready);
     } catch (err) {
       fail(serial, err, readFailureCode(format), "convert", file);
     }
-  }, [cancelWork, fail, resetDrawingState]);
+  }, [cancelWork, fail, goHome, resetDrawingState, t]);
 
   const retry = useCallback(() => {
     const was = lastRef.current;
@@ -532,7 +543,7 @@ export function App() {
     if (state.libraryOpen && !state.closeConfirmOpen && !state.confirmOpen && handleLibraryBack()) return;
     switch (decideBack(state)) {
       case "close-close-confirm": setCloseConfirm(false); break;
-      case "close-confirm": setConfirm(null); break;
+      case "close-confirm": { const was = confirmRef.current; setConfirm(null); was?.onCancel?.(); break; }
       case "close-export": closeExport(); break;
       case "close-markup-text": setTextDialog(null); break;
       case "end-markup": endMarkup(); break;
