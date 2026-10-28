@@ -31,6 +31,13 @@ patch('parser/entities/text.js','case 50: // Rotation in degrees','case 51: enti
 console.log('工程parser/原色/線寬修補已套用');
 // Nested block references skipped _FilterEntity, so hidden entities and frozen layers inside nested blocks still drew.
 patch('DxfScene.js','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    if (!this._FilterEntity(entity)) continue /* fatcat nested filter */\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }');
+// Old-style POLYLINE widths were skipped (40/41 on the polyline and on each VERTEX), so a donut or a wide 2D polyline
+// came out as a hairline (世舜 門窗圖 10527C224: bulge 1, width 1.25, a filled ring in ZWCAD).
+patch('parser/entities/vertex.js','        case 40: // start width\n            break;\n        case 41: // end width\n            break;','        case 40: // start width\n            entity.startWidth = curr.value;\n            break;\n        case 41: // end width\n            entity.endWidth = curr.value;\n            break;');
+patch('parser/entities/polyline.js','        case 40: // start width\n            break;\n        case 41: // end width\n            break;','        case 40: // start width\n            entity.startWidth = curr.value;\n            break;\n        case 41: // end width\n            entity.endWidth = curr.value;\n            break;');
+// A line or arc edge swallowed the loop's source-object count (97) as if it were a spline field, so the 330 after it
+// ended the loop and every later loop was lost (太原段 排水 1B0C3: two side-by-side boxes, only the first hatched).
+patch('parser/entities/hatch.js','            case 42:\n            case 97:\n                break;','            case 42:\n                break;\n            case 97: /* fatcat: a spline field only; after other edges it is the loop source count */\n                if (!isSpline) return e\n                break;');
 // HATCH dropped its extrusion (210/220/230), so a hatch drawn with a downward normal stayed unmirrored while its circle
 // boundary's own CIRCLE turned over (超級圖庫 閘閥: the solid wheel hub landed 56 units off the hub circle).
 patch('parser/entities/hatch.js','        case 98: // Number of seed points','        case 210:\n            entity.extrusionDirection = helpers.parsePoint(scanner);\n            break;\n\n        case 98: // Number of seed points');

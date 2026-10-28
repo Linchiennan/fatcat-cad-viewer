@@ -10,6 +10,7 @@ export type DebugSource = {
   currentSpace(): string;
   sceneStats(): { meshes: number; verts: number };
   camera(): { center: { x: number; y: number }; width: number } | null;
+  renderRegion?(bounds: { minX: number; minY: number; maxX: number; maxY: number }, widthPx: number, heightPx: number): Promise<HTMLCanvasElement>;
 };
 
 export type FatcatDebug = {
@@ -20,6 +21,11 @@ export type FatcatDebug = {
   camera(): { center: { x: number; y: number }; width: number } | null;
   /** Message and stack of the last failed load (the error screen shows only a generic line). */
   lastError(): string | null;
+  /** Where each top-level entity of the sheet is drawn: handle → [minX, minY, maxX, maxY] (compare with ZWCAD). */
+  xrefs(): unknown[] | null;
+  entityBoxes(): Record<string, [number, number, number, number]> | null;
+  /** PNG data URL of a drawing region as the export draws it (image comparison with a ZWCAD plot of the same region). */
+  regionPng(minX: number, minY: number, maxX: number, maxY: number, widthPx: number, heightPx: number): Promise<string | null>;
 };
 
 let lastError: string | null = null;
@@ -49,6 +55,13 @@ export function makeDebugApi(): FatcatDebug {
     ready: () => !!current && current.isReady() && !current.isLoading(),
     camera: () => current?.camera() ?? null,
     lastError: () => lastError,
+    xrefs: () => ((current?.report() as { xrefs?: unknown[] } | null)?.xrefs) ?? null,
+    entityBoxes: () => ((current?.report() as { entityBoxes?: Record<string, [number, number, number, number]> } | null)?.entityBoxes) ?? null,
+    regionPng: async (minX, minY, maxX, maxY, widthPx, heightPx) => {
+      const e = current;
+      if (!e?.renderRegion) return null;
+      return (await e.renderRegion({ minX, minY, maxX, maxY }, widthPx, heightPx)).toDataURL("image/png");
+    },
   };
 }
 

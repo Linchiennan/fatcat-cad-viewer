@@ -63,6 +63,8 @@ export const OWN_STRINGS = {
   "error.diagLabel": { zh: "DWG 診斷", en: "DWG diagnostics" },
   "home.legalLabel": { zh: "法律告知", en: "Legal notices" },
   "home.featuresLabel": { zh: "特色", en: "Features" },
+  // 用戶 2026-10-28：首頁先講明不支援 3D（3D 實體開圖時才提示太晚）
+  "home.no3d": { zh: "只顯示 2D 圖面；3D 實體（立體管件、面域等）不顯示，請用電腦 CAD 查看。", en: "2D drawings only: 3D solids (solid fittings, regions) are not shown; view them in desktop CAD." },
 
   // Measuring bar (T18 2.3) and mode picker
   "bar.modeShort.distance": { zh: "距離", en: "Dist" },

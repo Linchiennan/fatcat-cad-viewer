@@ -188,13 +188,17 @@ const CJK_CODEPAGE = /^\s*ANSI_(932|936|949|950)\s*$/;
 const MIF_CODE = /\\M\+[1-5][0-9A-Fa-f]{4}/;
 // A tail can also be a cut-off piece of such a code ("Yoga\PRoom" came out with "+5C0FD\" after it, 上晴 D 區).
 const MIF_PIECE = /\+[1-5][0-9A-Fa-f]{4}/;
+// A text whose multibyte character came before a line break is written as the break alone ("器" + Enter came out
+// as "^J", 給排水圖例及工程說明 of 太原段／太祥段; ZWCAD shows 器). The object reader still has the character.
+const CARET_ONLY = /^(?:\^[JMI])+$/;
+const CARET_ONLY_LINE = /\n\s*1\r?\n(?:\^[JMI])+\r?\n/;
 
 export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).length;
 
 /** True when a converted DXF looks like it carries mis-decoded text worth re-reading. */
 export function needsTextRecovery(dxf: string): boolean {
   const head = dxf.slice(0, 20000).split(/\r?\n/), i = head.findIndex((l) => l === "$DWGCODEPAGE");
-  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 3 || MIF_CODE.test(dxf));
+  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 3 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf));
 }
 
 /** Text of every text-bearing entity by handle, from the object reader. */
@@ -220,6 +224,8 @@ export function applyReaderTexts(doc: Any, texts: Record<string, string>): numbe
   for (const e of all) {
     const better = e.handle && texts[e.handle];
     if (!better || typeof e.text !== "string" || better === e.text) continue;
+    // one-line text: the break is dropped at the end and becomes a space inside, as decodeCaretText does
+    if (CARET_ONLY.test(e.text) && /\S/.test(better)) { e.text = e.type === "MTEXT" ? better : better.replace(/[\r\n]+$/, "").replace(/\r?\n/g, " "); fixed++; continue; }
     if (suspectTextCount(e.text) > 0 || MIF_CODE.test(better) || (e.text.startsWith(better) && (MIF_CODE.test(e.text) || MIF_PIECE.test(e.text.slice(better.length))))) { e.text = better; fixed++; }
   }
   return fixed;

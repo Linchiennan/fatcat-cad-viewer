@@ -7,6 +7,7 @@ import { AppError } from "../types/errors";
 import { createCadEngine, LOAD_TIMEOUT_MS, type FatcatCadEngine } from "./cadEngine";
 import { VIEWER_WORKER_FAILED } from "./workerMessages";
 import { registerSavedView } from "./savedView";
+import { bindDrawingIdentity } from "./readingPosition";
 import type { MeasurementSettings } from "./measurementGeometry";
 
 type Any = any;
@@ -238,6 +239,41 @@ describe("CAD engine", () => {
     await until(() => viewer.pending.length === 1);
     viewer.finish();
     await model;
+    expect(engine.currentSpace()).toBe("Model");
+  });
+
+  it("keeps the tab the user switched to when xrefs rebuild the drawing (惠宇 A04: jumped back to the saved sheet)", async () => {
+    engine = make();
+    const meta = { cadSavedSpace: "配置1", cadLayouts: [{ name: "Model", order: 0 }, { name: "配置1", order: 1 }] };
+    const original = jsonFile("xref-tab.dxf", meta);
+    const first = engine.load(original, () => {}, "Model");
+    await until(() => viewer.pending.length === 1);
+    viewer.finish();
+    await first;
+    const rebuilt = jsonFile("xref-tab.dxf", { ...meta, cadXrefStatuses: [] });
+    await bindDrawingIdentity(original, rebuilt);
+    const again = engine.load(rebuilt, () => {});
+    await until(() => viewer.pending.length === 1);
+    viewer.finish();
+    await again;
+    expect(engine.currentSpace()).toBe("Model");
+  });
+
+  it("keeps a tab asked for even when the xref rebuild replaces that load before it finishes", async () => {
+    engine = make();
+    const meta = { cadSavedSpace: "配置1", cadLayouts: [{ name: "Model", order: 0 }, { name: "配置1", order: 1 }] };
+    const original = jsonFile("xref-early.dxf", meta);
+    const asked = engine.load(original, () => {}, "Model");
+    asked.catch(() => {});
+    await until(() => viewer.pending.length === 1);
+    const rebuilt = jsonFile("xref-early.dxf", { ...meta, cadXrefStatuses: [] });
+    await bindDrawingIdentity(original, rebuilt);
+    const again = engine.load(rebuilt, () => {});
+    await expect(asked).rejects.toMatchObject({ name: "AbortError" });
+    await until(() => viewer.pending.length === 2);
+    viewer.pending.shift()!.resolve();
+    viewer.finish();
+    await again;
     expect(engine.currentSpace()).toBe("Model");
   });
 

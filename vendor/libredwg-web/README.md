@@ -15,6 +15,10 @@ Built by `.github/workflows/build-libredwg-wasm.yml` on branch `build-libredwg` 
   handle offsets this way; 敦南 drawings carry handles like 0xFFF7D40F52A0262A, so the map went out of step and no object
   was read (error 1; ZWCAD keeps the handles on save, WBLOCK renumbers them). 1051121 敦南-北向室外地坪修正.dwg now reads
   1,164 objects, as ZWCAD. Run 40535135096.
+- one fix of ours in src/dwg.spec, VERTEX_2D DXF output: widths (40/41) and bulge (42) were written only when the
+  vertex flag is non-zero, and a plain vertex has flag 0, so old-style polylines lost their arcs and widths (世舜 門窗圖
+  donut 10527C224 drew as nothing; A07 工作陽台排水吊管 lost 10 of 20 bulges). They are now written for every vertex
+  (BD0 still skips zeros). 186-drawing regression: error codes and entity counts unchanged. Run 40670822492.
 
 Same build commands and flags as libredwg-web's package.json (emscripten latest, `--enable-release --enable-debug`,
 linked with em++). `scripts/copy-runtime.mjs` copies these files into public/runtime/libredwg instead of the ones

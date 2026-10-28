@@ -3,6 +3,9 @@ import {widePolyline} from './widePolyline';
 import {complexLinePrimitives} from './complexLineType';
 import {Entity} from 'dxf-viewer/src/DxfScene.js';
 import {dimensionBlockOffset} from './dimensionBlock';
+import {installEntityBoxes} from './entityBoxes';
+import {installFitSplines} from './fitSpline';
+import {attdefAsText} from './attdefTag';
 import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
 import type { CadLayerState } from "./layerStateTable";
@@ -60,6 +63,9 @@ export function dashSegments(points:DrawingPoint[],pattern:number[],scale:number
  const total=path.slice(1).reduce((s,p,i)=>s+Math.hypot(p.x-path[i].x,p.y-path[i].y),0);
  const continuous=()=>path.slice(1).map((p,i)=>[path[i],p]);
  if(total/cycle*pat.length>DASH_LIMIT)return continuous();
+ // Too short for one whole pattern: CAD draws it solid (碁創潭子 肆層弱電 9F8A: 35.3 long on HIDDENX2 × LTSCALE 50 = 37.5,
+ // solid in ZWCAD; cutting it left only the first 25-long dash).
+ if(total<cycle-1e-9)return continuous();
  let k=0,left=Math.abs(pat[0])||Math.max(cycle*0.001,1e-7);
  for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],len=Math.hypot(b.x-a.x,b.y-a.y);if(!len)continue;let pos=0;
   while(pos<len-1e-10){if(output.length>=DASH_LIMIT)return continuous();const step=Math.min(left,len-pos);
@@ -119,7 +125,7 @@ export function prepareCad(dxf:Any):CadReport {
   }
   return out;
  };
- dxf.entities=(dxf.entities??[]).map((e:Any)=>adapt(e,'0',0xffffff,'CONTINUOUS',[]));
+ dxf.entities=(dxf.entities??[]).map((e:Any)=>adapt(attdefAsText(e),'0',0xffffff,'CONTINUOUS',[]));
  // Retain dimension anonymous blocks; insert variants avoid context-dependent shared mutation.
  dxf.blocks={...blocks,...variants};
  // ACIS bodies: the DWG parser (LibreDWG) yields no shape data for them, so say why instead of a generic gap.
@@ -134,6 +140,8 @@ export function prepareCad(dxf:Any):CadReport {
 }
 export function installEngineeringScene(ctor:Any):void {
  const p=ctor.prototype,original=p.Build;
+ installEntityBoxes(p);
+ installFitSplines(p);
  // A spline whose knot vector does not fit its control points (seen in hatch boundaries of PARK 1F
  // 水電施工圖) used to abort the whole drawing. Retry with standard knots, else follow the control polygon.
  const interpolate=p._InterpolateSpline;
@@ -176,17 +184,18 @@ export function installEngineeringScene(ctor:Any):void {
    yield new Entity({type:Entity.Type.LINE_SEGMENTS,vertices,layer,color});
   }
  };
- p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;this.cadDenseHatchCount=0;this.cadDenseHatches=new Set();this.cadHatchSegments=0;await original.call(this,dxf,fonts);if(this.cadDenseHatchCount)report.warnings.push(`剖面線 ${this.cadDenseHatchCount} 個的圖樣過密或超過整張圖的繪製量，只畫外框`);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
- report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;dxf.cadReport=report;};
+ p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;this.cadDenseHatchCount=0;this.cadDenseHatches=new Set();this.cadHatchSegments=0;this.cadBoxes=dxf.cadEntityBoxes?{}:null;await original.call(this,dxf,fonts);if(this.cadDenseHatchCount)report.warnings.push(`剖面線 ${this.cadDenseHatchCount} 個的圖樣過密或超過整張圖的繪製量，只畫外框`);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
+ report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;if(this.cadBoxes){(report as Any).entityBoxes=this.cadBoxes;this.cadBoxes=null;}dxf.cadReport=report;};
  // Load hidden layers; saved ON/OFF is applied to actual GPU layer objects after loading.
  p._FilterEntity=function(e:Any){return !e.hidden&&(!this.options.suppressPaperSpace||!e.inPaperSpace);};
  for(const method of ['_DecomposeLine','_DecomposePolyline','_DecomposeArc','_DecomposeCircle','_DecomposeEllipse']){
   const orig=p[method];p[method]=function*(e:Any,ctx:Any){
-   const wide=method==='_DecomposePolyline'&&(e.width>0||e.vertices?.some((v:Any)=>v.startWidth>0||v.endWidth>0));
+   // POLYLINE keeps its default width in 40/41 (startWidth/endWidth); LWPOLYLINE in 43 (width)
+   const wide=method==='_DecomposePolyline'&&(e.width>0||e.startWidth>0||e.endWidth>0||e.vertices?.some((v:Any)=>v.startWidth>0||v.endWidth>0));
    if(wide&&!e.isPolyfaceMesh&&!e.includesCurveFitVertices&&!e.includesSplineFitVertices){
     const first=orig.call(this,e,ctx).next().value;if(!first)return;
     yield* complexLinePrimitives(this,e,first,ctx);
-    const meshes=widePolyline(e.vertices,!!e.shape,e.width??0,this.cadLineTypes[e.lineType]?.pattern??[],this.cadScale*Math.abs(e.lineTypeScale??1));
+    const meshes=widePolyline(e.vertices,!!e.shape,e.width??e.startWidth??0,this.cadLineTypes[e.lineType]?.pattern??[],this.cadScale*Math.abs(e.lineTypeScale??1));
     for(const mesh of meshes){if(e.extrusionDirection?.z<0)mesh.vertices=mesh.vertices.map(v=>({x:-v.x,y:v.y}));yield Object.assign(Object.create(Object.getPrototypeOf(first)),first,{type:3,...mesh});}return;
    }
    for(const prim of orig.call(this,e,ctx)){

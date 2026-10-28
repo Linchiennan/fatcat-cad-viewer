@@ -74,6 +74,10 @@ export function leaderEntities(tags: readonly Tag[], base: { handle: string; lay
   // LibreDWG reads 71=0 for leaders ZWCAD shows with arrows in R2018 files; follow the CAD default and say so.
   if (!arrow && base.arrowFlagUnreliable) { arrow = true; notes.push("此版本 DWG 的引線箭頭開關解析不可靠，已依 CAD 預設畫出，請與 CAD 核對"); }
   const entities: Any[] = [{ ...common, type: "LWPOLYLINE", handle: `${base.handle}:leader`, shape: false, vertices }];
+  // CAD leaves the arrowhead off when the first segment is shorter than twice its size (W05 地下室水箱給水: DIMASZ 40 on
+  // a 16.8 long segment drew a huge filled wedge over the note; ZWCAD draws none).
+  const first = Math.hypot(vertices[1].x - vertices[0].x, vertices[1].y - vertices[0].y);
+  if (arrow && first < 2 * asz * scale) arrow = false;
   if (arrow) {
     const { kind, known } = arrowKind(blockName);
     if (!known) notes.push(`舊式引線 ${base.handle} 箭頭樣式 ${blockName} 以實心箭頭近似`);

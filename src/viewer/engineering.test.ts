@@ -23,4 +23,9 @@ describe('dense line types (PARK B4F 柱牆套圖)', () => {
     const seg = dashSegments([{ x: 0, y: 0 }, { x: 1e7, y: 0 }], [0.5, -0.25], 0.01, false);
     expect(seg).toEqual([[{ x: 0, y: 0 }, { x: 1e7, y: 0 }]]);
   });
+  it('draws a line shorter than one whole pattern solid, as ZWCAD does (碁創潭子 肆層弱電 9F8A)', () => {
+    // HIDDENX2 0.5,-0.25 × LTSCALE 50 = 37.5 per pattern; the line is 35.3
+    expect(dashSegments([{ x: 0, y: 0 }, { x: 0, y: 35.3 }], [0.5, -0.25], 50, false)).toEqual([[{ x: 0, y: 0 }, { x: 0, y: 35.3 }]]);
+    expect(dashSegments([{ x: 0, y: 0 }, { x: 0, y: 40 }], [0.5, -0.25], 50, false).length).toBe(2);
+  });
 });

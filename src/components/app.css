@@ -125,6 +125,7 @@ button { cursor: pointer; }
 .home-features li { display: flex; align-items: center; gap: 10px; }
 .feature-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px rgba(255, 181, 71, 0.16); margin: 0 4px; }
 .feature-icon { width: 16px; height: 16px; color: var(--accent); }
+.home-no3d { margin: 0; color: #c9d6dc; font-size: 0.72rem; line-height: 1.6; }
 .home-privacy { margin: 0; color: #6f8590; font-size: 0.68rem; line-height: 1.7; }
 .home-install { margin: 0; color: var(--accent-hi); font-size: 0.92rem; line-height: 1.5; }
 .home-legal { display: flex; align-items: center; gap: 12px; color: #6f8590; font-size: 0.68rem; line-height: 1.7; }

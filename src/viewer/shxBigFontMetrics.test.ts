@@ -59,6 +59,9 @@ describe("vertical SHX text (鴻群消防栓動作流程圖)", () => {
     expect(verticalPitch({ font: "romans", bigFont: "genie", standardFlag: 0 })).toBeNull();
     expect(verticalPitch({ font: "kaiu.ttf", standardFlag: 4 })).toBeNull();
     expect(verticalPitch({ font: "romans", bigFont: "chs.shx", standardFlag: 4 })).toBeNull();
+    // ZWCAD 實測（zw_vertical_probe.py）：china 直寫同 chineset；acadchn6、dayump、lu、visiohg 維持橫寫
+    expect(verticalPitch({ font: "romans.shx", bigFont: "china.shx", standardFlag: 4 })).toBe(1.125);
+    for (const big of ["acadchn6.shx", "dayump.shx", "lu.shx", "visiohg.shx"]) expect(verticalPitch({ font: "romans.shx", bigFont: big, standardFlag: 4 })).toBeNull();
   });
 
   it("stacks 由人發現 downward, centred on the alignment point in the middle of its box", () => {

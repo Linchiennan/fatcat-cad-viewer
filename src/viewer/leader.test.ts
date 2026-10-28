@@ -26,6 +26,13 @@ describe("legacy LEADER display", () => {
     expect(arrowLength(sized.entities.find((e) => e.type === "SOLID"))).toBeCloseTo(4, 9);
   });
 
+  it("leaves the arrow off when the first segment is shorter than twice its size, as CAD does (W05 水箱給水)", () => {
+    // first segment 45 long: DIMASZ 22.5 still draws, 22.6 does not
+    const at = (size: string) => leaderEntities(tags([[1070, "41"], [1040, size], [1070, "40"], [1040, "1"]]), { handle: "D", layer: "0" }).entities.map((e) => e.type);
+    expect(at("22.5")).toContain("SOLID");
+    expect(at("22.6")).toEqual(["LWPOLYLINE"]);
+  });
+
   it("draws the CAD-default arrow with a note when the file version's arrow flag is unreliable", () => {
     const made = leaderEntities(tags([], "0"), { handle: "E", layer: "0", arrowFlagUnreliable: true });
     expect(made.entities.some((e) => e.type === "SOLID")).toBe(true);

@@ -96,6 +96,19 @@ describe("text LibreDWG's DXF writer mis-decoded (15A 客變圖 R2004 Big5 MTEXT
     expect(applyReaderTexts(doc, texts)).toBe(3);
     expect(doc.entities.map((e) => e.text)).toEqual([mif, "天然橡木染色", long, "2F", "Yoga\\PRoom"]);
   });
+
+  // 太原段／太祥段 給排水圖例及工程說明：「器」＋Enter 寫成只剩 "^J"，ZWCAD 讀到 '器\n'
+  it("re-reads a text written as a line break alone and keeps its character", () => {
+    expect(needsTextRecovery(head("ANSI_950", "  1\n^J\n  7\nCHINA\n"))).toBe(true);
+    expect(needsTextRecovery(head("ANSI_950", "  1\n^Jx\n"))).toBe(false);
+    const doc = { entities: [
+      { type: "TEXT", handle: "11BCC", text: "^J" },
+      { type: "MTEXT", handle: "M1", text: "^J" },
+      { type: "TEXT", handle: "B1", text: "^J" }, // the reader has no visible character either: left for the caret decoder
+    ], blocks: {} };
+    expect(applyReaderTexts(doc, { "11BCC": "器\n", M1: "甲\\P乙", B1: "\n" })).toBe(2);
+    expect(doc.entities.map((e) => e.text)).toEqual(["器", "甲\\P乙", "^J"]);
+  });
 });
 
 import { headerArrowSize } from "./missingBlocks";

@@ -24,7 +24,7 @@ import type { CadLayerState } from "./layerStateTable";
 import { drawingIdentity, loadPosition, readLayerMemory, saveLayerMemory, savePosition, sheetKey, type ReadingPosition } from "./readingPosition";
 import { installXclipViewer, XCLIP_LAYER_PREFIX, xclipBaseLayer } from "./xclipScene";
 import { VIEWER_WORKER_FAILED } from "./workerMessages";
-import { attachDebug, detachDebug, noteLoadError } from "./engineDebug";
+import { attachDebug, debugRequested, detachDebug, noteLoadError } from "./engineDebug";
 import { renderRegion as drawRegion, type RegionOptions, type RegionResult } from "./regionRender";
 import { fallbackPadding, fitInArea, freeArea, initialBounds, savedViewCamera, validBounds, type CameraView, type Rect, type ShellLayout } from "./viewGeometry";
 
@@ -44,6 +44,10 @@ const RECENTER_DELAYS = [150, 500, 1200];
 const REBUILD_DELAY_MS = 300;
 const TEXT_KINDS = new Set(["TEXT", "MTEXT", "ATTRIB", "ATTDEF"]);
 const TEXT_CANDIDATE_LIMIT = 500;
+/** Tab each drawing was last shown on in this session, by drawing identity. Applying xrefs rebuilds the drawing
+ * as a new file with the same identity; without this it went back to the saved tab, undoing the user's switch to
+ * Model a few seconds earlier (外框比對 單位1: 9 standard drawings, 惠宇 A04 工陽瓦斯明管路徑範例). */
+const shownSpace = new Map<string, string>();
 
 /**
  * Elements of the viewer shell the fit avoids (T14 3.5-1a). The shell element carries
@@ -204,6 +208,8 @@ export class DxfCadEngine implements FatcatCadEngine {
   async load(file: File, onProgress: LoadProgress, requested?: string, signal?: AbortSignal): Promise<void> {
     if (this.disposed) throw abortError();
     if (signal?.aborted) throw abortError();
+    // A tab asked for counts at once: xrefs applied right after opening replace this load before it finishes
+    if (requested) void drawingIdentity(file).then((id) => shownSpace.set(id, requested), () => {});
     this.flushPosition();
     this.cancelTask(abortError());
     this.cancelRecenter();
@@ -226,13 +232,17 @@ export class DxfCadEngine implements FatcatCadEngine {
       if (!this.parsed) this.parsed = await guard(parseCadFile(file));
       const parsed = this.parsed;
       this.spaceList = (parsed.cadLayouts ?? [{ name: MODEL_SPACE, order: 0 }]).map((l: Any) => ({ name: l.name, order: l.order, ...(l.owner ? { owner: l.owner } : {}) }));
-      const space = requested ?? (this.spaceList.some((s) => s.name === parsed.cadSavedSpace) ? parsed.cadSavedSpace : MODEL_SPACE);
+      const identity = await guard(drawingIdentity(file)), has = (name?: string) => !!name && this.spaceList.some((s) => s.name === name);
+      const remembered = shownSpace.get(identity);
+      const space = requested ?? (has(remembered) ? remembered! : has(parsed.cadSavedSpace) ? parsed.cadSavedSpace : MODEL_SPACE);
       const saved = space === MODEL_SPACE ? savedViewFor(file) : null;
-      const key = sheetKey(await guard(drawingIdentity(file)), space);
+      const key = sheetKey(identity, space);
       const position = await guard(loadPosition(key));
       const doc = selectCadSpace(parsed, space);
       const memory = readLayerMemory(key);
       doc.cadLayerVisibility = memory;
+      // scripted surveys only: the worker records where each entity is drawn (entityBoxes in the debug hook)
+      if (debugRequested(globalThis.location?.search)) doc.cadEntityBoxes = true;
       const rasterItems = collectRasters(doc);
       replaceRasterEntities(doc);
       const label = sheetLabelHeight(doc);
@@ -270,6 +280,7 @@ export class DxfCadEngine implements FatcatCadEngine {
       this.key = key;
       this.space = space;
       this.saved = saved;
+      shownSpace.set(identity, space);
       for (const layer of report.layers) {
         if (typeof memory[layer.name] === "boolean") layer.visible = memory[layer.name];
         this.applyLayer(layer.name, layer.visible);
