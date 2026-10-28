@@ -148,7 +148,7 @@ describe("drawing check panel in both languages (P5)", () => {
     const zh = renderToStaticMarkup(<CadPanel report={report} source={source} initialTab="缺件警告" onLayer={noop} onReload={noop} onClose={noop} />);
     for (const s of ["圖面檢查", "開圖成功不代表內容完整。請與原 CAD 核對後使用。", "未偵測到已知缺件；並非完整性證明。", "場景建置：34 毫秒；巡覽實體 12。"]) expect(zh).toContain(s);
     const xref = en(<CadPanel report={report} source={source} initialTab="外部參考" onLayer={noop} onReload={noop} onClose={noop} />);
-    for (const s of ["Drawing check", "Choose xref files", "Attach", "Load", "Match by relative path / unique file name"]) expect(xref).toContain(s);
+    for (const s of ["Drawing check", "Choose xref files", "Attach", "Load", "1 of 1 references are not applied (red)", "Pick several files or a folder"]) expect(xref).toContain(s);
     const layers = en(<CadPanel report={report} source={source} initialTab="圖層" onLayer={noop} onReload={noop} onClose={noop} />);
     expect(layers.replace(/A-WALL/g, "")).not.toMatch(/[㐀-鿿]/);
   });

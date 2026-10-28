@@ -18,11 +18,21 @@ export type SheetUnits = {
   assumed: boolean;
 };
 
-/** Units when a sheet is ready: saved choice, else INSUNITS, else centimetres; display saved, else cm. */
-export function sheetUnits(viewKey: string, fileUnit: MeasurementUnit): SheetUnits {
+/**
+ * Display unit before the user picks one (用戶 2026-10-28): 繁中 cm, as Taiwanese drawings are read; English follows the
+ * phone's region: inches in the US (also Liberia, Myanmar), millimetres elsewhere, what architects there draw in.
+ */
+export function defaultDisplayUnit(locale: string, languages: readonly string[] = typeof navigator === "undefined" ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]): MeasurementUnit {
+  if (locale !== "en") return "cm";
+  const region = languages.map((l) => /^[a-z]{2,3}[-_]([a-z]{2})\b/i.exec(l ?? "")?.[1]?.toUpperCase()).find(Boolean);
+  return region && ["US", "LR", "MM"].includes(region) ? "in" : "mm";
+}
+
+/** Units when a sheet is ready: saved choice, else INSUNITS, else centimetres; display saved, else the default for the language. */
+export function sheetUnits(viewKey: string, fileUnit: MeasurementUnit, defaultDisplay: MeasurementUnit = "cm"): SheetUnits {
   const saved = viewKey ? readPosition(viewKey) : null;
   const source = saved?.sourceUnit && UNIT_CHOICES.includes(saved.sourceUnit) ? saved.sourceUnit : fileUnit === "drawing" ? "cm" : fileUnit;
-  let display = saved?.displayUnit && UNIT_CHOICES.includes(saved.displayUnit) ? saved.displayUnit : "cm";
+  let display = saved?.displayUnit && UNIT_CHOICES.includes(saved.displayUnit) ? saved.displayUnit : defaultDisplay;
   if (source === "drawing") display = "drawing";
   return { source, display, assumed: fileUnit === "drawing" && source === "cm" };
 }

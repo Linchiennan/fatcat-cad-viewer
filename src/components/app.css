@@ -260,6 +260,9 @@ button { cursor: pointer; }
 .space-switch { font-weight: 700; }
 .check-strip-page > button:last-child { border-right: 0; }
 .check-strip em { font-style: normal; color: var(--accent-hi); }
+/* 外參沒套用完時佔第一頁分享的位置，紅字提醒（用戶 2026-10-28） */
+.check-strip-page > button.strip-xref-missing { color: #ff8a80; }
+.check-strip-page > button.strip-xref-missing em { color: #ff8a80; }
 .space-switch { position: relative; flex: 0 1 auto; max-width: 34%; padding: 0 14px; color: var(--accent-hi); }
 .space-switch svg { flex: none; width: 18px; height: 18px; }
 .space-name { overflow: hidden; text-overflow: ellipsis; }
@@ -533,14 +536,26 @@ button { cursor: pointer; }
 .layer-state-list::-webkit-scrollbar-thumb { background: var(--tile-line); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
 @supports not selector(::-webkit-scrollbar) { .layer-state-list { scrollbar-color: var(--tile-line) transparent; } }
 .cad-xref { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-/* 已選的外參檔：每次選檔累加，逐一可移除（用戶 2026-10-27） */
-.cad-xref-picked { margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); }
-.cad-xref-picked-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
-.cad-xref-file { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
-.cad-xref-file > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.cad-xref-file small { display: block; color: var(--muted); }
-.cad-xref-file > button { flex: none; min-width: 44px; }
-.cad-xref-hint { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+/* 外部參考清單：圖面用到的全部外參集中在上方，已套用綠、未套用紅，點名稱選檔，右邊「載入」可關（用戶 2026-10-28） */
+.cad-xref-list { margin: 0 0 10px; }
+.cad-xref-summary { margin: 0 0 8px; font-weight: 600; }
+.cad-xref-summary.missing { color: #ff8a80; }
+.cad-xref-summary.ok { color: #7fd88a; }
+.cad-xref-row { display: flex; align-items: stretch; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.cad-sheet-body .cad-xref-name { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: auto; padding: 8px 12px; text-align: left; }
+.cad-xref-name strong { overflow-wrap: anywhere; }
+.cad-xref-name small { color: var(--muted); overflow-wrap: anywhere; font-size: 0.82rem; }
+.cad-xref-row.applied .cad-xref-name { border-color: #3f9d55; }
+.cad-xref-row.applied .cad-xref-name strong { color: #7fd88a; }
+.cad-xref-row.missing .cad-xref-name { border-color: #b34b4b; }
+.cad-xref-row.missing .cad-xref-name strong { color: #ff8a80; }
+.cad-xref-row.off .cad-xref-name strong { color: var(--muted); text-decoration: line-through; }
+.cad-xref-row.not-needed .cad-xref-name strong { color: var(--muted); }
+.cad-xref-hidden { margin-top: 8px; }
+.cad-xref-hidden > summary { cursor: pointer; color: var(--muted); padding: 8px 0; }
+.cad-xref-load { flex: none; display: flex; align-items: center; gap: 4px; }
+.cad-xref-more { margin-top: 10px; }
+.cad-xref-more > summary { cursor: pointer; color: var(--muted); padding: 8px 0; }
 .cad-missing { margin: 10px 0; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 181, 71, 0.35); }
 .cad-missing-title { color: var(--accent-hi); font-weight: 700; }
 .cad-notes { color: var(--muted); }

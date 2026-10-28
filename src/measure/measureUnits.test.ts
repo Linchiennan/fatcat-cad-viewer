@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { nextUnits, changeUnits, clampPanelHeight, formatLabel, formatResult, loadPanelHeight, savePanelHeight, sheetUnits } from "./measureUnits";
+import { nextUnits, changeUnits, clampPanelHeight, defaultDisplayUnit, formatLabel, formatResult, loadPanelHeight, savePanelHeight, sheetUnits } from "./measureUnits";
 import { savePosition } from "../viewer/readingPosition";
 
 const store = new Map<string, string>();
@@ -17,6 +17,21 @@ describe("sheet units (T16 3.4)", () => {
   it("follows INSUNITS, else assumes centimetres; display defaults to cm", () => {
     expect(sheetUnits("k1", "mm")).toEqual({ source: "mm", display: "cm", assumed: false });
     expect(sheetUnits("k2", "drawing")).toEqual({ source: "cm", display: "cm", assumed: true });
+  });
+
+  it("the display default follows the language: 繁中 cm; English inches in the US, mm elsewhere (用戶 2026-10-28)", () => {
+    expect(defaultDisplayUnit("zh-TW", ["en-US"])).toBe("cm");
+    expect(defaultDisplayUnit("en", ["en-US", "zh-TW"])).toBe("in");
+    expect(defaultDisplayUnit("en", ["en-GB"])).toBe("mm");
+    expect(defaultDisplayUnit("en", ["de-DE"])).toBe("mm");
+    expect(defaultDisplayUnit("en", ["zh-Hant-TW"])).toBe("mm");
+    expect(defaultDisplayUnit("en", ["en"])).toBe("mm");
+    // the default only fills in: a unit saved for the sheet stays
+    expect(sheetUnits("k3", "mm", "in")).toEqual({ source: "mm", display: "in", assumed: false });
+    const key = "fatcat-reading-v1:b.dxf:00";
+    savePosition(key, { x: 0, y: 0, width: 10 });
+    changeUnits(key, "mm", sheetUnits(key, "mm", "in"), { display: "cm" });
+    expect(sheetUnits(key, "mm", "in").display).toBe("cm");
   });
 
   it("a saved choice wins and changing the source moves the display along", () => {

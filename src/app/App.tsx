@@ -18,6 +18,7 @@ import { handleLibraryBack } from "../library/libraryView";
 import { incomingDrawingPlugin, readIncomingDrawingFile, type IncomingDrawing } from "../native/incomingDrawing";
 import { beginParse, completeParse, diagnosticPhase, failParse, recordDiagnostic, type ParseAudit } from "../viewer/parseAudit";
 import { autoAssembleXrefs } from "../viewer/xrefAutoFind";
+import { loadXrefMemory } from "../viewer/xrefMemory";
 import { loadDecimals, saveDecimals } from "../viewer/measureFormat";
 import { loadMarks, shareFileName, type MarkTool } from "../viewer/markup";
 import type { CadEngine } from "../types/engine";
@@ -31,7 +32,7 @@ import type { TextHit } from "../viewer/textSearch";
 import { splitCadWarnings } from "../viewer/cadWarnings";
 import { canKeep, hasAnything, initialMeasureState, measureReducer, toastKey, type MeasureAction, type MeasureState } from "../measure/measureState";
 import { loadMeasurements, saveMeasurements } from "../measure/measurementStore";
-import { formatResult, sheetUnits, type SheetUnits } from "../measure/measureUnits";
+import { defaultDisplayUnit, formatResult, sheetUnits, type SheetUnits } from "../measure/measureUnits";
 import { CadPanel, hasXrefSession, reuseXrefSession, setXrefSession } from "../components/CadPanel";
 import { CloseDrawingDialog } from "../components/CloseDrawingDialog";
 import { ConfirmDialog, type ConfirmRequest } from "../components/ConfirmDialog";
@@ -115,6 +116,8 @@ type ShareNote = { text: string; error: boolean };
 
 export function App() {
   const { t, locale } = useI18n();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const glove = useGloveMode();
   const nativeApp = Capacitor.isNativePlatform();
 
@@ -350,7 +353,7 @@ export function App() {
     applyMeasure({ ...state, settings: { ...state.settings, kept: loadMeasurements(measurementKey.current) } }, false);
     setSearch(null); setSearchOpen(false);
     canvasRef.current?.clearSearchHit();
-    setUnits(sheetUnits(next.viewKey ?? "", next.unit));
+    setUnits(sheetUnits(next.viewKey ?? "", next.unit, defaultDisplayUnit(localeRef.current)));
   }, [applyMeasure]);
 
   const onSpaces = useCallback((list: CadSpace[], current: string, busy: boolean) => {
@@ -367,11 +370,12 @@ export function App() {
       ...report.xrefs.filter((x) => !x.loaded && !x.disabled && !x.savedUnloaded).map((x) => x.path),
       ...(report.images ?? []).map((i) => i.path),
     ].filter(Boolean);
-    if (!paths.length) return;
+    // Remembered references (picked before) apply even when nothing else is missing, e.g. all flagged saved unloaded.
+    if (!paths.length && !(was.entryId && Object.keys(loadXrefMemory(was.entryId)).length)) return;
     const serial = request.current;
     autoAssembleXrefs(was.file, paths, was.entryId).then((found) => {
       if (!found || serial !== request.current) return;
-      setXrefSession(was.file, found.files, found.statuses);
+      setXrefSession(was.file, found.files, found.statuses, found.mapping, found.manual);
       setDrawable(found.file);
     }).catch(() => { /* silent (T10 3.3) */ });
   }, [screen, report, last]);
@@ -766,7 +770,7 @@ export function App() {
             {exportNote ? <ExportNote note={exportNote} onShare={() => void handOff("share")} onOpen={() => void handOff("open")} onClose={() => setExportNote(null)} /> : null}
 
             {cadTab && report && last ? (
-              <CadPanel report={report} audit={audit} source={last.file} initialTab={STRIP_TABS[cadTab]}
+              <CadPanel report={report} audit={audit} source={last.file} entryId={last.entryId} initialTab={STRIP_TABS[cadTab]}
                 onLayer={(name, visible) => canvasRef.current?.showLayer(name, visible)}
                 onLayerState={(name) => canvasRef.current?.applyLayerState(name)}
                 onReload={(file) => setDrawable(file)} onClose={() => setCadTab(null)} />

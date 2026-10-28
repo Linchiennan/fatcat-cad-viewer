@@ -137,6 +137,15 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
     if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
   };
   const ordered = [...(spaces.length ? spaces : [{ name: MODEL_SPACE, order: 0 }])].sort((a, b) => (a.name === MODEL_SPACE ? -1 : b.name === MODEL_SPACE ? 1 : a.order - b.order));
+  // Unapplied xrefs take the share button's place on the first page, so they are seen on opening; once all are
+  // applied, share comes back and xrefs return to the second page (用戶 2026-10-28).
+  const xrefsFirst = xrefsUnloaded > 0;
+  const xrefButton = (
+    <button type="button" className={xrefsFirst ? "strip-xref-missing" : undefined} aria-label={xrefsUnloaded > 0 ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefUnloadedCount", { N: xrefsUnloaded })}` : undefined} onClick={() => onTab("xrefs")}>
+      {t("viewer.stripXrefs")}{xrefsUnloaded > 0 ? <em>{t("viewer.stripWarn", { N: xrefsUnloaded })}</em> : null}
+    </button>
+  );
+  const shareButton = onExport ? <button type="button" className="strip-export" aria-label={t("markup.share")} title={t("export.buttonTip")} onClick={onExport}>{t("markup.share")}</button> : null;
   const caption = switching ? t("viewer.spaceSwitching") : space === MODEL_SPACE ? t("viewer.spaceModel") : space;
   return (
     <nav className="check-strip" aria-label={t("viewer.checkStripLabel")} data-fit="corner" data-strip-page={page} data-dragging={offset !== 0 || undefined}>
@@ -180,15 +189,13 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
           </select>
         </label>
       <button type="button" onClick={() => onTab("layers")}>{t("viewer.stripLayers")}</button>
-        {onExport ? <button type="button" className="strip-export" aria-label={t("markup.share")} title={t("export.buttonTip")} onClick={onExport}>{t("markup.share")}</button> : null}
+        {xrefsFirst ? xrefButton : shareButton}
         </div>
         <div className="check-strip-page" data-check-page="2" inert={page !== 1} aria-hidden={page !== 1}>
       <button type="button" aria-label={missing > 0 ? `${t("viewer.stripMissing")}, ${t("viewer.missingCount", { N: missing })}` : undefined} onClick={() => onTab("missing")}>
         {t("viewer.stripMissing")}{missing > 0 ? <em>{t("viewer.stripWarn", { N: missing })}</em> : null}
       </button>
-      <button type="button" aria-label={xrefsUnloaded > 0 ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefUnloadedCount", { N: xrefsUnloaded })}` : undefined} onClick={() => onTab("xrefs")}>
-        {t("viewer.stripXrefs")}{xrefsUnloaded > 0 ? <em>{t("viewer.stripWarn", { N: xrefsUnloaded })}</em> : null}
-      </button>
+      {xrefsFirst ? shareButton : xrefButton}
       {onInspect ? <button type="button" onClick={onInspect}>{t("bar.info")}</button> : null}
         </div>
         </div>

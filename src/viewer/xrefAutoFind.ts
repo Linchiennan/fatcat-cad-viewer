@@ -5,6 +5,7 @@
 import { listLibraryDrawings, readLibraryDrawing } from "../library/drawingLibrary";
 import { assembleXrefs, normalizeCadPath, type XrefStatus } from "./xrefs";
 import { rememberedFolderFiles } from "./xrefFolders";
+import { rememberedXrefFiles } from "./xrefMemory";
 
 /** File names a reference path can be found under (a path without extension also matches .dwg/.dxf). */
 export function xrefFileNames(path: string): string[] {
@@ -50,7 +51,7 @@ async function findFiles(paths: readonly string[], entryId?: string): Promise<{ 
   return out;
 }
 
-export type AutoXrefResult = { file: File; statuses: XrefStatus[]; files: File[] };
+export type AutoXrefResult = { file: File; statuses: XrefStatus[]; files: File[]; mapping: Record<string, string>; manual: Set<File> };
 
 /**
  * Load what can be found, including references inside references (up to three rounds).
@@ -58,13 +59,22 @@ export type AutoXrefResult = { file: File; statuses: XrefStatus[]; files: File[]
  */
 export async function autoAssembleXrefs(source: File, paths: readonly string[], entryId?: string): Promise<AutoXrefResult | null> {
   const files: File[] = [], origins = new Map<string, string>(), tried = new Set<string>();
+  // Files the user picked for this drawing before come first, each tied to its reference (and allowed to load one
+  // saved unloaded, as when it was picked). 用戶 2026-10-28：再次開圖就能自動套用.
+  const remembered = entryId ? await rememberedXrefFiles(entryId).catch(() => null) : null;
+  const mapping: Record<string, string> = { ...(remembered?.mapping ?? {}) }, manual = new Set<File>(remembered?.files ?? []);
+  for (const f of remembered?.files ?? []) { files.push(f); origins.set(f.webkitRelativePath || f.name, "記住的外參"); }
   let todo = [...new Set(paths)], result: { file: File; statuses: XrefStatus[] } | null = null;
+  if (files.length) {
+    result = await assembleXrefs(source, files, mapping, new Set(), manual);
+    todo = result.statuses.filter((s) => s.status.startsWith("找不到")).map((s) => s.path);
+  }
   for (let round = 0; round < 3 && todo.length; round++) {
     todo.forEach((p) => tried.add(normalizeCadPath(p)));
     const found = (await findFiles(todo, entryId)).filter((f) => !files.some((g) => g.name === f.file.name));
     if (!found.length) break;
     for (const f of found) { files.push(f.file); origins.set(f.file.webkitRelativePath || f.file.name, f.origin); }
-    result = await assembleXrefs(source, files);
+    result = await assembleXrefs(source, files, mapping, new Set(), manual);
     todo = result.statuses.filter((s) => s.status.startsWith("找不到") && !tried.has(normalizeCadPath(s.path))).map((s) => s.path);
   }
   if (!result) return null;
@@ -73,5 +83,5 @@ export async function autoAssembleXrefs(source: File, paths: readonly string[], 
     const origin = loaded && origins.get(loaded[1]);
     if (origin) s.status = s.status.replace("已載入：", `已自動載入（${origin}）：`);
   }
-  return { ...result, files };
+  return { ...result, files, mapping, manual };
 }
