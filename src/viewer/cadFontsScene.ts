@@ -4,6 +4,7 @@ import {fallbackMetrics,fittedShape,verticalPitch,verticalTextEntities} from './
 import {ShxFont,fontKey,shxTextGeometry} from './shxText';
 import {parse} from 'opentype.js';
 import {TextRenderer} from 'dxf-viewer/src/TextRenderer.js';
+import {generationMirror} from './textGeneration';
 type Any=any;
 let activeFontUsage:Record<string,number>|null=null;
 export function installCadFontScene(ctor:Any):void {
@@ -36,9 +37,9 @@ export function installCadFontScene(ctor:Any):void {
    if(vertical){for(const c of verticalTextEntities({...e,textHeight:e.textHeight||style.fixedTextHeight||1},vertical))yield* p[name].call(this,{...c,cadVerticalChar:true},ctx);return;}
    const effective={...e,textHeight:e.textHeight||style.fixedTextHeight||1,xScale:e.xScale??style.widthFactor??1,obliqueAngle:e.obliqueAngle??style.obliqueAngle??0,textGenerationFlag:e.textGenerationFlag??style.textGenerationFlag??0};
    const outline=this.cadOutlineFonts?.get(fontKey(style.font??''));
-   if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* original.call(this,effective,ctx);this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
+   if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* generationMirror(effective,original.call(this,effective,ctx));this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
    if(font){const lines=shxTextGeometry(effective,font,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
-   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withBigFontPitch(this.textRenderer,style,()=>original.call(this,effective,ctx));
+   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withBigFontPitch(this.textRenderer,style,()=>generationMirror(effective,original.call(this,effective,ctx)));
   };
  }
  const mtext=p._DecomposeMText;p._DecomposeMText=function*(e:Any,ctx:Any){
