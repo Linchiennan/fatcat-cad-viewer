@@ -45,6 +45,11 @@ jobs:
           sed -i 's/#define MAX_BYTE_UMC 8/#define MAX_BYTE_UMC 10/; s/unsigned char byte\[MAX_BYTE_UMC\] = { 0, 0, 0, 0, 0, 0, 0, 0 };/unsigned char byte[MAX_BYTE_UMC] = { 0 };/' src/bits.c
           grep -n 'MAX_BYTE_UMC 10' src/bits.c
           grep -n 'byte\[MAX_BYTE_UMC\] = { 0 };' src/bits.c
+          # DXF out of 2D polyline vertices wrote widths (40/41) and bulge (42) only when the vertex flag is non-zero;
+          # a plain vertex has flag 0, so arcs and widths were lost (門窗圖 donut: bulge 1 width 1.25 came out as nothing,
+          # A07 lost 10 of 20 bulges). The decoder has them; write them for every vertex (BD0 skips zeros anyway).
+          perl -0pi -e 's/if \(FIELD_VALUE \(flag\) != 0\)(\s*\{?\s*FIELD_BD0 \((?:start_width|bulge))/if (1)$1/g' src/dwg.spec
+          test "$(grep -c 'if (1)' src/dwg.spec)" -ge 2 && grep -n -A2 'if (1)' src/dwg.spec
           git log --oneline -3
       - name: Build
         run: |
