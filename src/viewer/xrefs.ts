@@ -11,6 +11,7 @@ import { detectDxfEncoding } from './dxfEncoding';
 import { repairDxfText, repairWarning } from './dxfRepair';
 import { applyReaderTexts } from '../dwg/missingBlocks';
 import { readLayerStates } from "./layerStateTable";
+const isLayerZero=(name:unknown)=>name===undefined||name===null||String(name)==='0';
 export type XrefStatus={name:string;path:string;status:string;overlay:boolean;key:string};
 type Any=any;
 export function normalizeCadPath(value:string):string {
@@ -96,7 +97,9 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
      assembled.set(file,child);
     }
     const ns=name+'|';const rename=(e:Any)=>{
-     const q={...e,layer:ns+(e.layer??'0'),handle:ns+(e.handle??'')};
+     // Layer 0 of an xref is the host's layer 0, not "name|0": its content keeps following the INSERT's layer and
+     // color (碁創潭子 屋頂排水: A/C symbol on layer 0 inside a block inserted on xref layer AC, orange in ZWCAD, white here).
+     const q={...e,layer:isLayerZero(e.layer)?'0':ns+e.layer,handle:ns+(e.handle??'')};
      for(const k of ['name','block'])if(q[k]&&child.blocks?.[q[k]])q[k]=ns+q[k];
      if(q.lineType&&!['BYLAYER','BYBLOCK','CONTINUOUS'].includes(q.lineType.toUpperCase()))q.lineType=ns+q.lineType;
      if(q.styleName)q.styleName=ns+q.styleName;
@@ -105,7 +108,7 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
     for(const [n,b] of Object.entries(child.blocks??{}) as [string,Any][])doc.blocks[ns+n]={...b,name:ns+n,entities:(b.entities??[]).map(rename)};
     doc.tables??={};for(const [table,records] of [['layer','layers'],['lineType','lineTypes'],['style','styles'],['dimstyle','dimStyles']]){
      doc.tables[table]??={};doc.tables[table][records]??={};
-     for(const [n,v] of Object.entries(child.tables?.[table]?.[records]??{}) as [string,Any][])doc.tables[table][records][ns+n]=table==='layer'&&doc.tables[table][records][ns+n]?doc.tables[table][records][ns+n]:{...v,name:ns+n,styleName:ns+n,lineType:v.lineType&&!['CONTINUOUS','BYLAYER','BYBLOCK'].includes(v.lineType.toUpperCase())?ns+v.lineType:v.lineType};
+     for(const [n,v] of Object.entries(child.tables?.[table]?.[records]??{}) as [string,Any][])if(!(table==='layer'&&isLayerZero(n)))doc.tables[table][records][ns+n]=table==='layer'&&doc.tables[table][records][ns+n]?doc.tables[table][records][ns+n]:{...v,name:ns+n,styleName:ns+n,lineType:v.lineType&&!['CONTINUOUS','BYLAYER','BYBLOCK'].includes(v.lineType.toUpperCase())?ns+v.lineType:v.lineType};
     }
     block.entities=(child.entities??[]).filter((e:Any)=>!e.inPaperSpace).map(rename);
     block.position=child.header?.$INSBASE??block.position??{x:0,y:0,z:0};

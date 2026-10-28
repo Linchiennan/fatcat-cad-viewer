@@ -4,7 +4,7 @@ import { useI18n, type TranslationKey } from "../i18n/translations";
 import { IconTile } from "../components/IconTile";
 import { AngleIcon, AreaIcon, CheckIcon, CloseIcon, DistanceIcon, EraserIcon, GearIcon, PathIcon, PointerIcon, TrashIcon, ArrowLeftIcon } from "../components/Icons";
 import { DECIMAL_CHOICES, fixedNumber } from "../viewer/measureFormat";
-import { LABEL_STYLES, setLabelStyle, setLabelUnit, useLabelStyle, useLabelUnit, type MeasureLabelStyle } from "../viewer/measureLabelStyle";
+import { LABEL_STYLES, MEASURE_COLORS, setLabelStyle, setLabelUnit, resetMeasureColors, setMeasureColor, useLabelStyle, useLabelUnit, useMeasureColors, type MeasureLabelStyle } from "../viewer/measureLabelStyle";
 import { distanceParts, lengthTotal, resultValue } from "../viewer/measureResults";
 import { pathLength, type MeasurableEntity, type MeasurementMode, type MeasurementSettings, type MeasurementUnit } from "../viewer/measurementGeometry";
 import { ALL_SNAP_KINDS, canKeep, initialMeasureState, measureReducer, MODE_KEYS, statusKey, type MeasureAction, type MeasureState } from "./measureState";
@@ -103,6 +103,7 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
   const [settingsOpen, setSettingsOpen] = useState(false);
   const labelStyle = useLabelStyle();
   const labelUnit = useLabelUnit();
+  const measureColors = useMeasureColors();
   const drag = useRef<{ id: number; y: number; h: number } | null>(null);
   const panel = useRef<HTMLElement | null>(null);
 
@@ -246,6 +247,19 @@ function PanelBody({ state, dispatch, units, fileUnit, onUnits, decimals, onDeci
                   {LABEL_STYLES.map((v) => <option key={v} value={v}>{t(`measure.labelStyle.${v}` as TranslationKey)}</option>)}
                 </select>
               </label>
+              {(["text", "box", "line"] as const).map((part) => (
+                <div key={part} className="measure-colors" role="radiogroup" aria-label={t(`measure.color.${part}` as TranslationKey)}>
+                  <span>{t(`measure.color.${part}` as TranslationKey)}</span>
+                  <div className="measure-color-row">
+                    {MEASURE_COLORS.map((c) => (
+                      <button key={c.id} type="button" role="radio" aria-checked={measureColors[part] === c.id} className={measureColors[part] === c.id ? "on" : ""}
+                        aria-label={t(`measure.color.${c.id}` as TranslationKey)} title={t(`measure.color.${c.id}` as TranslationKey)}
+                        style={{ background: c.hex }} onClick={() => setMeasureColor(part, c.id)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button type="button" className="measure-color-reset" title={t("measure.color.resetTip")} onClick={resetMeasureColors}>{t("measure.color.reset")}</button>
               {s.snap && !objectMode ? (
                 <div className="measure-snap-kinds" role="group" aria-label={t("measure.snapKindsLabel")}>
                   {ALL_SNAP_KINDS.map((kind) => {

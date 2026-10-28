@@ -51,6 +51,19 @@
 .measure-settings-body label { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .measure-settings-body select { min-height: 34px; background: #0b1118; color: inherit; border: 1px solid #567; border-radius: 8px; }
 .measure-check { justify-content: flex-start !important; }
+/* 量測標註顏色：每項一排 5 個色票，選中的加亮框（用戶 2026-10-28） */
+.measure-colors { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.measure-color-row { display: flex; gap: 8px; }
+.measure-color-row button { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 2px solid #567; cursor: pointer; }
+.measure-color-row button.on { border-color: #fff; box-shadow: 0 0 0 2px #081019, 0 0 0 4px #fff; }
+.measure-panel.coarse .measure-color-row button, .measure-panel.glove .measure-color-row button { width: 40px; height: 40px; }
+/* 6 色在窄手機（360 寬）放不下 40px：縮成 34px、間距 6px，仍和其他排右緣對齊 */
+@media (max-width: 380px) {
+  .measure-panel .measure-color-row { gap: 6px; }
+  .measure-panel.coarse .measure-color-row button, .measure-panel.glove .measure-color-row button { width: 34px; height: 34px; }
+}
+/* 還原預設顏色：整排寬，和上下各排對齊 */
+.measure-color-reset { min-height: 40px; border-radius: 10px; border: 1px solid #567; background: transparent; color: #e8f0f4; font: inherit; cursor: pointer; }
 .measure-snap-kinds { display: flex; flex-wrap: wrap; gap: 6px; }
 .measure-snap-kinds button { border-radius: 999px; padding: 5px 12px; border: 1px solid #567; background: transparent; color: #b8c7cf; cursor: pointer; font: inherit; }
 .measure-snap-kinds button.on { background: #1d5a40; border-color: #36d399; color: #fff; }

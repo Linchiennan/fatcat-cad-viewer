@@ -1,12 +1,14 @@
-// Measuring overlay (T15 2.2): current lines in amber with bright red points, numbers and length
+// Measuring overlay (T15 2.2): lines, numbers and their boxes in the colours chosen in 量測設定 (用戶 2026-10-28; default the colours of before: amber lines and box rim, red numbers) with bright red points, numbers and length
 // labels; kept results look the same (用戶指定：結束量測後不變灰) without the point numbers; the long-press crosshair
 // with the snap marker. Never takes touches.
 import type { DrawingPoint } from "../types/drawing";
 import type { SnapKind } from "../viewer/measurementGeometry";
 import { rightAngleCue, snapMarkPath, SNAP_MARK_NAMES, type OverlayLabel, type OverlayModel, type OverlayShape } from "./overlayModel";
-import { useLabelStyle, type MeasureLabelStyle } from "../viewer/measureLabelStyle";
+import { measureColorHex, useLabelStyle, useMeasureColors, type MeasureColors, type MeasureLabelStyle } from "../viewer/measureLabelStyle";
 
-const AMBER = "#ffb547", RED = "#ff1f1f", DARK = "#081019", GREEN = "#36d399";
+const RED = "#ff1f1f", DARK = "#081019", GREEN = "#36d399";
+/** #rrggbb at an alpha, for the area fill and the number box rim. */
+const withAlpha = (hex: string, a: number) => `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`;
 const pointsAttr = (pts: readonly DrawingPoint[]) => pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
 function RightAngle({ points }: { points: DrawingPoint[] }) {
@@ -57,15 +59,35 @@ function piecesAround(points: DrawingPoint[], closed: boolean, cuts: Placed[]): 
   return out;
 }
 
-function Shape({ s, kept, style }: { s: OverlayShape; kept: boolean; style: MeasureLabelStyle }) {
+/** Distance from a point to the centre of its number, px. */
+export const DOT_NUMBER_GAP = 15;
+/**
+ * Where a point's number goes: just outside the line, away from it. An end point gets it on the line's extension
+ * past the point; a point between two segments on the outer side of the corner (or square to a straight run).
+ * A fixed up-right offset put 「2」 against the middle of a line going up-right, beside its length box (用戶 2026-10-28).
+ */
+export function dotNumberAt(dots: readonly DrawingPoint[], i: number, closed = false): DrawingPoint {
+  const p = dots[i], n = dots.length;
+  const unit = (x: number, y: number) => { const l = Math.hypot(x, y); return l > 1e-9 ? { x: x / l, y: y / l } : null; };
+  const prev = closed || i > 0 ? dots[(i - 1 + n) % n] : null, next = closed || i < n - 1 ? dots[(i + 1) % n] : null;
+  const away = (q: DrawingPoint | null) => (q && q !== p ? unit(p.x - q.x, p.y - q.y) : null);
+  const a = away(prev), b = away(next);
+  let dir = a && b ? unit(a.x + b.x, a.y + b.y) ?? { x: -a.y, y: a.x } : a ?? b;
+  if (dir && a && b && dir.y > 0 && Math.abs(a.x + b.x) + Math.abs(a.y + b.y) < 1e-6) dir = { x: -dir.x, y: -dir.y }; // straight run: the upper side
+  dir ??= { x: Math.SQRT1_2, y: -Math.SQRT1_2 }; // a single point: up-right as before
+  return { x: p.x + dir.x * DOT_NUMBER_GAP, y: p.y + dir.y * DOT_NUMBER_GAP };
+}
+
+function Shape({ s, kept, style, colors }: { s: OverlayShape; kept: boolean; style: MeasureLabelStyle; colors: MeasureColors }) {
+  const lineHex = measureColorHex(colors.line), textHex = measureColorHex(colors.text), boxHex = measureColorHex(colors.box);
   const placed = s.labels.map((l) => place(l, style));
   const gaps = style === "gap" && s.points.length > 1;
-  const stroke = { stroke: AMBER, strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  const stroke = { stroke: lineHex, strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   const line = gaps
-    ? <>{s.closed ? <polygon points={pointsAttr(s.points)} fill="rgba(255,181,71,0.12)" stroke="none" /> : null}
+    ? <>{s.closed ? <polygon points={pointsAttr(s.points)} fill={withAlpha(lineHex, 0.12)} stroke="none" /> : null}
         {piecesAround(s.points, s.closed, placed).map((p, i) => <polyline key={`p${i}`} className="measure-line-piece" points={pointsAttr(p)} fill="none" {...stroke} />)}</>
     : s.closed
-      ? <polygon points={pointsAttr(s.points)} fill="rgba(255,181,71,0.12)" {...stroke} />
+      ? <polygon points={pointsAttr(s.points)} fill={withAlpha(lineHex, 0.12)} {...stroke} />
       : <polyline points={pointsAttr(s.points)} fill="none" {...stroke} />;
   return (
     <g className={kept ? "measure-kept-shape" : "measure-current-shape"}>
@@ -74,15 +96,15 @@ function Shape({ s, kept, style }: { s: OverlayShape; kept: boolean; style: Meas
       {placed.map(({ l, x, y, w, h, angle }, i) => (
         <g key={`l${i}`} transform={angle ? `rotate(${angle.toFixed(2)} ${x.toFixed(1)} ${y.toFixed(1)})` : undefined}>
           {style === "box" ? <rect className="measure-label-box" x={x - w / 2 - 5} y={y - h / 2 - 2} width={w + 10} height={h + 4} rx={6}
-            fill="rgba(8,16,25,0.85)" stroke="rgba(255,181,71,0.55)" strokeWidth={1} /> : null}
+            fill="rgba(8,16,25,0.85)" stroke={withAlpha(boxHex, 0.55)} strokeWidth={1} /> : null}
           <text className="measure-length-label" x={x} y={y} fontSize={l.size} fontWeight={700} textAnchor="middle" dominantBaseline="central"
-            fill={RED} stroke={DARK} strokeWidth={l.stroke} paintOrder="stroke" strokeLinejoin="round">{l.text}</text>
+            fill={textHex} stroke={DARK} strokeWidth={l.stroke} paintOrder="stroke" strokeLinejoin="round">{l.text}</text>
         </g>
       ))}
       {s.dots.map((p, i) => (
         <g key={`d${i}`}>
           <circle className={kept ? "measure-kept-dot" : "measure-dot"} cx={p.x} cy={p.y} r={5} fill={RED} stroke="#fff" strokeWidth={1.5} />
-          {kept ? null : <text className="measure-dot-number" x={p.x + 11} y={p.y - 11} fontSize={13} fontWeight={800} fill={RED} stroke={DARK} strokeWidth={3} paintOrder="stroke">{i + 1}</text>}
+          {kept ? null : (() => { const at = dotNumberAt(s.dots, i, s.closed); return <text className="measure-dot-number" x={at.x} y={at.y} fontSize={13} fontWeight={800} textAnchor="middle" dominantBaseline="central" fill={RED} stroke={DARK} strokeWidth={3} paintOrder="stroke">{i + 1}</text>; })()}
         </g>))}
     </g>
   );
@@ -95,12 +117,12 @@ export function MeasureOverlay({ model, aim, snapAt }: {
   /** Snap the aim would take: where and which kind. */
   snapAt: (DrawingPoint & { kind: SnapKind; perpendicularFrom?: DrawingPoint }) | null;
 }) {
-  const style = useLabelStyle();
+  const style = useLabelStyle(), colors = useMeasureColors();
   return (
     <svg className="measure-overlay" aria-hidden="true">
-      {model.kept.map((s, i) => <Shape key={i} s={s} kept style={style} />)}
-      {model.current ? <Shape s={model.current} kept={false} style={style} /> : null}
-      {model.outline ? <polyline className="measure-object-outline" points={pointsAttr(model.outline)} fill="none" stroke={AMBER} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /> : null}
+      {model.kept.map((s, i) => <Shape key={i} s={s} kept style={style} colors={colors} />)}
+      {model.current ? <Shape s={model.current} kept={false} style={style} colors={colors} /> : null}
+      {model.outline ? <polyline className="measure-object-outline" points={pointsAttr(model.outline)} fill="none" stroke={measureColorHex(colors.line)} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /> : null}
       {aim ? (
         <g className="measure-aim" style={{ filter: "drop-shadow(0 0 1px #000)" }}>
           <line x1={aim.x - 22} y1={aim.y} x2={aim.x + 22} y2={aim.y} stroke="#fff" strokeWidth={1.5} />

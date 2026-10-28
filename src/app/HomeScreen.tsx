@@ -7,6 +7,7 @@ import { FolderCheckIcon, ShieldIcon } from "../components/Icons";
 import { BUILD_CODE, BUILD_ID } from "./buildIdentity";
 import { IS_WEB_BUILD, isAppleMobile, isStandalone } from "./platform";
 import { LangSwitch } from "./LangSwitch";
+import { UiStyleSwitch } from "./uiStyle";
 import { shortVersion } from "./shellText";
 
 /** Little pink butterfly on the card's top-left; the wings flap around the body line. */
@@ -42,7 +43,7 @@ export function HomeScreen({ onLibrary, onLegal }: { onLibrary(): void; onLegal?
     <div className="home-page">
       <header className="home-top">
         <strong className="brand">{t("home.brand")}</strong>
-        <LangSwitch />
+        <div className="home-switches"><UiStyleSwitch /><LangSwitch /></div>
       </header>
       <main className="home-main">
         <div className="home-art">

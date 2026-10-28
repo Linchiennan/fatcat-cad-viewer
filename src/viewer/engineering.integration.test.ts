@@ -21,6 +21,18 @@ describe('工程整合fixture，非施工圖',()=>{
   const d:any={tables:{layer:{layers:{H:{name:'H',visible:false,frozen:true,color:0xff0000}}}},entities:[{...line(),layer:'H'}]};const scene=new Scene();await scene.Build(d,[]);
   expect(d.cadReport.layers[0].visible).toBe(false);expect(d.cadMeasurement.entities).toHaveLength(1);expect(d.cadMeasurement.entities[0].length).toBe(100);expect(d.cadMeasurement.entities[0].properties.handle).toBe('A');
  });
+ it('外參的0圖層＝主圖0圖層：圖塊內0圖層物件隨插入圖層的顏色（碁創潭子 屋頂排水 A/C）',async()=>{
+  const root=file('root.dxf',{blocks:{X:{name:'X',xrefPath:'child.dxf',type:4,position:{x:0,y:0},entities:[]}},entities:[{type:'INSERT',name:'X',layer:'XREF',position:{x:0,y:0}}]});
+  const child=file('child.dxf',{tables:{layer:{layers:{'0':{name:'0',color:0xffffff},AC:{name:'AC',color:0xff5500}}}},
+   blocks:{AC1:{name:'AC1',position:{x:0,y:0},entities:[line()]}},entities:[{type:'INSERT',name:'AC1',layer:'AC',position:{x:0,y:0}}]});
+  const out=await assembleXrefs(root,[child]);const d=await parseCadFile(out.file);
+  expect(d.blocks['X|AC1'].entities[0].layer).toBe('0');
+  expect(d.tables.layer.layers['X|0']).toBeUndefined();
+  prepareCad(d);
+  const inner=Object.values(d.blocks as Record<string,any>).filter((b:any)=>b.cadName==='X|AC1').flatMap((b:any)=>b.entities);
+  expect(inner.length).toBeGreaterThan(0);
+  for(const e of inner)expect(e.trueColor).toBe(0xff5500);
+ });
  it('外參讀檔+平移旋轉縮放交給同一INSERT管線',async()=>{
   const root=file('root.dxf',{blocks:{X:{name:'X',xrefPath:'child.dxf',type:4,position:{x:0,y:0},entities:[]}},entities:[{type:'INSERT',name:'X',position:{x:30,y:40},xScale:2,yScale:2,rotation:90}]});
   const child=file('child.dxf',{tables:{layer:{layers:{'0':{name:'0',color:255}}}},entities:[line()]});const out=await assembleXrefs(root,[child]);const d=await parseCadFile(out.file);

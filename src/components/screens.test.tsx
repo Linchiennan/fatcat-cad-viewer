@@ -25,9 +25,9 @@ describe("loading screen (T20 2.1)", () => {
     expect(html).not.toContain("%</p>");
     expect(html).toContain(">取消<");
     const known = renderToStaticMarkup(<LoadingScreen stage="preparing" progress={0.426} fileName="a.dxf" onCancel={noop} />);
-    expect(known).toContain(`aria-valuenow="43"`);
-    expect(known).toContain("scaleX(0.426)");
-    expect(known).toContain("43%");
+    // a known progress shows only after it has lasted PROGRESS_AFTER_MS (LoadingScreen.dom.test.tsx); the first frame keeps the moving bar
+    expect(known).toContain("loading-bar is-unknown");
+    expect(known).not.toContain("43%");
   });
 });
 

@@ -15,8 +15,12 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { IS_WEB_BUILD } from "./app/platform";
 import { installDiagnosticHandlers } from "./viewer/parseAudit";
 import "./components/app.css";
+import "./components/ui3d.css";
+import { applyUiStyle, readUiStyle, UiStyleDefs } from "./app/uiStyle";
 
 installDiagnosticHandlers();
+// the saved interface style before the first paint, so the page never shows flat for a frame
+applyUiStyle(readUiStyle());
 
 // Bundled Noto Sans CJK TC under our own family name (T10 2.1-2); loaded relative to the page so the same
 // build works from the Android WebView and any web folder. Fallback: system sans-serif.
@@ -35,6 +39,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <I18nProvider>
       <ErrorBoundary>
+        <UiStyleDefs />
         <Suspense fallback={<p role="status">正在載入 / Loading…</p>}><Entry /></Suspense>
       </ErrorBoundary>
     </I18nProvider>

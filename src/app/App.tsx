@@ -683,7 +683,7 @@ export function App() {
             {showStrip ? (
               <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded}
                 onSpace={(name) => { setSwitching(true); canvasRef.current?.switchSpace(name); }}
-                onTab={(tab) => { setSearchOpen(false); setCadTab(tab); }} onExport={openExport} onInspect={toggleInspect} />
+                onTab={(tab) => { setSearchOpen(false); endMeasure(); setCadTab(tab); }} /* 用戶 2026-10-28：量測中打開圖層等面板，自動結束量測 */ onExport={openExport} onInspect={toggleInspect} />
             ) : null}
 
             {selecting ? <SelectionBar tool={selectionTool} count={selectionCount} onTool={setSelectionTool} onDelete={askDeleteSelection} /> : null}

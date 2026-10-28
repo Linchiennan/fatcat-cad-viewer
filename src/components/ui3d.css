@@ -1,0 +1,42 @@
+/* 介面立體樣式（用戶 2026-10-28：首頁「繁中｜EN」左邊的切換鈕選；原始＝不套）。由 010-BUG檢查/工具/ui3d_shot.mjs 的預覽樣式產生，
+   原則：不改底色（橘色主按鈕維持橘色），只疊光影、陰影、厚邊；貓掌列按鈕用沿外形投影連耳朵一起立體，貓爪只加投影不改形狀。
+   耳朵漸層 #fc3d-* 定義在 UiStyleDefs（uiStyle.tsx）。 */
+
+
+/* 玻璃質感 */
+:root[data-ui-style="glass"] :is(.home-page, .library-screen, .app) { background-image: radial-gradient(120% 70% at 15% 0%, rgba(70,120,170,.35), transparent 60%) !important; }
+:root[data-ui-style="glass"] :is(header.file-bar, nav.check-strip, nav.glove-bar, section.measure-strip, div.markup-bar, header.lib-header) { background-color: rgba(20,34,48,.55) !important; backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%); border-color: rgba(255,255,255,.16) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.22) !important; }
+:root[data-ui-style="glass"] :is(section.cad-sheet, section.search-sheet, span.glove-tip, .lib-row, .lib-toast, .confirm-box, .measure-panel, .export-sheet, .markup-dialog) { background-color: rgba(30,48,66,.55) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.18) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 14px 32px rgba(0,0,0,.45) !important; }
+:root[data-ui-style="glass"] :is(.glove-bar > .glove-btn:not(.glove-paw), .check-strip-page > button, label.space-switch, .file-close, section.cad-sheet button, section.search-sheet button, .icon-tile, .measure-settings-btn, .markup-color, .lib-primary, .lib-secondary, .secondary-btn, .lib-row-icon) { background-image: linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,.02) 55%) !important; border-color: rgba(255,255,255,.32) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 6px 14px rgba(0,0,0,.4) !important; }
+:root[data-ui-style="glass"] :is(.primary-btn, .file-library, .brand-card) { box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 8px 18px rgba(0,0,0,.45) !important; }
+:root[data-ui-style="glass"] :is(.glove-bar > .glove-btn:not(.glove-paw)) { box-shadow: inset 0 1px 0 rgba(255,255,255,.4) !important; filter: drop-shadow(0 6px 8px rgba(0,0,0,.5)); }
+:root[data-ui-style="glass"] :is(.glove-ear:not(.is-on) .glove-ears .ear-fill) { fill: url(#fc3d-glass) !important; }
+:root[data-ui-style="glass"] :is(.glove-ear:not(.is-on) .glove-ears .ear-line) { stroke: rgba(255,255,255,.32) !important; }
+:root[data-ui-style="glass"] :is(.glove-paw) { filter: drop-shadow(0 6px 8px rgba(0,0,0,.5)); }
+
+
+/* 分層浮起 */
+:root[data-ui-style="layered"] :is(header.file-bar, nav.check-strip, nav.glove-bar, section.measure-strip, div.markup-bar, header.lib-header) { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 10px 24px rgba(0,0,0,.6), 0 -10px 24px rgba(0,0,0,.55) !important; }
+:root[data-ui-style="layered"] :is(section.cad-sheet, section.search-sheet, span.glove-tip, .lib-row, .lib-toast, .confirm-box, .measure-panel, .export-sheet, .markup-dialog) { background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08)) !important; border-color: rgba(255,255,255,.08) !important; box-shadow: 0 1px 0 rgba(255,255,255,.1) inset, 0 2px 4px rgba(0,0,0,.5), 0 18px 40px rgba(0,0,0,.6) !important; }
+:root[data-ui-style="layered"] :is(section.cad-sheet, .confirm-box) { box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 6px 10px rgba(0,0,0,.5), 0 32px 70px rgba(0,0,0,.75) !important; }
+:root[data-ui-style="layered"] :is(.glove-bar > .glove-btn:not(.glove-paw), .check-strip-page > button, label.space-switch, .file-close, section.cad-sheet button, section.search-sheet button, .icon-tile, .measure-settings-btn, .markup-color, .lib-primary, .lib-secondary, .secondary-btn, .lib-row-icon) { background-image: linear-gradient(180deg, rgba(255,255,255,.12), rgba(0,0,0,.12)) !important; box-shadow: 0 1px 0 rgba(255,255,255,.14) inset, 0 2px 3px rgba(0,0,0,.6), 0 8px 16px rgba(0,0,0,.45) !important; }
+:root[data-ui-style="layered"] :is(.primary-btn, .file-library, .brand-card) { box-shadow: 0 1px 0 rgba(255,255,255,.3) inset, 0 3px 4px rgba(0,0,0,.55), 0 12px 22px rgba(0,0,0,.5) !important; }
+:root[data-ui-style="layered"] :is(.glove-bar > .glove-btn:not(.glove-paw)) { box-shadow: 0 1px 0 rgba(255,255,255,.14) inset !important; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)) drop-shadow(0 9px 9px rgba(0,0,0,.45)); }
+:root[data-ui-style="layered"] :is(.glove-ear:not(.is-on) .glove-ears .ear-fill) { fill: url(#fc3d-layer) !important; }
+:root[data-ui-style="layered"] :is(.glove-paw) { filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)) drop-shadow(0 9px 9px rgba(0,0,0,.45)); }
+
+/* 金屬光澤 */
+:root[data-ui-style="metal"] :is(header.file-bar, nav.check-strip, nav.glove-bar, section.measure-strip, div.markup-bar, header.lib-header) { background-image: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,0) 50%, rgba(0,0,0,.3)) !important; border-color: #5a7389 !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.3) !important; }
+:root[data-ui-style="metal"] :is(section.cad-sheet, section.search-sheet, span.glove-tip, .lib-row, .lib-toast, .confirm-box, .measure-panel, .export-sheet, .markup-dialog) { background-image: linear-gradient(180deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.03) 40%, rgba(0,0,0,.25) 100%) !important; border: 1px solid #4a6378 !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.28), inset 0 -2px 0 rgba(0,0,0,.45), 0 10px 22px rgba(0,0,0,.55) !important; }
+:root[data-ui-style="metal"] :is(.glove-bar > .glove-btn:not(.glove-paw), .check-strip-page > button, label.space-switch, .file-close, section.cad-sheet button, section.search-sheet button, .icon-tile, .measure-settings-btn, .markup-color, .lib-primary, .lib-secondary, .secondary-btn, .lib-row-icon) { background-image: linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,.08) 48%, rgba(0,0,0,.22) 52%, rgba(0,0,0,.05) 100%) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.4), 0 5px 10px rgba(0,0,0,.5) !important; }
+:root[data-ui-style="metal"] :is(.primary-btn, .file-library, .brand-card) { box-shadow: inset 0 1px 0 rgba(255,255,255,.65), inset 0 -3px 0 rgba(0,0,0,.25), 0 6px 12px rgba(0,0,0,.5) !important; }
+:root[data-ui-style="metal"] :is(.glove-bar > .glove-btn:not(.glove-paw)) { box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -3px 0 rgba(0,0,0,.4) !important; filter: drop-shadow(0 5px 5px rgba(0,0,0,.55)); }
+:root[data-ui-style="metal"] :is(.glove-ear:not(.is-on) .glove-ears .ear-fill) { fill: url(#fc3d-metal) !important; }
+
+:root[data-ui-style="metal"] :is(.glove-paw) { filter: drop-shadow(0 5px 5px rgba(0,0,0,.55)); }
+
+/* 貓頭＝耳朵＋按鈕一體（用戶 2026-10-28：效果要佈滿到耳朵）：整顆頭算一條漸層，耳朵約佔上方 18%（耳 14px＋按鈕 65px），
+   耳朵（uiStyle.tsx 的 #fc3d-*）畫上段、按鈕接下段，接縫同色；兩耳之間不畫按鈕上緣的高光線，改由耳朵外框收邊 */
+:root[data-ui-style="glass"] .glove-bar > .glove-ear { background-image: linear-gradient(180deg, rgba(255,255,255,.155), rgba(255,255,255,.02) 45%, rgba(255,255,255,0)) !important; box-shadow: none !important; }
+:root[data-ui-style="layered"] .glove-bar > .glove-ear { background-image: linear-gradient(180deg, rgba(255,255,255,.077), rgba(0,0,0,.12)) !important; box-shadow: none !important; }
+:root[data-ui-style="metal"] .glove-bar > .glove-ear { background-image: linear-gradient(180deg, rgba(255,255,255,.249) 0%, rgba(255,255,255,.08) 36.6%, rgba(0,0,0,.22) 41.5%, rgba(0,0,0,.05) 100%) !important; box-shadow: inset 0 -3px 0 rgba(0,0,0,.4) !important; }

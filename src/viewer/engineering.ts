@@ -54,6 +54,13 @@ export const DENSE_HATCH_SEGMENTS=100000;
 export const HATCH_BUDGET=6000000;
 export const SMALL_HATCH_SEGMENTS=2000;
 /** Signed DXF pattern, continuous phase across vertices; dots use a tiny visible segment. */
+/** Old-style POLYLINE: a vertex width left out takes the polyline's default (40/41). The engine writes a zero width as
+ * nothing, so an arrow drawn 20 → 0 came back with its end width missing and was filled as a 20-wide bar
+ * (t2-16C客變 ST-MARKER arrows 1CA60…, tapered in ZWCAD). LWPOLYLINE has no defaults and is left as it is. */
+export function polylineVertexWidths(e:Any):Any[]{
+ if(e.type!=='POLYLINE'||(e.startWidth===undefined&&e.endWidth===undefined))return e.vertices;
+ return (e.vertices??[]).map((v:Any)=>({...v,startWidth:v.startWidth??e.startWidth??0,endWidth:v.endWidth??e.endWidth??0}));
+}
 export function dashSegments(points:DrawingPoint[],pattern:number[],scale:number,closed:boolean):DrawingPoint[][] {
  const output:DrawingPoint[][]=[];const pat=pattern.map(n=>n*scale);
  const cycle=pat.reduce((s,n)=>s+Math.abs(n),0);if(!Number.isFinite(cycle)||cycle<1e-10||!pat.length)return points.slice(1).map((p,i)=>[points[i],p]);
@@ -195,7 +202,7 @@ export function installEngineeringScene(ctor:Any):void {
    if(wide&&!e.isPolyfaceMesh&&!e.includesCurveFitVertices&&!e.includesSplineFitVertices){
     const first=orig.call(this,e,ctx).next().value;if(!first)return;
     yield* complexLinePrimitives(this,e,first,ctx);
-    const meshes=widePolyline(e.vertices,!!e.shape,e.width??e.startWidth??0,this.cadLineTypes[e.lineType]?.pattern??[],this.cadScale*Math.abs(e.lineTypeScale??1));
+    const meshes=widePolyline(polylineVertexWidths(e),!!e.shape,e.width??e.startWidth??0,this.cadLineTypes[e.lineType]?.pattern??[],this.cadScale*Math.abs(e.lineTypeScale??1));
     for(const mesh of meshes){if(e.extrusionDirection?.z<0)mesh.vertices=mesh.vertices.map(v=>({x:-v.x,y:v.y}));yield Object.assign(Object.create(Object.getPrototypeOf(first)),first,{type:3,...mesh});}return;
    }
    for(const prim of orig.call(this,e,ctx)){

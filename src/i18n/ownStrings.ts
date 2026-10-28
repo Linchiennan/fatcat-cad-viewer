@@ -63,6 +63,13 @@ export const OWN_STRINGS = {
   "error.diagLabel": { zh: "DWG 診斷", en: "DWG diagnostics" },
   "home.legalLabel": { zh: "法律告知", en: "Legal notices" },
   "home.featuresLabel": { zh: "特色", en: "Features" },
+  // 介面立體樣式切換（用戶 2026-10-28：首頁「繁中｜EN」左邊）
+  "uiStyle.label": { zh: "介面樣式", en: "Interface style" },
+  "uiStyle.tip": { zh: "介面樣式：切換按鈕與面板的立體效果，這台裝置會記住", en: "Interface style: depth of buttons and panels, kept on this device" },
+  "uiStyle.plain": { zh: "原始", en: "Flat" },
+  "uiStyle.glass": { zh: "玻璃", en: "Glass" },
+  "uiStyle.layered": { zh: "分層", en: "Layers" },
+  "uiStyle.metal": { zh: "金屬", en: "Metal" },
   // 用戶 2026-10-28：首頁先講明不支援 3D（3D 實體開圖時才提示太晚）
   "home.no3d": { zh: "只顯示 2D 圖面；3D 實體（立體管件、面域等）不顯示，請用電腦 CAD 查看。", en: "2D drawings only: 3D solids (solid fittings, regions) are not shown; view them in desktop CAD." },
 
@@ -282,6 +289,18 @@ export const OWN_STRINGS = {
   "markup.editTitle": { zh: "修改註記文字", en: "Edit markup text" },
   "markup.inputTitle": { zh: "輸入註記文字", en: "Enter markup text" },
   "measure.labelStyle": { zh: "數字樣式", en: "Number style" },
+  // 量測標註顏色（用戶 2026-10-28：字色、外框色、線色，5 種常用色、不用黃色）
+  "measure.color.text": { zh: "字色", en: "Numbers" },
+  "measure.color.box": { zh: "外框色", en: "Box" },
+  "measure.color.line": { zh: "線色", en: "Lines" },
+  "measure.color.orange": { zh: "橘", en: "Orange" },
+  "measure.color.red": { zh: "紅", en: "Red" },
+  "measure.color.reset": { zh: "還原預設顏色", en: "Default colours" },
+  "measure.color.resetTip": { zh: "字色、外框色、線色回到原本的紅字、橘框、橘線", en: "Numbers, box and lines back to red, orange, orange" },
+  "measure.color.white": { zh: "白", en: "White" },
+  "measure.color.green": { zh: "綠", en: "Green" },
+  "measure.color.blue": { zh: "藍", en: "Blue" },
+  "measure.color.magenta": { zh: "洋紅", en: "Magenta" },
   "measure.labelUnit": { zh: "圖上數字顯示單位（如 cm）", en: "Show the unit on the drawing (e.g. cm)" },
   "measure.labelStyle.angle": { zh: "跟線同角度", en: "Along the line" },
   "measure.labelStyle.box": { zh: "原位＋深色底", en: "On a dark box" },

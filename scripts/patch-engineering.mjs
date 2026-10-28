@@ -31,6 +31,13 @@ patch('parser/entities/text.js','case 50: // Rotation in degrees','case 51: enti
 console.log('工程parser/原色/線寬修補已套用');
 // Nested block references skipped _FilterEntity, so hidden entities and frozen layers inside nested blocks still drew.
 patch('DxfScene.js','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }','            if (block.data.entities) {\n                for (const entity of block.data.entities) {\n                    if (!this._FilterEntity(entity)) continue /* fatcat nested filter */\n                    this._ProcessDxfEntity(entity, nestedCtx)\n                }\n            }');
+// The "QCAD default" test swapped any single solid 45° embedded pattern for the named one × 41, and that is exactly how
+// AutoCAD / ZWCAD store ANSI31. Where the stored lines and 41 disagree, CAD draws the stored lines (B13 浴室排水 6AD5B:
+// spacing 6.25 stored, 41 = 50; ZWCAD hatches the wall densely, the swap left one stroke in a corner). Use what is stored.
+patch('DxfScene.js','if ((pattern == null || pattern.isQcadDefault) && entity.patternName) {','if (pattern == null && entity.patternName) { /* fatcat: stored definition wins */');
+// Layer flag 2 is "frozen by default in new viewports", not frozen: such layers show in model space and existing
+// viewports (碁創潭子 10175E-B10100905 layer AC, 70=2: 120 blocks hidden here, all shown in ZWCAD).
+patch('parser/DxfParser.js','layer.frozen = ((curr.value & 1) !== 0 || (curr.value & 2) !== 0);','layer.frozen = (curr.value & 1) !== 0;');
 // Old-style POLYLINE widths were skipped (40/41 on the polyline and on each VERTEX), so a donut or a wide 2D polyline
 // came out as a hairline (世舜 門窗圖 10527C224: bulge 1, width 1.25, a filled ring in ZWCAD).
 patch('parser/entities/vertex.js','        case 40: // start width\n            break;\n        case 41: // end width\n            break;','        case 40: // start width\n            entity.startWidth = curr.value;\n            break;\n        case 41: // end width\n            entity.endWidth = curr.value;\n            break;');

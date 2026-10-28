@@ -77,6 +77,13 @@ button { cursor: pointer; }
 .lang-item { border: 0; background: none; color: var(--muted); padding: 0 14px; height: 24px; line-height: 24px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; }
 .lang-item.is-on { color: var(--accent); }
 .lang-sep { width: 1px; height: 20px; background: rgba(181, 207, 216, 0.3); }
+/* 介面樣式切換：和語言鈕同一種膠囊外觀，放在它左邊（用戶 2026-10-28） */
+.home-switches { display: flex; align-items: center; gap: 8px; margin-left: auto; } /* 窄螢幕換到第二行時靠右，右緣和內容對齊 */
+.ui-style-switch { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 4px 10px 4px 12px; border-radius: 999px;
+  border: 1px solid rgba(181, 207, 216, 0.22); background: rgba(16, 26, 36, 0.7); color: var(--accent); }
+.ui-style-icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; flex: none; }
+.ui-style-switch select { border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; padding: 0 2px; cursor: pointer; }
+.ui-style-switch select option { color: #e8eef2; background: #101a24; }
 
 /* ---------- home (T10 2.2) ---------- */
 .home-page {
@@ -165,6 +172,7 @@ button { cursor: pointer; }
 .loading-bar.is-unknown span { width: 38%; transform: none; animation: bar-slide 1.2s ease-in-out infinite; }
 @keyframes bar-slide { 0% { left: -38%; } 100% { left: 100%; } }
 .loading-percent { margin: 10px 0 0; color: var(--muted); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.loading-percent.is-empty { visibility: hidden; }
 .loading-cancel {
   min-width: 120px; min-height: 42px; margin-top: 24px; padding: 0 24px; border-radius: 12px;
   border: 1px solid rgba(181, 207, 216, 0.2); background: #0f1a23; color: #cdd9df; font-size: 1.05rem;
@@ -209,6 +217,8 @@ button { cursor: pointer; }
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line);
 }
 .file-bar.card-open { z-index: 32; }
+/* 手機上面板滿版、內容左緣 14px：檔名列左內距也用 14px，檔名和面板內容對齊同一條線（電腦版維持原樣） */
+@media (max-width: 560px) { .file-bar { padding-left: 14px; } }
 .format-badge {
   flex: none; padding: 7px 9px; border-radius: 8px; background: var(--accent); color: var(--on-accent);
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
@@ -454,9 +464,10 @@ button { cursor: pointer; }
   display: flex; flex-direction: column; max-width: 560px; margin: 0 auto; border-radius: 14px;
   background: var(--panel); border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45); overflow: hidden;
 }
-.search-sheet header, .info-panel header, .cad-sheet header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px 10px 16px; }
+/* 用戶 2026-10-28：UI 要對齊整潔——面板的標題、頁籤、搜尋框、按鈕左右邊緣對齊同一條線（左右內距一律 14px） */
+.search-sheet header, .info-panel header, .cad-sheet header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; }
 .search-sheet header strong, .info-panel header strong, .cad-sheet header strong { font-size: 1.05rem; }
-.search-box { padding: 0 12px 8px; }
+.search-box { padding: 0 14px 8px; }
 .search-box input { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--tile-line); background: #0b151d; font-size: 16px; }
 .search-count { margin: 8px 2px 0; color: var(--muted); font-size: 0.9rem; }
 .search-warn { margin: 6px 2px 0; color: var(--accent-hi); font-size: 0.88rem; }
@@ -499,12 +510,27 @@ button { cursor: pointer; }
   max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; border-radius: 14px;
   background: var(--panel); border: 1px solid var(--line); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5); overflow: hidden;
 }
+/* 用戶 2026-10-28：手機上面板要整個蓋住頁籤列——從頁籤列頂端（70px）開始、左右貼齊螢幕（原本上緣與左右各露出一條頁籤）；
+   上方直角、左右不畫邊，免得圓角露出底下頁籤。電腦版維持原樣 */
+@media (max-width: 560px) { .cad-sheet { top: calc(70px + var(--safe-top)); left: 0; right: 0; border-radius: 0 0 14px 14px; border-left: 0; border-right: 0; } }
 .cad-sheet header button, .cad-sheet nav button, .cad-sheet-body button, .cad-sheet-body select {
   min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg);
 }
-.cad-sheet nav { display: flex; gap: 6px; padding: 0 10px 10px; overflow-x: auto; }
-.cad-sheet nav button { flex: none; white-space: nowrap; }
+.cad-sheet nav { display: flex; gap: 8px; padding: 0 14px 10px; overflow-x: auto; }
+/* 每一列左右都對齊：頁籤平均撐滿整列（放不下時不縮、可左右捲） */
+.cad-sheet nav button { flex: 1 0 auto; white-space: nowrap; }
 .cad-sheet nav button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-hi); color: #1b1b1b; }
+/* 用戶 2026-10-28：圖層面板「恢復原始開關」「全部開啟」不要黏在一起 */
+.cad-layer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.cad-layer-actions > button { flex: 1 0 auto; }
+/* 內容區裡單獨一顆的按鈕也撐滿整列，左右和其他列對齊 */
+.cad-sheet-body > button { width: 100%; }
+/* 用戶 2026-10-28：本機字型的「選擇檔案」要明顯、不要碰到下面的按鈕——整列寬橘色主按鈕，下方留 12px */
+.cad-font-import { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; font-weight: 700; }
+.cad-font-import input[type="file"] { width: 100%; color: var(--muted); font-size: 0.9rem; }
+.cad-font-import input[type="file"]::file-selector-button { display: block; width: 100%; min-height: 48px; margin: 0 0 6px; border-radius: 10px;
+  border: 1.5px solid var(--accent-hi); background: var(--accent); color: var(--on-accent); font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer; }
+@media (pointer: coarse) { .cad-font-import input[type="file"]::file-selector-button { min-height: 52px; } }
 .cad-sheet-body { flex: 1; overflow-y: auto; padding: 0 14px 14px; line-height: 1.5; }
 .cad-sheet-body input[type="search"], .cad-sheet-body input:not([type]) { width: 100%; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; }
 .cad-layer { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
