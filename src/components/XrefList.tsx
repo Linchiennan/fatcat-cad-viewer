@@ -12,8 +12,10 @@ export const xrefApplied = (status?: string) => !!status && /^已(自動)?載入
 /** Not drawn in CAD either: an overlay inside a reference does not carry up (11F 給水放樣: six of eleven). Gray, not missing. */
 export const xrefNotNeeded = (status?: string) => !!status && status.startsWith("巢狀覆疊不傳遞");
 
-export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle }: {
+export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle, canPick = true }: {
   rows: readonly XrefRow[];
+  /** false for a guest: the rows only show the state, no file picking (用戶 2026-10-29) */
+  canPick?: boolean;
   /** the main drawing file name: references of other files are shown as nested in them */
   rootName: string;
   disabled: ReadonlySet<string>;
@@ -31,11 +33,11 @@ export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle }: {
       <p className={"cad-xref-summary " + (missing ? "missing" : "ok")} role="status">
         {missing ? t("cad.xref.missingN", { N: missing, total: needed.length }) : t("cad.xref.allApplied", { total: needed.length })}
       </p>
-      <input ref={input} type="file" accept="*/*" hidden onChange={(e) => {
+      {canPick ? <input ref={input} type="file" accept="*/*" hidden onChange={(e) => {
         const file = e.target.files?.[0], row = target.current;
         e.target.value = "";
         if (file && row) onPick(row, file);
-      }} />
+      }} /> : null}
       {needed.map(row)}
       {/* overlays inside references: not drawn in CAD either, folded away until tapped (用戶 2026-10-28：預設縮起來) */}
       {rows.length > needed.length ? (
@@ -52,8 +54,8 @@ export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle }: {
     const parent = r.key.slice(0, r.key.lastIndexOf("|")); // keys are "parent file|reference name"
     return (
       <div className={"cad-xref-row " + (off ? "off" : applied ? "applied" : notNeeded ? "not-needed" : "missing")} key={r.key}>
-        <button type="button" className="cad-xref-name" disabled={busy} title={t("cad.xref.pickOne", { name: r.name })}
-          onClick={() => { target.current = r; input.current?.click(); }}>
+        <button type="button" className="cad-xref-name" disabled={busy} title={canPick ? t("cad.xref.pickOne", { name: r.name }) : undefined}
+          onClick={() => { if (!canPick) return; target.current = r; input.current?.click(); }}>
           <strong>{r.name}</strong>
           <small>{r.path} · {r.overlay ? t("cad.xref.overlay") : t("cad.xref.attach")}</small>
           {parent && parent !== rootName ? <small className="cad-xref-nested">{t("cad.xref.nestedIn", { parent })}</small> : null}

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { DragRow } from "../components/DragRow";
 import { IS_WEB_BUILD } from "../app/platform";
+import { IS_GUEST } from "../auth/guestMode";
 import { MarqueeText } from "../components/MarqueeText";
 import { RecentCarousel } from "../components/RecentCarousel";
 import {
@@ -469,11 +470,14 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           ))}
         </DragRow>
 
-        {IS_WEB_BUILD ? <p className="lib-web-note">{t("library.webNote")}</p> : null}
+        {IS_GUEST ? <p className="lib-web-note">{locale === "en" ? "Guest preview: only the demo drawings below. Marks, measurements and exports are cleared when the page closes." : "訪客試用：只能開下面的示範圖；註記、量測和輸出在關閉頁面後清空。"}</p>
+          : IS_WEB_BUILD ? <p className="lib-web-note">{t("library.webNote")}</p> : null}
 
         <div className="lib-actions">
           {/* 單一檔案 = browser file picker (no folder info); 整個資料夾 keeps each file's path inside the folder and its
               drawings serve as external references (same-name files in the library are applied automatically). */}
+          {/* 訪客試用（用戶 2026-10-29）：開自己檔案的按鈕直接隱藏，不顯示成灰色. */}
+          {IS_GUEST ? null : <>
           <button type="button" className="lib-primary" disabled={busy} onClick={() => addInput.current?.click()}>
             <ImportIcon /> <span className="lib-two-line">{t("library.addOneFileBtn")}</span>
           </button>
@@ -481,6 +485,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           <button type="button" className="lib-primary" disabled={busy} onClick={pickFolder} title={t(noFolderPick ? "library.pickFilesTip" : "library.addFolderTip")}>
             <FolderOpenIcon /> <span className="lib-two-line">{t(noFolderPick ? "library.pickFilesBtn" : "library.addFolderBtn")}</span>
           </button>
+          </>}
           <button type="button" className="lib-secondary" disabled={busy} onClick={() => { setExportPopup(null); setExportsOpen(true); }}>
             <FolderCheckIcon /> <span>{libraryText(locale, "exports")}</span>
           </button>
@@ -592,7 +597,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
         <ActionSheet
           entry={popup.entry}
           onCancel={() => setPopup(null)}
-          onReplace={() => {
+          onReplace={IS_GUEST ? undefined : () => {
             replaceTarget.current = popup.entry as LibraryDrawingEntry;
             replaceInput.current?.click();
           }}
@@ -759,10 +764,10 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
 }
 
 function ActionSheet({ entry, onCancel, onReplace, onPick }: {
-  entry: LibraryEntry; onCancel(): void; onReplace(): void; onPick(kind: "rename" | "delete"): void;
+  entry: LibraryEntry; onCancel(): void; onReplace?(): void; onPick(kind: "rename" | "delete"): void;
 }) {
   const { t } = useI18n();
-  const canReplace = entry.kind === "drawing" && !isArchiveFormat(entry.format);
+  const canReplace = !!onReplace && entry.kind === "drawing" && !isArchiveFormat(entry.format);
   // 複製／移動 removed (user request): a drawing sheet only renames or deletes.
   const tiles: { kind: "rename" | "delete"; icon: ReactNode; label: string }[] = [
     { kind: "rename", icon: <RenameIcon />, label: t("action.rename") },

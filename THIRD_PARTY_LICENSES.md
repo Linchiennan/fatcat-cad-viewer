@@ -27,6 +27,7 @@
 | LLVM libc++／runtime（同上內含） | — | C++ 執行支援 | Apache-2.0 WITH LLVM-exception | licenses/llvm-LICENSE.txt |
 | @mlightcad/shx-parser | 1.4.5 | SHX 字型解析 | MIT | licenses/shx-parser-MIT.txt |
 | fflate | 0.8.3 | ZIP 解壓 | MIT | licenses/fflate-MIT.txt |
+| fake-indexeddb | 6.2.4 | 網頁版訪客試用的記憶體圖庫（關分頁即清空） | Apache-2.0 | licenses/npm-fake-indexeddb-LICENSE.txt |
 | pdf-lib | 1.17.1 | 輸出 PDF | MIT | licenses/pdf-lib-LICENSE.txt |
 | pdf-lib 相依：pako、@pdf-lib/standard-fonts、@pdf-lib/upng、tslib | 1.0.11／1.0.0／1.0.1／2.8.1 | 壓縮、內建字型、PNG 解碼 | MIT AND Zlib／MIT／MIT／0BSD | licenses/pako-LICENSE.txt、pdf-lib-standard-fonts-LICENSE.txt、pdf-lib-upng-LICENSE.txt、tslib-LICENSE.txt |
 | React／React DOM／scheduler | 19.1.1／0.26.0 | 介面 | MIT | licenses/react-MIT.txt、react-dom-MIT.txt、scheduler-MIT.txt |

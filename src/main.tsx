@@ -17,8 +17,8 @@ import { installDiagnosticHandlers } from "./viewer/parseAudit";
 import "./components/app.css";
 import "./components/ui3d.css";
 import { applyUiStyle, readUiStyle, UiStyleDefs } from "./app/uiStyle";
+import { IS_GUEST } from "./auth/guestMode";
 
-installDiagnosticHandlers();
 // the saved interface style before the first paint, so the page never shows flat for a frame
 applyUiStyle(readUiStyle());
 
@@ -35,13 +35,23 @@ if (!previewHost && IS_WEB_BUILD && "serviceWorker" in navigator) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <I18nProvider>
-      <ErrorBoundary>
-        <UiStyleDefs />
-        <Suspense fallback={<p role="status">正在載入 / Loading…</p>}><Entry /></Suspense>
-      </ErrorBoundary>
-    </I18nProvider>
-  </StrictMode>,
-);
+async function start() {
+  // 訪客試用：記憶體儲存要在任何資料庫打開之前換上，示範圖放進那個空圖庫後才開畫面。
+  if (IS_GUEST && !previewHost) {
+    const guest = await import("./auth/guestStorage");
+    guest.installGuestStorage();
+    await guest.seedDemoLibrary();
+  }
+  installDiagnosticHandlers();
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <I18nProvider>
+        <ErrorBoundary>
+          <UiStyleDefs />
+          <Suspense fallback={<p role="status">正在載入 / Loading…</p>}><Entry /></Suspense>
+        </ErrorBoundary>
+      </I18nProvider>
+    </StrictMode>,
+  );
+}
+void start();

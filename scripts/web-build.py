@@ -57,6 +57,11 @@ finally:
 shutil.copytree(w / 'web/icons', out / 'icons', dirs_exist_ok=True)
 shutil.copy2(w / 'web/manifest.webmanifest', out / 'manifest.webmanifest')
 shutil.copy2(w / 'WEB_PRIVACY.md', out / 'WEB_PRIVACY.md')
+# 訪客試用的示範圖（自己畫的虛構平面，用戶 2026-10-29），只放這三個檔，其他圖檔一律不得出現在網站。
+DEMO = ['示範-住宅平面.dwg', '示範-圖框.dwg', '示範-住宅平面.pdf']
+(out / 'demo').mkdir(exist_ok=True)
+for name in DEMO:
+    shutil.copy2(w / 'web/demo' / name, out / 'demo' / name)
 # Do not publish the native zero-collection notice as the web policy.
 shutil.copy2(w / 'WEB_PRIVACY.md', out / 'licenses/PRIVACY_POLICY.md')
 (out / '.nojekyll').write_text('', encoding='utf8')
@@ -77,14 +82,15 @@ rel = lambda p: './' + p.relative_to(out).as_posix()
 files_under = lambda d: [rel(p) for p in sorted((out / d).rglob('*')) if p.is_file()] if (out / d).is_dir() else []
 core = ['./', './index.html', './usage.html', './WEB_PRIVACY.md', './manifest.webmanifest'] + [rel(p) for p in sorted(out.glob('*.png'))]
 core += files_under('assets') + files_under('icons')
-runtime = files_under('runtime') + files_under('fonts')
+runtime = files_under('runtime') + files_under('fonts') + files_under('demo')
 sw = (w / 'web/sw.template.js').read_text(encoding='utf8')
 sw = sw.replace('__BUILD_ID__', build).replace('__PRECACHE__', json.dumps(core, ensure_ascii=False)).replace('__RUNTIME_PRECACHE__', json.dumps(runtime, ensure_ascii=False))
 (out / 'sw.js').write_text(sw, encoding='utf8')
 
 # Self-check: no drawings or credentials shipped, every cached entry exists, runtime and fonts are in the cache.
 files = [p for p in out.rglob('*') if p.is_file()]
-banned = [p for p in files if p.suffix.lower() in ['.dwg', '.dxf', '.jks', '.keystore', '.pem', '.p12'] or any(k in p.name.lower() for k in ['client_secret', 'google_token', 'local.properties'])]
+demo = {out / 'demo' / n for n in DEMO}
+banned = [p for p in files if p not in demo and p.suffix.lower() in ['.dwg', '.dxf', '.jks', '.keystore', '.pem', '.p12'] or any(k in p.name.lower() for k in ['client_secret', 'google_token', 'local.properties'])]
 assert not banned, banned
 for url in core + runtime:
     assert url == './' or (out / url[2:]).is_file(), url

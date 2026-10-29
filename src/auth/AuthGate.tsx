@@ -15,7 +15,7 @@ function errorMessage(code: string, en: boolean) {
   if (code === 'logout-failed') return en ? 'Access is locked. Sign-out could not be confirmed; close this tab on a shared device.' : '入口已鎖定，但無法確認登出；共用裝置請關閉此分頁。';
   return en ? 'An online server check is required. Reconnect and retry. Your local library is not deleted.' : '需要連線向伺服器確認權限，請恢復網路後重試。本機圖庫不會被刪除。';
 }
-export function AuthGate({ controller, children }: { controller: AccessController; children: ReactNode }) {
+export function AuthGate({ controller, children, onGuest }: { controller: AccessController; children: ReactNode; onGuest?(): void }) {
   const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
   const { locale } = useI18n(); const en = locale === 'en';
   const [busy, setBusy] = useState(false);
@@ -74,6 +74,7 @@ export function AuthGate({ controller, children }: { controller: AccessControlle
       <p>{en ? 'Free tools, including PNG and PDF export. Sign in with an approved Google account.' : '所有功能免費，包含 PNG／PDF 輸出。請使用白名單 Google 帳號登入。'}</p>
       <p role="status">{checking ? (en ? 'Checking access online…' : '正在連線確認權限…') : state.reason ? errorMessage(state.reason, en) : (en ? 'Google sign-in is required.' : '請先以 Google 登入。')}</p>
       {(state.status === 'signed-out' || state.status === 'denied') && <button className="primary-btn" disabled={busy} onClick={async () => { setBusy(true); try { await controller.login(); } finally { setBusy(false); } }}>{en ? 'Sign in with Google' : '使用 Google 登入'}</button>}
+      {onGuest && (state.status === 'signed-out' || state.status === 'denied') && <button className="secondary-btn auth-guest" disabled={busy} title={en ? 'No sign-in. Open the built-in demo drawings to try measuring, marking and exporting; nothing is kept after the page closes.' : '不用登入，開內建示範圖試用量測、註記、輸出；關閉頁面後不保留。'} onClick={onGuest}>{en ? 'Try as guest (demo drawings only)' : '訪客試用（只看示範圖）'}</button>}
       {updateRequired && <><p role="alert">{en ? 'A new version is ready. Reload when convenient; the library and unexpired local grant remain, but unsaved work will close.' : '新版已就緒，可自行重新載入。圖庫與未到期本機授權保留，但未保存操作將關閉。'}</p><button className="primary-btn" onClick={() => location.reload()}>{en ? 'Reload latest version' : '重新載入新版'}</button></>}
       {state.status === 'locked' && <button className="primary-btn" onClick={() => void controller.recheck()}>{en ? 'Retry online check' : '重新連線驗證'}</button>}
       {(state.status === 'locked' || checking) && <button className="secondary-btn" onClick={() => void controller.logout()}>{en ? 'Sign out / switch account' : '登出／切換帳號'}</button>}
