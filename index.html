@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#081019" />
     <title>大肥貓CAD看圖</title>
+    <script>
+      // LINE 內建瀏覽器開不起來（整片空白）：偵測到 LINE 就加 openExternalBrowser=1 重開，LINE 會改用手機瀏覽器開.
+      // 只看 UA 的 "Line/"，其他瀏覽器、App 不受影響；已帶參數仍在 LINE（舊版不支援）就不再跳，避免無限重開.
+      (function () {
+        if (!/\bLine\//i.test(navigator.userAgent)) return;
+        if (/[?&]openExternalBrowser=1\b/.test(location.search)) return;
+        var q = location.search ? location.search + "&" : "?";
+        location.replace(location.pathname + q + "openExternalBrowser=1" + location.hash);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
