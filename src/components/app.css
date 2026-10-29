@@ -84,6 +84,8 @@ button { cursor: pointer; }
 .ui-style-icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; flex: none; }
 .ui-style-switch select { border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.08em; padding: 0 2px; cursor: pointer; }
 .ui-style-switch select option { color: #e8eef2; background: #101a24; }
+/* No white focus ring around the chosen style after a tap (用戶 2026-10-29：選風格時不要有白色框). */
+.ui-style-switch select:focus, .ui-style-switch select:focus-visible { outline: none; }
 
 /* ---------- home (T10 2.2) ---------- */
 .home-page {

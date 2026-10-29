@@ -6,6 +6,8 @@ import { MarqueeText } from "../components/MarqueeText";
 import { CloseIcon, FileIcon, RenameIcon, ShareIcon, TrashIcon, FolderOpenIcon } from "../components/Icons";
 import { useI18n } from "../i18n/translations";
 import { Dialog } from "./LibraryDialog";
+import { ExportPreviewDialog } from "./ExportPreviewDialog";
+import { useExportColumns } from "./exportColumns";
 import { exportFilesZip, shareExportFiles, openExportFile, shareExportFile } from "./exportFileActions";
 import {
   cacheExportPreview, deleteExport, exportsOverWarning, listExports, readExport, readExportThumbnails, renameExport, type ExportEntry,
@@ -18,6 +20,7 @@ export type ExportPopup =
   | { kind: "menu"; entry: ExportEntry }
   | { kind: "rename"; entry: ExportEntry }
   | { kind: "delete"; entry: ExportEntry }
+  | { kind: "preview"; entry: ExportEntry }
   | null;
 
 /** Hold this long to open the item menu. */
@@ -32,7 +35,17 @@ export function ExportsView({ popup, setPopup, busy, runBusy, notify, inert }: {
   inert: boolean;
 }) {
   const { locale, t } = useI18n();
+  const columns = useExportColumns();
   const [items, setItems] = useState<ExportEntry[] | null>(null);
+  // Storage limit in bytes: undefined while asking, null when the browser does not tell.
+  const [quota, setQuota] = useState<number | null | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    const ask = navigator.storage?.estimate?.();
+    if (!ask) { setQuota(null); return; }
+    ask.then((e) => { if (live) setQuota(e.quota && e.quota > 0 ? e.quota : null); }, () => { if (live) setQuota(null); });
+    return () => { live = false; };
+  }, []);
   const [thumbs, setThumbs] = useState<Map<string, string>>(new Map());
   const [previewErrors, setPreviewErrors] = useState<Set<string>>(new Set());
   const [warningClosed, setWarningClosed] = useState(false);
@@ -140,7 +153,7 @@ export function ExportsView({ popup, setPopup, busy, runBusy, notify, inert }: {
     if (p) clearTimeout(p.timer);
     if (p?.fired || suppressClick.current || busy) { suppressClick.current = false; return; }
     if (selecting) { toggle(entry.id); return; }
-    void open(entry);
+    setPopup({ kind: "preview", entry }); // in-app preview (用戶 2026-10-29：點一下要預覽，不是下載)
   };
 
   return (
@@ -150,7 +163,14 @@ export function ExportsView({ popup, setPopup, busy, runBusy, notify, inert }: {
         onClickCapture={e => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); suppressClick.current = false; cancelPress(); } }}
         onScrollCapture={() => { if (press.current) { suppressClick.current = true; cancelPress(); } }}>
         <div className="lib-exports-summary">
-          <strong>{libraryText(locale, "exportsUsed", { size: sizeText })}</strong>
+          {/* 用戶 2026-10-29：已用空間左邊補上可保存上限與檔案總數. The limit is the storage the browser / app grants this app (shared with 我的圖面). */}
+          <div className="lib-exports-stats">
+            <strong className={quota === null ? "is-missing" : undefined} title={en ? "Storage this device lets the app keep (shared with My drawings)" : "這台裝置允許本 App 保存的空間上限（與「我的圖面」共用）"}>
+              {quota === null ? (en ? "Limit: unknown" : "上限 無法取得") : quota === undefined ? (en ? "Limit …" : "上限 …") : `${en ? "Limit" : "上限"} ${en ? "~" : "約 "}${formatLibrarySize(quota, locale)}`}
+            </strong>
+            <strong>{en ? `${items?.length ?? 0} files` : `共 ${items?.length ?? 0} 個檔案`}</strong>
+            <strong>{libraryText(locale, "exportsUsed", { size: sizeText })}</strong>
+          </div>
           <span>{en ? "Tap to preview; hold to select. All/none applies to this export list." : "點一下預覽，按住進入選擇。全選／取消範圍：目前成果列表。"}</span>
         </div>
         {selecting ? <div className="export-selection" role="toolbar" aria-label={en ? 'Export selection' : '成果選擇'}>
@@ -175,7 +195,7 @@ export function ExportsView({ popup, setPopup, busy, runBusy, notify, inert }: {
               <p>{libraryText(locale, "exportsEmptyBody")}</p>
             </div>
           ) : (
-            <ul className="export-grid">
+            <ul className="export-grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} data-columns={columns}>
               {items.map((entry) => (
                 <li key={entry.id} className="lib-row export" data-selected={selected.has(entry.id)}>
                   {selecting ? <input className="export-checkbox" type="checkbox" aria-label={`${en ? 'Select' : '選取'} ${entry.name}`} checked={selected.has(entry.id)} disabled={busy} onChange={() => toggle(entry.id)} /> : null}
@@ -265,6 +285,11 @@ export function ExportsView({ popup, setPopup, busy, runBusy, notify, inert }: {
             ))}
           </div>
         </Dialog>
+      ) : null}
+
+      {popup?.kind === "preview" ? (
+        <ExportPreviewDialog entry={popup.entry} locale={locale} onClose={() => setPopup(null)}
+          onShare={() => void share(popup.entry)} onOpen={() => void open(popup.entry)} />
       ) : null}
 
       {popup?.kind === "rename" ? (

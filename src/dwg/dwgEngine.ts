@@ -97,9 +97,12 @@ export function readDwgMetadata(module: Any, path: string): Metadata {
       if (!tio) continue;
       const name = String(field(tio, "name") ?? "");
       if (type === Dwg_Object_Type.DWG_TYPE_BLOCK_HEADER) {
-        // The DXF writer drops this state (flags 12 either way). 世舜 太原段 etc.: every xref saved unresolved stayed
-        // unloaded in ZWCAD and every resolved one loaded (450 of 450 with the file present).
-        if (name && num(field(tio, "blkisxref")) && !num(field(tio, "is_xref_resolved"))) unloadedXrefs.push(name);
+        // The DXF writer drops this state (flags 12 either way). The unload mark is the BLOCK_HEADER bit LibreDWG calls
+        // xref_loaded (the DWG spec: "0 indicates loaded"), not is_xref_resolved: an xref that was just not found when
+        // the drawing was saved is unresolved too, and ZWCAD loads it once the file is there (PARK B3F 施工圖 →
+        // B3F 建築圖 441 objects, 11F 給水 three xrefs, 外參累加測試主圖 two: all resolved 0, xref_loaded 0). The xrefs
+        // ZWCAD keeps unloaded with the file present (A1至A18消防設備平面圖 five 施工平面圖) are resolved 0, xref_loaded 1.
+        if (name && num(field(tio, "blkisxref")) && num(field(tio, "xref_loaded"))) unloadedXrefs.push(name);
         continue;
       }
       if (type === Dwg_Object_Type.DWG_TYPE_LAYER) {

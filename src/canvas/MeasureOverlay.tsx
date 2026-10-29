@@ -6,9 +6,10 @@ import type { SnapKind } from "../viewer/measurementGeometry";
 import { rightAngleCue, snapMarkPath, SNAP_MARK_NAMES, type OverlayLabel, type OverlayModel, type OverlayShape } from "./overlayModel";
 import { measureColorHex, useLabelStyle, useMeasureColors, type MeasureColors, type MeasureLabelStyle } from "../viewer/measureLabelStyle";
 
-const RED = "#ff1f1f", DARK = "#081019", GREEN = "#36d399";
+export const RED = "#ff1f1f", DARK = "#081019";
+const GREEN = "#36d399";
 /** #rrggbb at an alpha, for the area fill and the number box rim. */
-const withAlpha = (hex: string, a: number) => `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`;
+export const withAlpha = (hex: string, a: number) => `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${a})`;
 const pointsAttr = (pts: readonly DrawingPoint[]) => pts.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
 function RightAngle({ points }: { points: DrawingPoint[] }) {
@@ -27,9 +28,9 @@ function textWidth(text: string, size: number): number {
   return text.length * size * 0.6;
 }
 
-type Placed = { l: OverlayLabel; x: number; y: number; w: number; h: number; angle: number };
+export type Placed = { l: OverlayLabel; x: number; y: number; w: number; h: number; angle: number };
 /** Where each number goes for the chosen style: centred on its line (box, gap) or turned with it just above (angle). */
-function place(l: OverlayLabel, style: MeasureLabelStyle): Placed {
+export function place(l: OverlayLabel, style: MeasureLabelStyle): Placed {
   const w = textWidth(l.text, l.size), h = l.size * 1.05;
   // Totals and angles keep their spot; l.y is a baseline, the text is drawn centred.
   if (!l.seg) return { l, x: l.x, y: l.y - l.size * 0.35, w, h, angle: 0 };
@@ -42,7 +43,7 @@ function place(l: OverlayLabel, style: MeasureLabelStyle): Placed {
 }
 
 /** The line pieces left once the numbers cut gaps in it (gap style). */
-function piecesAround(points: DrawingPoint[], closed: boolean, cuts: Placed[]): DrawingPoint[][] {
+export function piecesAround(points: DrawingPoint[], closed: boolean, cuts: Placed[]): DrawingPoint[][] {
   const n = points.length, last = closed && n >= 3 ? n : n - 1, out: DrawingPoint[][] = [];
   for (let i = 0; i < last; i++) {
     const a = points[i], b = points[(i + 1) % n], len = Math.hypot(b.x - a.x, b.y - a.y);

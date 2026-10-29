@@ -30,7 +30,17 @@ export function matchXref(path:string,parent:string,files:File[],mapping:Record<
   const name=normalizeCadPath(candidate).split('/').at(-1);const base=files.filter(f=>normalizeCadPath(f.name)===name);
   if(base.length===1)return base[0];if(base.length>1)return null;
  }
+ // Last resort: a copy renamed with a prefix ("03--消防__B3F 建築圖.dwg" for "B3F 建築圖.dwg"), only when it is the only one.
+ for(const candidate of variants){
+  const name=normalizeCadPath(candidate).split('/').at(-1)??'';const tail=files.filter(f=>endsWithXrefName(f.name,name));
+  if(tail.length===1)return tail[0];if(tail.length>1)return null;
+ }
  return null;
+}
+/** A file name that is the reference name with a prefix put in front, cut at a separator ("__", "-", space…), so "data.dwg" is not "a.dwg". */
+export function endsWithXrefName(fileName:string,xrefName:string):boolean{
+ const f=normalizeCadPath(fileName).split('/').at(-1)??'',n=xrefName.toLocaleLowerCase('en-US');
+ return !!n&&f.length>n.length&&f.endsWith(n)&&!/[a-z0-9㐀-鿿]/.test(f[f.length-n.length-1]);
 }
 /** Spaces where a block shows up, following nested INSERTs ("Model" or layout names). */
 export function blockUsage(doc:Any,blockName:string):Set<string>{

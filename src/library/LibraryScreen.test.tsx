@@ -138,9 +138,17 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     await m.settle();
     const row = () => m.host.querySelector<HTMLButtonElement>(".lib-row.export .lib-row-main")!;
     expect(row().textContent).toContain("已降解析度");
+    // 用戶 2026-10-29：點一下是 App 內預覽（不另開分頁、不下載）；預覽裡的「打開」才交給其他 App.
     await act(async () => row().click());
     await m.settle();
+    expect(openFile).not.toHaveBeenCalled();
+    const preview = m.host.querySelector(".export-preview");
+    expect(preview?.getAttribute("aria-label")).toBe("plan.png");
+    await act(async () => preview!.querySelector<HTMLButtonElement>('button[aria-label="打開"]')!.click());
+    await m.settle();
     expect(openFile).toHaveBeenCalledTimes(1);
+    await act(async () => preview!.querySelector<HTMLButtonElement>('button[aria-label="關閉"]')!.click());
+    expect(m.host.querySelector(".export-preview")).toBeNull();
     await act(async () => { row().dispatchEvent(new MouseEvent("contextmenu", { bubbles: true })); });
     const menu = () => m.host.querySelector(".lib-sheet");
     expect(menu()?.textContent).toContain("plan.png");

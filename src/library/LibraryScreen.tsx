@@ -27,6 +27,7 @@ import { Dialog } from "./LibraryDialog";
 import { ImportVersionDialog } from "./ImportVersionDialog";
 import { importDrawingWithDecision, type ImportConflict, type ImportChoice } from "./drawingLibrary";
 import { ExportsView, LONG_PRESS_MS, type ExportPopup } from "./ExportsView";
+import { ExportColumnsButton } from "./exportColumns";
 import "./library.css";
 
 export type LibraryScreenProps = {
@@ -443,6 +444,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
           <h1>{exportsOpen ? libraryText(locale, "exports") : t("library.title")}</h1>
           <p>{exportsOpen ? libraryText(locale, "exportsSubtitle") : t("library.subtitle")}</p>
         </div>
+        {exportsOpen ? <ExportColumnsButton en={locale === "en"} disabled={busy} /> : null}
         <button type="button" className="lib-icon-btn" title={t("library.close")} aria-label={t("library.close")} disabled={busy} onClick={onClose}>
           <CloseIcon />
         </button>

@@ -3,7 +3,7 @@
 // the app may read: drawings already in the library (same folder first) and folders the user chose
 // once and asked to remember. Only a single same-name match is used; anything ambiguous stays manual.
 import { listLibraryDrawings, readLibraryDrawing } from "../library/drawingLibrary";
-import { assembleXrefs, normalizeCadPath, type XrefStatus } from "./xrefs";
+import { assembleXrefs, endsWithXrefName, normalizeCadPath, type XrefStatus } from "./xrefs";
 import { rememberedFolderFiles } from "./xrefFolders";
 import { rememberedXrefFiles } from "./xrefMemory";
 
@@ -18,7 +18,10 @@ type Entry = { id: string; name: string; parentId: string };
 /** The library entry for a reference: the only same-name drawing, preferring the main drawing's folder. */
 export function pickLibraryEntry(path: string, entries: readonly Entry[], main?: Entry): Entry | "ambiguous" | null {
   const names = new Set(xrefFileNames(path));
-  const hits = entries.filter((e) => e.id !== main?.id && names.has(normalizeCadPath(e.name).split("/").at(-1) ?? ""));
+  const others = entries.filter((e) => e.id !== main?.id);
+  let hits = others.filter((e) => names.has(normalizeCadPath(e.name).split("/").at(-1) ?? ""));
+  // No same-name drawing: a copy renamed with a prefix ("…__B3F 建築圖.dwg") counts when it is the only one nearby or overall.
+  if (!hits.length) hits = others.filter((e) => [...names].some((n) => endsWithXrefName(e.name, n)));
   if (!hits.length) return null;
   const near = main ? hits.filter((e) => e.parentId === main.parentId) : [];
   if (near.length === 1) return near[0];
@@ -44,7 +47,8 @@ async function findFiles(paths: readonly string[], entryId?: string): Promise<{ 
     const all = new Set([...wanted.values()].flatMap((s) => [...s]));
     const found = await rememberedFolderFiles(all).catch(() => []);
     for (const [, names] of wanted) {
-      const hits = found.filter((f) => names.has(f.file.name.toLocaleLowerCase("en-US")));
+      let hits = found.filter((f) => names.has(f.file.name.toLocaleLowerCase("en-US")));
+      if (!hits.length) hits = found.filter((f) => [...names].some((n) => endsWithXrefName(f.file.name, n)));
       if (hits.length === 1) out.push(hits[0]);
     }
   }

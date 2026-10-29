@@ -71,7 +71,8 @@ export const DEFAULT_MEASURE_COLORS: MeasureColors = { text: "red", box: "orange
 const COLOR_KEY = "fatcat:measure-colors";
 export const measureColorHex = (id: MeasureColorId): string => MEASURE_COLORS.find((c) => c.id === id)?.hex ?? MEASURE_COLORS[0].hex;
 
-function loadMeasureColors(): MeasureColors {
+/** The chosen colours as saved on this device (the export reads them outside React). */
+export function loadMeasureColors(): MeasureColors {
   const out = { ...DEFAULT_MEASURE_COLORS };
   try {
     const saved = JSON.parse(localStorage.getItem(COLOR_KEY) ?? "{}") as Partial<Record<string, string>>;

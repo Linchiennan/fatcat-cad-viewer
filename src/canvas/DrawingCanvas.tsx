@@ -11,10 +11,11 @@ import { formatLabel, sheetUnits, type SheetUnits } from "../measure/measureUnit
 import { resolveMeasurePick, toleranceFor } from "../measure/resolvePick";
 import { publishPickStatus, statusForPick } from "../measure/pickStatus";
 import { fixedNumber, loadDecimals } from "../viewer/measureFormat";
-import { useLabelUnit } from "../viewer/measureLabelStyle";
+import { loadLabelStyle, loadMeasureColors, useLabelUnit } from "../viewer/measureLabelStyle";
+import { paintMeasures } from "./paintMeasures";
 import { createCadEngine } from "../viewer/cadEngine";
 import { MeasureOverlay } from "./MeasureOverlay";
-import { labelSize, overlayModel, searchBox } from "./overlayModel";
+import { labelSize, overlayModel, searchBox, type OverlayModel } from "./overlayModel";
 import { applyMarkEdit } from "./marks";
 import { exportDrawing } from "../export/exportDrawing";
 import { ExportError, type ExportCapable, type ExportEngine, type ExportRequest, type ExportResult } from "../export/types";
@@ -78,6 +79,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   const [ready, setReady] = useState(false);
   const readyRef = useRef(false);
+  /** Builds the measuring overlay for a projection (null when nothing is measured); read by the export. */
+  const measureModelRef = useRef<((project: (pts: readonly DrawingPoint[]) => DrawingPoint[], ppu: number) => OverlayModel) | null>(null);
   readyRef.current = ready;
   const [marks, setMarks] = useState<Mark[]>([]);
   const marksRef = useRef(marks);
@@ -172,7 +175,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     if (!e || !readyRef.current || typeof e.renderRegion !== "function" || !e.sheetBounds || !e.viewBounds || !e.screenToDrawing) {
       throw new ExportError("EXPORT_NOT_READY");
     }
-    return exportDrawing(e as CadEngine & ExportEngine, request, marksRef.current);
+    const measures = measureModelRef.current;
+    return exportDrawing(e as CadEngine & ExportEngine, request, marksRef.current, {
+      paintMeasures: measures ? (ctx, project, ppu, scale) => paintMeasures(ctx, measures(project, ppu), loadLabelStyle(), loadMeasureColors(), scale) : undefined,
+    });
   }, []);
 
   useImperativeHandle(ref, (): DrawingCanvasHandle & ExportCapable => ({
@@ -257,13 +263,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const index = e?.measurementIndex() ?? null;
 
   let model = null;
+  measureModelRef.current = null;
   let aim: DrawingPoint | null = null, snapAt: (DrawingPoint & { kind: SnapKind; perpendicularFrom?: DrawingPoint }) | null = null;
   if (e && (m.enabled || m.kept.length)) {
     // Without units / decimals from the App they are read here, so a panel change shows at once.
     const units = "units" in props ? props.units : sheetUnits(viewKey.current, index?.unit ?? "drawing");
     const decimals = "decimals" in props ? props.decimals : loadDecimals();
     const entity = "pickedEntity" in props && props.pickedEntity !== undefined ? props.pickedEntity : picked;
-    model = overlayModel({ settings: m, entity, project, labelPx: labelSize(e.measureLabelHeight(), ppu), label: (value, area) => formatLabel(value, units, decimals, labelUnit, area), angle: value => `${fixedNumber(value, decimals)}°` });
+    const modelFor = (proj: typeof project, pxPerUnit: number) => overlayModel({ settings: m, entity, project: proj, labelPx: labelSize(e.measureLabelHeight(), pxPerUnit), label: (value, area) => formatLabel(value, units, decimals, labelUnit, area), angle: value => `${fixedNumber(value, decimals)}°` });
+    model = modelFor(project, ppu);
+    measureModelRef.current = modelFor; // the shared / exported picture draws the same marks at its own projection
     // Long-press aim: crosshair at the aim, snap marker on the snap itself (T15 2.2-7).
     if (m.enabled && preview) {
       [aim] = project([preview.point]);

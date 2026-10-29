@@ -49,7 +49,8 @@ async function walk(root: DirHandle, names: Set<string> | null, accept: RegExp =
       if (++seen > MAX_ENTRIES) return;
       if (entry.kind === "directory") { if (depth < MAX_DEPTH) await visit(entry, prefix + entry.name + "/", depth + 1); continue; }
       const lower = String(entry.name).toLocaleLowerCase("en-US");
-      if (!accept.test(lower) || (names && !names.has(lower))) continue;
+      // Also hand back prefixed copies ("…__B3F 建築圖.dwg"); the caller uses one only when no same-name file exists.
+      if (!accept.test(lower) || (names && !names.has(lower) && ![...names].some((n) => lower.length > n.length && lower.endsWith(n)))) continue;
       const file: File = await entry.getFile();
       Object.defineProperty(file, "webkitRelativePath", { value: prefix + entry.name });
       out.push({ file, origin: `記住的資料夾「${root.name}」` });

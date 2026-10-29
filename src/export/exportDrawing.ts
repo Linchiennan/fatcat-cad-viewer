@@ -5,12 +5,15 @@ import {
   boxBounds, buildPdf, exportFileName, pictureProjector, planOutput, smallerSize, thumbSize, type OutputPlan,
 } from "./exportPlan";
 import { ExportError, type ExportEngine, type ExportRequest, type ExportResult } from "./types";
+import type { DrawingPoint } from "../types/drawing";
 
 type Canvas = HTMLCanvasElement;
 export type ExportDeps = {
   /** New 2D canvas (tests pass a fake). */
   createCanvas?(width: number, height: number): Canvas;
   now?(): Date;
+  /** The measuring marks, painted under the markups at the picture's projection (用戶 2026-10-29：分享要保留量測). */
+  paintMeasures?(ctx: CanvasRenderingContext2D, project: (pts: readonly DrawingPoint[]) => DrawingPoint[], ppu: number, scale: number): void;
 };
 
 const isTooLarge = (e: unknown) => (e as { code?: string } | null)?.code === "EXPORT_TOO_LARGE";
@@ -69,10 +72,9 @@ export async function exportDrawing(engine: ExportEngine, request: ExportRequest
   if (!ctx) throw new ExportError("EXPORT_FAILED", "2D canvas unavailable");
   ctx.drawImage(drawn.canvas, 0, 0, widthPx, heightPx);
   const scale = p.markScale * (widthPx / p.widthPx);
-  if (marks.length) {
-    const w = widthPx / scale, h = heightPx / scale;
-    paintMarks(ctx, marks, pictureProjector(p.bounds, w, h), w / (p.bounds.maxX - p.bounds.minX), scale);
-  }
+  const w = widthPx / scale, h = heightPx / scale, project = pictureProjector(p.bounds, w, h), ppu = w / (p.bounds.maxX - p.bounds.minX);
+  deps.paintMeasures?.(ctx, project, ppu, scale);
+  if (marks.length) paintMarks(ctx, marks, project, ppu, scale);
   const png = await toPng(out);
   const t = thumbSize(widthPx, heightPx), thumbCanvas = make(t.width, t.height), tctx = thumbCanvas.getContext("2d");
   if (!tctx) throw new ExportError("EXPORT_FAILED", "2D canvas unavailable");

@@ -356,12 +356,14 @@
 }
 .lib-export-thumb img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 /* Outputs are an unlimited three-column gallery, not a nine-item limit. */
-.lib-list .export-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px 0; }
+.lib-list .export-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px 0; } /* 用戶 2026-10-29：每 3 張一排、寬度佈滿左右 */
 .export-grid .export { position: relative; min-width: 0; border: 1px solid var(--lib-line); border-radius: 8px; overflow: hidden; }
 .export-grid .export[data-selected="true"] { outline: 2px solid var(--lib-accent, #4b99e8); outline-offset: -2px; }
 .export-grid .lib-row-main { width: 100%; min-width: 0; flex-direction: column; align-items: stretch; padding: 6px; gap: 6px; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
 .export-grid .lib-export-thumb { width: 100%; height: auto; aspect-ratio: 1; flex: none; border-radius: 5px; }
 .export-grid .lib-row-text { width: 100%; min-width: 0; }
+/* The list row's fixed 72 px cut each card under its thumbnail, hiding the name and size: cards grow to fit. */
+.export-grid .lib-row.export .lib-row-main { height: auto; }
 .export-grid .lib-row-text small { white-space: normal; overflow-wrap: anywhere; font-size: 10px; }
 .export-checkbox { position: absolute; z-index: 2; top: 6px; right: 6px; width: 26px; height: 26px; margin: 0; cursor: pointer; }
 .export-selection { display: flex; flex-wrap: wrap; gap: 6px; flex: none; padding: 6px 0; }
@@ -398,3 +400,20 @@
 .lib-pick-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .lib-pick-list small { flex: none; color: var(--lib-muted); }
 .lib-pick input[type="checkbox"] { flex: none; width: 22px; height: 22px; accent-color: #ffb547; }
+
+/* In-app export preview (用戶 2026-10-29): fixed title bar, only the picture area scrolls. */
+.lib-backdrop:has(.export-preview) { padding: 0; place-items: stretch; background: #05080c; }
+.export-preview { display: flex; flex-direction: column; width: 100%; height: 100dvh; min-width: 0; }
+.export-preview-bar { flex: none; display: flex; align-items: center; gap: 4px; min-height: 56px; padding: env(safe-area-inset-top) 6px 0 16px; box-sizing: border-box; border-bottom: 1px solid var(--lib-line); background: var(--lib-panel); }
+.export-preview-title { flex: 1; min-width: 0; font-weight: 700; }
+.export-preview-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; }
+.export-preview-body img { display: block; max-width: 100%; height: auto; flex: none; background: #fff0; cursor: zoom-in; user-select: none; -webkit-user-select: none; }
+.export-preview-body.is-actual { align-items: flex-start; }
+.export-preview-body.is-actual img { max-width: none; cursor: zoom-out; }
+.export-preview-note { margin: auto; color: var(--lib-muted); text-align: center; }
+.export-preview-note.is-error { color: var(--lib-danger); }
+/* 每排張數 switch (用戶 2026-10-29): the cards icon with its number beside it, same 44 px height as the close button. */
+.lib-columns-btn { width: auto; min-width: 44px; grid-auto-flow: column; gap: 4px; padding: 0 8px; font-weight: 800; font-size: 15px; }
+/* 上限 · 共幾個 · 已用空間 on one row, wrapping on a narrow phone (用戶 2026-10-29). */
+.lib-exports-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
+.lib-exports-stats .is-missing { color: var(--lib-danger); }
