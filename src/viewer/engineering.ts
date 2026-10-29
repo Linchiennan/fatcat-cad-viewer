@@ -9,6 +9,7 @@ import {attdefAsText} from './attdefTag';
 import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
 import type { CadLayerState } from "./layerStateTable";
+import { expandRegions } from "./acisRegion";
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
 export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
 type Any = any;
@@ -91,7 +92,30 @@ export function normalizeLineType(lt:Any):void{
  }
  lt.complex=(lt.elements??[]).some((el:Any)=>el.flags&6);
 }
+/** Hands each hatch the loops it took from a REGION in the same list (group 97/330 source objects), with that
+ *  region as the entity to draw them as; returns how many regions get an outline this way. */
+export function linkRegionHatches(list:Any[]):number {
+ const regions=new Map<string,Any>();
+ for(const e of list)if(e.type==='REGION'&&e.handle!=null)regions.set(String(e.handle).toUpperCase(),e);
+ if(!regions.size)return 0;
+ const outlined=new Set<Any>();
+ for(const e of list){
+  if(e.type!=='HATCH'||!e.boundaryLoops)continue;
+  const byRegion=new Map<Any,Any[]>();
+  for(const loop of e.boundaryLoops){
+   const region=(loop.sourceRefs??[]).map((h:string)=>regions.get(String(h).toUpperCase())).find(Boolean);
+   if(region){if(!byRegion.has(region))byRegion.set(region,[]);byRegion.get(region)!.push(loop);}
+  }
+  if(!byRegion.size)continue;
+  e.cadRegionOutlines=[...byRegion].map(([region,loops])=>({region,loops}));
+  for(const region of byRegion.keys())outlined.add(region);
+ }
+ return outlined.size;
+}
 export function prepareCad(dxf:Any):CadReport {
+ // Regions with readable ACIS text (DWG 2004/2010) become the lines and arcs of their outline.
+ dxf.entities=expandRegions(dxf.entities??[]);
+ for(const block of Object.values(dxf.blocks??{}) as Any[])if(block.entities)block.entities=expandRegions(block.entities);
  const layers=dxf.tables?.layer?.layers??{};
  const report:CadReport={layers:Object.entries(layers).map(([name,l]:[string,Any])=>({name,color:l.trueColor??l.color??0xffffff,visible:l.visible!==false&&!l.frozen,originalVisible:l.visible!==false&&!l.frozen})),warnings:[],xrefs:[],entityCount:0,buildMs:0};
  const counts=new Map<string,number>(Object.entries(dxf.cadUnsupported??{}));
@@ -133,6 +157,10 @@ export function prepareCad(dxf:Any):CadReport {
   return out;
  };
  dxf.entities=(dxf.entities??[]).map((e:Any)=>adapt(attdefAsText(e),'0',0xffffff,'CONTINUOUS',[]));
+ // A REGION has no shape we can read (ACIS), but a hatch filled from it keeps the same outline as its boundary
+ // (鴻群 t4: piping drawn as a region outline with ANSI31 inside showed as loose dashes). Draw those loops as the region.
+ for(const list of [dxf.entities,...Object.values(variants).map((v:Any)=>v.entities)]){const n=linkRegionHatches(list);if(n)counts.set('REGION',(counts.get('REGION')??0)-n);}
+ if(!counts.get('REGION'))counts.delete('REGION');
  // Retain dimension anonymous blocks; insert variants avoid context-dependent shared mutation.
  dxf.blocks={...blocks,...variants};
  // ACIS bodies: the DWG parser (LibreDWG) yields no shape data for them, so say why instead of a generic gap.
@@ -191,10 +219,27 @@ export function installEngineeringScene(ctor:Any):void {
    yield new Entity({type:Entity.Type.LINE_SEGMENTS,vertices,layer,color});
   }
  };
+ // Loops a hatch took from a REGION (see linkRegionHatches) are also drawn as that region's outline.
+ const decomposeDenseHatch=p._DecomposeHatch;
+ p._DecomposeHatch=function*(e:Any,ctx:Any){
+  yield* decomposeDenseHatch.call(this,e,ctx);
+  if(!e.cadRegionOutlines)return;
+  const transform=this._GetEntityExtrusionTransform(e);
+  for(const {region,loops} of e.cadRegionOutlines){
+   if(region.hidden)continue;
+   const layer=this._GetEntityLayer(region,ctx),color=this._GetEntityColor(region,ctx);
+   for(const loop of this._GetHatchBoundaryLoops({...e,boundaryLoops:loops})){
+    const v=(loop.vertices??[]).map((q:Any)=>transform?q.clone().applyMatrix3(transform):q);
+    if(v.length<2)continue;
+    const vertices:Any[]=[];for(let i=0;i<v.length;i++)vertices.push(v[i],v[(i+1)%v.length]);
+    yield new Entity({type:Entity.Type.LINE_SEGMENTS,vertices,layer,color,lineType:this._GetLineType(region)});
+   }
+  }
+ };
  p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;this.cadDenseHatchCount=0;this.cadDenseHatches=new Set();this.cadHatchSegments=0;this.cadBoxes=dxf.cadEntityBoxes?{}:null;await original.call(this,dxf,fonts);if(this.cadDenseHatchCount)report.warnings.push(`剖面線 ${this.cadDenseHatchCount} 個的圖樣過密或超過整張圖的繪製量，只畫外框`);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
  report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;if(this.cadBoxes){(report as Any).entityBoxes=this.cadBoxes;this.cadBoxes=null;}dxf.cadReport=report;};
  // Load hidden layers; saved ON/OFF is applied to actual GPU layer objects after loading.
- p._FilterEntity=function(e:Any){return !e.hidden&&(!this.options.suppressPaperSpace||!e.inPaperSpace);};
+ p._FilterEntity=function(e:Any){return !e.hidden&&e.type!=='REGION'&&(!this.options.suppressPaperSpace||!e.inPaperSpace);};
  for(const method of ['_DecomposeLine','_DecomposePolyline','_DecomposeArc','_DecomposeCircle','_DecomposeEllipse']){
   const orig=p[method];p[method]=function*(e:Any,ctx:Any){
    // POLYLINE keeps its default width in 40/41 (startWidth/endWidth); LWPOLYLINE in 43 (width)
