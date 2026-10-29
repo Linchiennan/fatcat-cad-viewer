@@ -72,6 +72,9 @@ export const OWN_STRINGS = {
   "uiStyle.metal": { zh: "金屬", en: "Metal" },
   // 用戶 2026-10-28：首頁先講明不支援 3D（3D 實體開圖時才提示太晚）
   "home.no3d": { zh: "只顯示 2D 圖面；3D 實體（立體管件、面域等）不顯示，請用電腦 CAD 查看。", en: "2D drawings only: 3D solids (solid fittings, regions) are not shown; view them in desktop CAD." },
+  // 用戶 2026-10-29：不要自動旋轉，手機橫向 UI 很難用。網頁在瀏覽器分頁內鎖不住，只有主畫面圖示開啟才固定。
+  "home.portrait": { zh: "畫面固定直向，手機轉橫也不會跟著旋轉。", en: "The screen stays upright; turning the phone sideways does not rotate it." },
+  "home.portraitWeb": { zh: "從主畫面圖示開啟時畫面固定直向，不隨手機轉橫旋轉。", en: "Opened from the home-screen icon, the screen stays upright and does not rotate." },
 
   // Measuring bar (T18 2.3) and mode picker
   "bar.modeShort.distance": { zh: "距離", en: "Dist" },
