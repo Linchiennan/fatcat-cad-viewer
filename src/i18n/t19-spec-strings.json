@@ -795,8 +795,8 @@
   "section": "5.1 核心－App 殼與看圖畫面（T10）"
  },
  "viewer.xrefUnloadedCount": {
-  "zh": "{N} 個外參未載入",
-  "en": "{N} xrefs not loaded",
+  "zh": "{N} 個外參未載入或檔名不符",
+  "en": "{N} xrefs not loaded or picked from a file of another name",
   "section": "5.1 核心－App 殼與看圖畫面（T10）"
  },
  "close.title": {

@@ -56,3 +56,13 @@ describe("references saved unloaded (世舜 A1至A18施工平面圖: ZWCAD leave
     expect(doc.blocks["A"].entities.length).toBeGreaterThan(0);
   });
 });
+
+import { xrefNameMatches } from "./xrefs";
+describe("does a picked file carry the reference's name", () => {
+  it("takes the same name, a name without extension and a prefixed copy, not another drawing", () => {
+    expect(xrefNameMatches(String.raw`.\03-13F-動力插座.dwg`, "03-13F-動力插座.DWG")).toBe(true);
+    expect(xrefNameMatches("C:/x/1英吋不鏽鋼閘閥", "1英吋不鏽鋼閘閥.dwg")).toBe(true);
+    expect(xrefNameMatches(String.raw`..\建築\B3F 建築圖.dwg`, "03--消防施工圖__B3F 建築圖.dwg")).toBe(true);
+    expect(xrefNameMatches(String.raw`.\03-13F-動力插座.dwg`, "02-13F-頂板放樣.dwg")).toBe(false);
+  });
+});

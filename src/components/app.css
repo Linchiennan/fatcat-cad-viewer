@@ -135,6 +135,7 @@ button { cursor: pointer; }
 .feature-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px rgba(255, 181, 71, 0.16); margin: 0 4px; }
 .feature-icon { width: 16px; height: 16px; color: var(--accent); }
 .home-no3d { margin: 0; color: #c9d6dc; font-size: 0.72rem; line-height: 1.6; }
+.home-no3d.home-xref { color: #ffcf7a; }
 .home-privacy { margin: 0; color: #6f8590; font-size: 0.68rem; line-height: 1.7; }
 .home-install { margin: 0; color: var(--accent-hi); font-size: 0.92rem; line-height: 1.5; }
 .home-legal { display: flex; align-items: center; gap: 12px; color: #6f8590; font-size: 0.68rem; line-height: 1.7; }
@@ -570,12 +571,15 @@ button { cursor: pointer; }
 .cad-xref-summary { margin: 0 0 8px; font-weight: 600; }
 .cad-xref-summary.missing { color: #ff8a80; }
 .cad-xref-summary.ok { color: #7fd88a; }
+.cad-xref-summary.mismatch { color: #ffb74d; }
 .cad-xref-row { display: flex; align-items: stretch; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .cad-sheet-body .cad-xref-name { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: auto; padding: 8px 12px; text-align: left; }
 .cad-xref-name strong { overflow-wrap: anywhere; }
 .cad-xref-name small { color: var(--muted); overflow-wrap: anywhere; font-size: 0.82rem; }
 .cad-xref-row.applied .cad-xref-name { border-color: #3f9d55; }
 .cad-xref-row.applied .cad-xref-name strong { color: #7fd88a; }
+.cad-xref-row.mismatch .cad-xref-name { border-color: #c27c1c; }
+.cad-xref-row.mismatch .cad-xref-name strong, .cad-xref-row.mismatch .cad-xref-state { color: #ffb74d; }
 .cad-xref-row.missing .cad-xref-name { border-color: #b34b4b; }
 .cad-xref-row.missing .cad-xref-name strong { color: #ff8a80; }
 .cad-xref-row.off .cad-xref-name strong { color: var(--muted); text-decoration: line-through; }

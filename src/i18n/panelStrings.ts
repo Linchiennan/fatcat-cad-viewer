@@ -70,6 +70,8 @@ export const PANEL_STRINGS = {
   "cad.xref.missingN": { zh: "這張圖用到 {total} 個外參，{N} 個還沒套用（紅色）：點紅色的名稱去選檔", en: "{N} of {total} references are not applied (red): tap a red name to pick its file" },
   "cad.xref.notNeeded": { zh: "不需要：外參裡用覆疊貼的圖，CAD 開這張圖也不顯示", en: "Not needed: an overlay inside a reference, not shown in CAD either" },
   "cad.xref.notNeededN": { zh: "另有 {N} 個外參裡的覆疊（CAD 也不顯示），點這裡展開", en: "{N} more overlays inside references (not shown in CAD either): tap to show" },
+  "cad.xref.mismatch": { zh: "檔名不符：選的是 {picked}，外參要的是 {wanted}。照選的檔畫出，確認不是選錯", en: "Name differs: picked {picked}, the reference wants {wanted}. Drawn from the picked file; check it is the right one" },
+  "cad.xref.mismatchN": { zh: "{N} 個外參選的檔和外參名稱不同（橘色）：確認不是選錯", en: "{N} references use a file of another name (orange): check the picks" },
   "cad.xref.allApplied": { zh: "這張圖用到的 {total} 個外參都已套用", en: "All {total} references are applied" },
   "cad.xref.pickOne": { zh: "選「{name}」的檔：會存進圖面庫的「外部參考」資料夾，下次開這張圖自動套用", en: "Pick the file for \"{name}\": kept in the library and applied next time" },
   "cad.xref.nestedIn": { zh: "在 {parent} 裡", en: "inside {parent}" },

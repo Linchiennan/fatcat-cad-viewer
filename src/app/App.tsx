@@ -367,7 +367,7 @@ export function App() {
     if (xrefsTried.current.has(was.file) || hasXrefSession(was.file)) return;
     xrefsTried.current.add(was.file);
     const paths = [
-      ...report.xrefs.filter((x) => !x.loaded && !x.disabled && !x.savedUnloaded).map((x) => x.path),
+      ...report.xrefs.filter((x) => !x.loaded && !x.disabled && !x.savedUnloaded && !x.notNeeded).map((x) => x.path),
       ...(report.images ?? []).map((i) => i.path),
     ].filter(Boolean);
     // Remembered references (picked before) apply even when nothing else is missing, e.g. all flagged saved unloaded.
@@ -621,7 +621,9 @@ export function App() {
   // ---- render ----------------------------------------------------------------------------------------------
   const blocked = libraryOpen || closeConfirm;
   const missingCount = report ? splitCadWarnings(report.warnings).missing.length : 0;
-  const xrefsUnloaded = report ? report.xrefs.filter((x) => !x.loaded && !x.disabled && !x.savedUnloaded).length : 0;
+  // Overlays inside references are not drawn in CAD either (13F 牆板放樣 showed 外參 ⚠ 9 with all six applied); a file of
+  // another name picked by hand counts, so a wrong pick does not look done (用戶 2026-10-30).
+  const xrefsUnloaded = report ? report.xrefs.filter((x) => (!x.loaded && !x.disabled && !x.savedUnloaded && !x.notNeeded) || (x.loaded && !x.disabled && x.mismatch)).length : 0;
   const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking && !selecting;
   const searching = searchOpen || !!search;
 

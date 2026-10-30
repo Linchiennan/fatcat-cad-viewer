@@ -11,7 +11,7 @@ import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from
 import type { CadLayerState } from "./layerStateTable";
 import { expandRegions } from "./acisRegion";
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
-export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
+export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean;/** an overlay inside a reference: not drawn in CAD either */notNeeded?:boolean;/** applied from a file of another name */mismatch?:string}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
 type Any = any;
 export function resolveCadColor(e:Any,layers:Any,inheritedLayer='0',inheritedColor=0xffffff):number {
  if(Number.isInteger(e.trueColor))return e.trueColor;
@@ -129,7 +129,7 @@ export function prepareCad(dxf:Any):CadReport {
  // An xref block is loaded once it has content; ones turned off in the panel are not "missing".
  const offXrefs=new Set((dxf.cadXrefStatuses??[]).filter((x:Any)=>x.status==='已關閉').map((x:Any)=>x.name));
  // Only blocks flagged as external references (70 bit 4); LibreDWG also writes a path (group 1) for plain blocks.
- for(const block of Object.values(blocks) as Any[])if(block.xrefPath&&(block.type&4))report.xrefs.push({name:block.name,path:block.xrefPath,overlay:!!(block.type&8),loaded:(block.entities?.length??0)>0,disabled:offXrefs.has(block.name),...(block.cadXrefUnloaded?{savedUnloaded:true}:{})});
+ for(const block of Object.values(blocks) as Any[])if(block.xrefPath&&(block.type&4))report.xrefs.push({name:block.name,path:block.xrefPath,overlay:!!(block.type&8),loaded:(block.entities?.length??0)>0,disabled:offXrefs.has(block.name),...(block.cadXrefUnloaded?{savedUnloaded:true}:{}),...(block.cadXrefNotNeeded?{notNeeded:true}:{}),...(block.cadXrefMismatch?{mismatch:block.cadXrefMismatch}:{})});
  const adapt=(e:Any,layer:string,color:number,lineType:string,stack:string[],inheritedWeight=0):Any=>{
   report.entityCount++;const out={...e};
   if(['TEXT','MTEXT','ATTRIB','ATTDEF'].includes(e.type))warn('字型以內附 Latin／繁中字型替代；SHX／原字型字寬未保證相同');
@@ -166,7 +166,7 @@ export function prepareCad(dxf:Any):CadReport {
  // ACIS bodies: the DWG parser (LibreDWG) yields no shape data for them, so say why instead of a generic gap.
  for(const [type,n] of counts)warn(['REGION','3DSOLID','BODY'].includes(type)?`未支援物件 ${type}：${n}（ACIS 實體，DWG 解析庫未提供形狀資料，請在電腦 CAD 查看）`:`未支援物件 ${type}：${n}`);
  // Only unloaded references are a gap; once loaded (or turned off, or saved unloaded as CAD keeps it) there is nothing to report.
- const unloadedXrefs=report.xrefs.filter(x=>!x.loaded&&!x.disabled&&!x.savedUnloaded).length;
+ const unloadedXrefs=report.xrefs.filter(x=>!x.loaded&&!x.disabled&&!x.savedUnloaded&&!x.notNeeded).length;
  if(unloadedXrefs)warn(`外部參考 ${unloadedXrefs} 筆未載入：請在外參面板選檔套用`);
  for(const l of Object.values(layers) as Any[]){l.visible=true;l.frozen=false;}
  if(Object.values(dxf.tables?.style?.styles??{}).length)warn('字型以內附 Latin／繁中字型替代；SHX／原字型字寬未保證相同');

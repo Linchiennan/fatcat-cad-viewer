@@ -5,7 +5,7 @@ import { useRef } from "react";
 import { useI18n } from "../i18n/translations";
 import type { XrefStatus } from "../viewer/xrefs";
 
-export type XrefRow = Pick<XrefStatus, "name" | "path" | "key" | "overlay"> & { status?: string };
+export type XrefRow = Pick<XrefStatus, "name" | "path" | "key" | "overlay"> & { status?: string; mismatch?: boolean };
 
 /** Applied = drawn from a file (loaded, picked, or found automatically). */
 export const xrefApplied = (status?: string) => !!status && /^已(自動)?載入/.test(status);
@@ -28,11 +28,14 @@ export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle, can
   const target = useRef<XrefRow | null>(null);
   const needed = rows.filter((r) => !xrefNotNeeded(r.status));
   const missing = needed.filter((r) => !disabled.has(r.key) && !xrefApplied(r.status)).length;
+  // A hand-picked file of another name is drawn but not taken as right: orange, counted apart (用戶 2026-10-30：亂選套用還是綠色).
+  const mismatched = needed.filter((r) => !disabled.has(r.key) && xrefApplied(r.status) && r.mismatch).length;
   return (
     <div className="cad-xref-list">
       <p className={"cad-xref-summary " + (missing ? "missing" : "ok")} role="status">
         {missing ? t("cad.xref.missingN", { N: missing, total: needed.length }) : t("cad.xref.allApplied", { total: needed.length })}
       </p>
+      {mismatched ? <p className="cad-xref-summary mismatch" role="status">{t("cad.xref.mismatchN", { N: mismatched })}</p> : null}
       {canPick ? <input ref={input} type="file" accept="*/*" hidden onChange={(e) => {
         const file = e.target.files?.[0], row = target.current;
         e.target.value = "";
@@ -50,16 +53,17 @@ export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle, can
   );
 
   function row(r: XrefRow) {
-    const off = disabled.has(r.key), applied = xrefApplied(r.status), notNeeded = xrefNotNeeded(r.status);
+    const off = disabled.has(r.key), applied = xrefApplied(r.status), notNeeded = xrefNotNeeded(r.status), mismatch = applied && !!r.mismatch;
+    const picked = mismatch ? (/^已(?:自動)?載入(?:（[^）]*）)?：(.+?)(?:（|$)/.exec(r.status ?? "")?.[1] ?? "").split("/").at(-1) ?? "" : "";
     const parent = r.key.slice(0, r.key.lastIndexOf("|")); // keys are "parent file|reference name"
     return (
-      <div className={"cad-xref-row " + (off ? "off" : applied ? "applied" : notNeeded ? "not-needed" : "missing")} key={r.key}>
+      <div className={"cad-xref-row " + (off ? "off" : mismatch ? "mismatch" : applied ? "applied" : notNeeded ? "not-needed" : "missing")} key={r.key}>
         <button type="button" className="cad-xref-name" disabled={busy} title={canPick ? t("cad.xref.pickOne", { name: r.name }) : undefined}
           onClick={() => { if (!canPick) return; target.current = r; input.current?.click(); }}>
           <strong>{r.name}</strong>
           <small>{r.path} · {r.overlay ? t("cad.xref.overlay") : t("cad.xref.attach")}</small>
           {parent && parent !== rootName ? <small className="cad-xref-nested">{t("cad.xref.nestedIn", { parent })}</small> : null}
-          {r.status ? <small className="cad-xref-state">{notNeeded ? t("cad.xref.notNeeded") : r.status}</small> : null}
+          {r.status ? <small className="cad-xref-state">{notNeeded ? t("cad.xref.notNeeded") : mismatch ? t("cad.xref.mismatch", { picked, wanted: r.path.split(/[\\/]/).at(-1) ?? r.name }) : r.status}</small> : null}
         </button>
         <label className="cad-xref-load">
           <input type="checkbox" checked={!off} disabled={busy} onChange={(e) => onToggle(r, e.target.checked)} />

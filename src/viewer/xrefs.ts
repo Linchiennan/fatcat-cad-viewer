@@ -12,7 +12,7 @@ import { repairDxfText, repairWarning } from './dxfRepair';
 import { applyReaderTexts } from '../dwg/missingBlocks';
 import { readLayerStates } from "./layerStateTable";
 const isLayerZero=(name:unknown)=>name===undefined||name===null||String(name)==='0';
-export type XrefStatus={name:string;path:string;status:string;overlay:boolean;key:string};
+export type XrefStatus={name:string;path:string;status:string;overlay:boolean;key:string;/** applied from a file whose name is not the reference's (用戶 2026-10-30：亂選套用還是綠色) */mismatch?:boolean};
 type Any=any;
 export function normalizeCadPath(value:string):string {
  const parts:string[]=[];for(const s of value.replaceAll('\\','/').split('/')){if(!s||s==='.')continue;if(s==='..')parts.pop();else parts.push(s.toLocaleLowerCase('en-US'));}return parts.join('/');
@@ -41,6 +41,13 @@ export function matchXref(path:string,parent:string,files:File[],mapping:Record<
 export function endsWithXrefName(fileName:string,xrefName:string):boolean{
  const f=normalizeCadPath(fileName).split('/').at(-1)??'',n=xrefName.toLocaleLowerCase('en-US');
  return !!n&&f.length>n.length&&f.endsWith(n)&&!/[a-z0-9㐀-鿿]/.test(f[f.length-n.length-1]);
+}
+/** The file name is the one the reference saved (a path without extension also matches .dwg/.dxf, and a copy renamed
+ *  with a prefix such as「…__B3F 建築圖.dwg」counts). */
+export function xrefNameMatches(path:string,fileName:string):boolean{
+ const want=normalizeCadPath(path).split('/').at(-1)??'',have=normalizeCadPath(fileName).split('/').at(-1)??'';
+ const names=/.[a-z0-9]{2,4}$/i.test(want)?[want]:[want,want+'.dwg',want+'.dxf'];
+ return !want||names.includes(have)||names.some(n=>endsWithXrefName(have,n));
 }
 /** Spaces where a block shows up, following nested INSERTs ("Model" or layout names). */
 export function blockUsage(doc:Any,blockName:string):Set<string>{
@@ -96,7 +103,7 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
    // has all three references flagged so and ZWCAD loads them). Files found automatically keep the ZWCAD-matched rule.
    const picked=!!file&&(manual.has(file)||!!mapping[key]||!!mapping[path]);
    if(block.cadXrefUnloaded&&!picked){block.entities=[];status.status='存檔時已卸載（CAD 開圖也不顯示）';continue;}
-   if(depth>0&&status.overlay){block.entities=[];status.status='巢狀覆疊不傳遞';continue;}
+   if(depth>0&&status.overlay){block.entities=[];block.cadXrefNotNeeded=true;status.status='巢狀覆疊不傳遞';continue;}
    if(!file){block.entities=[];status.status='找不到或同名衝突，請逐檔對應';continue;}
    if(stack.includes(file)||depth>=16){block.entities=[];status.status='循環／深度上限已阻擋';continue;}
    let child=assembled.get(file);
@@ -123,6 +130,7 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
     block.entities=(child.entities??[]).filter((e:Any)=>!e.inPaperSpace).map(rename);
     block.position=child.header?.$INSBASE??block.position??{x:0,y:0,z:0};
     status.status='已載入：'+(file.webkitRelativePath||file.name)+(block.cadXrefUnloaded?'（存檔時標為卸載，依選的檔載入）':'');
+    if(!xrefNameMatches(path,file.name)){status.mismatch=true;block.cadXrefMismatch=file.name;}
    }catch(error){block.entities=[];status.status='讀取失敗：'+(error instanceof Error?error.message:String(error));}
   }
  }

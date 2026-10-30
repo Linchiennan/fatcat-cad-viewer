@@ -24,3 +24,17 @@ describe("xref list: red / green, overlays inside references folded away", () =>
     expect(html.indexOf("4F-結構")).toBeGreaterThan(html.indexOf("11F-建築底圖"));
   });
 });
+
+// 用戶 2026-10-30：13F 牆板放樣「亂選套用 他還是綠色」— 動力插座選成 02-13F-頂板放樣.dwg 仍顯示綠色已載入。
+describe("a hand-picked file of another name", () => {
+  const picked = [
+    { name: "03-13F-動力插座", path: String.raw`.\03-13F-動力插座.dwg`, key: "01.dwg|03-13F-動力插座", overlay: true, status: "已載入：02-13F-頂板放樣.dwg", mismatch: true },
+    { name: "04-13F-照明", path: String.raw`.\04-13F-照明.dwg`, key: "01.dwg|04-13F-照明", overlay: true, status: "已載入：04-13F-照明.dwg" },
+  ];
+  const out = renderToStaticMarkup(<XrefList rows={picked} rootName="01.dwg" disabled={new Set()} busy={false} onPick={() => {}} onToggle={() => {}} />);
+  it("is orange, names both files and is counted apart", () => {
+    expect(out).toMatch(/cad-xref-row mismatch.*03-13F-動力插座.*檔名不符：選的是 02-13F-頂板放樣.dwg，外參要的是 03-13F-動力插座.dwg/);
+    expect(out).toMatch(/cad-xref-row applied.*04-13F-照明/);
+    expect(out).toContain("1 個外參選的檔和外參名稱不同（橘色）");
+  });
+});

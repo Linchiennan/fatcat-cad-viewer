@@ -73,6 +73,7 @@ export const OWN_STRINGS = {
   // 用戶 2026-10-28：首頁先講明不支援 3D（3D 實體開圖時才提示太晚）
   "home.no3d": { zh: "只顯示 2D 圖面；3D 實體（立體管件、面域等）不顯示，請用電腦 CAD 查看。", en: "2D drawings only: 3D solids (solid fittings, regions) are not shown; view them in desktop CAD." },
   // 用戶 2026-10-29：不要自動旋轉，手機橫向 UI 很難用。網頁在瀏覽器分頁內鎖不住，只有主畫面圖示開啟才固定。
+  "home.xrefFolder": { zh: "有外參的圖：請在「我的圖面」用「整個資料夾」加入（含外部參考資料夾），開圖時外參會自動套上；只加單一檔案，App 看不到旁邊的外參檔。", en: "Drawings with external references: add the whole folder (with its reference folders) in My drawings, and references apply by themselves when opened; a single file cannot see the files beside it." },
   "home.portrait": { zh: "畫面固定直向，手機轉橫也不會跟著旋轉。", en: "The screen stays upright; turning the phone sideways does not rotate it." },
   "home.portraitWeb": { zh: "從主畫面圖示開啟時畫面固定直向，不隨手機轉橫旋轉。", en: "Opened from the home-screen icon, the screen stays upright and does not rotate." },
 
