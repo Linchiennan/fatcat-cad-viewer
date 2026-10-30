@@ -1140,7 +1140,7 @@ export class DxfScene {
         /* QCAD always embed ANSI31-like pattern definition. Try to detect it, and let named
          * pattern override the provided definition.
          */
-        if ((pattern == null || pattern.isQcadDefault) && entity.patternName) {
+        if (pattern == null && entity.patternName) { /* fatcat: stored definition wins */
             const _pattern = LookupPattern(entity.patternName, this.isMetric)
             if (!_pattern) {
                 console.log(`Hatch pattern with name ${entity.patternName} not found ` +

@@ -18,7 +18,9 @@ const State = Object.freeze({
     /* Parsing \Cxxx color code. */
     COLOR: 6,
     /* Parsing \H height code (fatcat). */
-    HEIGHT: 7
+    HEIGHT: 7,
+    WIDTH: 8,
+    FONT: 9
 })
 
 const EntityType = Object.freeze({
@@ -33,7 +35,10 @@ const EntityType = Object.freeze({
     /** \Cxxx color code. "color" property specified (index resolved to actual color value). */
     COLOR: 5,
     /** \H height change (fatcat): "height" value, "relative" for an "x" multiplier. */
-    HEIGHT: 6
+    HEIGHT: 6,
+    WIDTH: 7,
+    FONT: 8,
+    PARAGRAPH_INDENT: 9
     /* Many others are not yet implemented. */
 })
 
@@ -91,6 +96,15 @@ export class MTextFormatParser {
             }
             /* We actually allow whole color table indices for better compatibility. */
             curEntities.push({type: EntityType.COLOR, color: colorTable[colorIndex]})
+        }
+
+        function EmitWidth() {
+            const s = text.slice(textStart, curPos).trim()
+            const relative = /x$/i.test(s)
+            const width = Number(relative ? s.slice(0, -1) : s)
+            if (Number.isFinite(width) && width > 0 && width <= 100) {
+                curEntities.push({type: EntityType.WIDTH, width, relative})
+            }
         }
 
         function EmitHeight() {
@@ -169,6 +183,16 @@ export class MTextFormatParser {
                     switch (c) {
                     case "p":
                         state = State.PARAGRAPH1
+                        textStart = curPos + 1
+                        continue
+                    case "f":
+                    case "F":
+                        state = State.FONT
+                        textStart = curPos + 1
+                        continue
+                    case "W":
+                        state = State.WIDTH
+                        textStart = curPos + 1
                         continue
                     case "H":
                         state = State.HEIGHT
@@ -194,7 +218,20 @@ export class MTextFormatParser {
                 continue
 
             case State.PARAGRAPH1:
-                state = c === "x" ? State.PARAGRAPH2 : State.SKIP_FORMAT
+                if (c === ";") {
+                    const args = text.slice(textStart, curPos).replace(/^x/, "").split(",")
+                    for (const arg of args) {
+                        const m = /^i([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|\*)$/.exec(arg)
+                        if (m) {
+                            const first = m[1] === "*" ? 0 : Number(m[1])
+                            if (Number.isFinite(first) && Math.abs(first) <= 1e4)
+                                curEntities.push({type: EntityType.PARAGRAPH_INDENT, first})
+                        }
+                        if (/^q[lcrjd]$/.test(arg)) curEntities.push({type: EntityType.PARAGRAPH_ALIGNMENT, alignment: arg[1]})
+                    }
+                    textStart = curPos + 1
+                    state = State.TEXT
+                }
                 continue
 
             case State.PARAGRAPH2:
@@ -208,6 +245,23 @@ export class MTextFormatParser {
 
             case State.SKIP_FORMAT:
                 if (c === ";") {
+                    textStart = curPos + 1
+                    state = State.TEXT
+                }
+                continue
+
+            case State.FONT:
+                if (c === ";") {
+                    const font = text.slice(textStart, curPos).split("|")[0].trim()
+                    if (font) curEntities.push({type: EntityType.FONT, font})
+                    textStart = curPos + 1
+                    state = State.TEXT
+                }
+                continue
+
+            case State.WIDTH:
+                if (c === ";") {
+                    EmitWidth()
                     textStart = curPos + 1
                     state = State.TEXT
                 }

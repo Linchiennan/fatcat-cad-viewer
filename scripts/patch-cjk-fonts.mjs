@@ -71,3 +71,22 @@ if(!nestedSource.includes('FATCAT_CFF_SMALLEST_CONTAINER')) {
     fs.writeFileSync(path,nestedSource.replace(nestedAnchor,nestedAnchor+nestedFix));
     console.log('Assign nested CFF holes to the smallest containing solid');
 }
+
+// Noto CJK draws some glyphs' only solid clockwise (］ ｝ 〕 ㄟ ˙ … 31 glyphs). Such a
+// contour looks like a hole with no container; throwing aborted the whole drawing.
+// Keep it as a solid of its own (reversed to counter-clockwise) instead.
+const loneSource=fs.readFileSync(path,'utf8');
+const loneOld='if (!parent) throw new Error("CFF hole has no containing solid")';
+const loneNew=`if (!parent) {
+                        // FATCAT_CFF_LONE_SOLID
+                        const shape = new Shape(points.slice().reverse())
+                        shapes.push(shape)
+                        solids.push({shape, points: shape.getPoints(options.curveSubdivision), area})
+                        solids.sort((a,b) => a.area-b.area)
+                        continue
+                    }`;
+if(!loneSource.includes('FATCAT_CFF_LONE_SOLID')) {
+    if(loneSource.split(loneOld).length!==2||loneSource.split('import {Matrix3, Vector2} from "three"').length!==2)throw Error('Unexpected lone CFF solid implementation');
+    fs.writeFileSync(path,loneSource.replace(loneOld,loneNew).replace('import {Matrix3, Vector2} from "three"','import {Matrix3, Shape, Vector2} from "three"'));
+    console.log('Keep clockwise-only CFF contours as solids');
+}

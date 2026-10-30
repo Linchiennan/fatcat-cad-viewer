@@ -1,7 +1,7 @@
 import {Entity} from "./DxfScene.js"
 import {ShapePath} from "three/src/extras/core/ShapePath.js"
 import {ShapeUtils} from "three/src/extras/ShapeUtils.js"
-import {Matrix3, Vector2} from "three"
+import {Matrix3, Shape, Vector2} from "three"
 import {MTextFormatParser} from "./MTextFormatParser.js"
 
 /** Regex for parsing special characters in text entities. */
@@ -285,7 +285,14 @@ class CharShape {
                     if (!ShapeUtils.isClockWise(points)) continue
                     const area = Math.abs(ShapeUtils.area(points))
                     const parent = solids.find(s => s.area > area && contains(points[0], s.points))
-                    if (!parent) throw new Error("CFF hole has no containing solid")
+                    if (!parent) {
+                        // FATCAT_CFF_LONE_SOLID
+                        const shape = new Shape(points.slice().reverse())
+                        shapes.push(shape)
+                        solids.push({shape, points: shape.getPoints(options.curveSubdivision), area})
+                        solids.sort((a,b) => a.area-b.area)
+                        continue
+                    }
                     parent.shape.holes.push(hole)
                 }
             }
@@ -463,6 +470,9 @@ class TextBox {
     constructor(fontSize, charShapeProvider) {
         this.fontSize = fontSize
         this.curFontSize = fontSize
+        this.curWidthFactor = 1
+        this.curFontName = null
+        this.curFirstIndent = 0
         this.charShapeProvider = charShapeProvider
         this.curParagraph = new TextBox.Paragraph(this)
         this.paragraphs = [this.curParagraph]
@@ -491,6 +501,9 @@ class TextBox {
         /* Null for default color which depends on entity color attributes. */
         let curColor = null
         const heightStack = []
+        const widthStack = []
+        const fontStack = []
+        const paragraphStack = []
 
         for (const item of FlattenItems(formattedText)) {
             switch(item.type) {
@@ -541,11 +554,32 @@ class TextBox {
 
             case "fatcatScopeStart":
                 heightStack.push(this.curFontSize)
+                widthStack.push(this.curWidthFactor)
+                fontStack.push(this.curFontName)
+                paragraphStack.push(this.curFirstIndent)
                 break
 
             case "fatcatScopeEnd":
                 this.curFontSize = heightStack.pop() ?? this.fontSize
+                this.curWidthFactor = widthStack.pop() ?? 1
+                this.curFontName = fontStack.pop() ?? null
+                this.curFirstIndent = paragraphStack.pop() ?? 0
                 break
+
+            case MTextFormatParser.EntityType.PARAGRAPH_INDENT:
+                this.curFirstIndent = item.first
+                this.curParagraph.firstIndent = this.curFirstIndent
+                break
+
+            case MTextFormatParser.EntityType.FONT:
+                this.curFontName = item.font
+                break
+
+            case MTextFormatParser.EntityType.WIDTH: {
+                const next = item.relative ? this.curWidthFactor * item.width : item.width
+                if (Number.isFinite(next) && next > 0 && next <= 100) this.curWidthFactor = next
+                break
+            }
 
             case MTextFormatParser.EntityType.HEIGHT: {
                 const next = item.relative ? this.curFontSize * item.height : item.height
@@ -690,7 +724,7 @@ class TextBox {
                     const v = new Vector2(x, y)
                     v.applyMatrix3(transform)
                     if (chunk.block) {
-                        yield* chunk.block.Render(v, null, rotation, null,
+                        yield* chunk.block.Render(v, null, rotation, chunk.widthFactor,
                                                   HAlign.LEFT, VAlign.BASELINE,
                                                   color, layer)
                     }
@@ -709,6 +743,7 @@ TextBox.Paragraph = class {
         this.alignment = null
         this.lines = null
         this.emptyFontSize = textBox.curFontSize
+        this.firstIndent = textBox.curFirstIndent
         //XXX for now applied to next chunks until advanced formatting implemented
         this.color = null
     }
@@ -717,21 +752,27 @@ TextBox.Paragraph = class {
      * character is fed into this method, it is interpreted as non-breaking space.
      */
     FeedChar(c) {
-        const shape = this.textBox.charShapeProvider(c)
+        const shape = this.textBox.charShapeProvider(c, this.textBox.curFontName)
         if (shape === null) {
             return
         }
-        if (this.curChunk !== null && this.curChunk.block === null) {
+        if (this.curChunk !== null && this.curChunk.block === null && this.curChunk.leadingSpaces === 0) {
             this.curChunk.fontSize = this.textBox.curFontSize
+            this.curChunk.widthFactor = this.textBox.curWidthFactor
         }
-        if (this.curChunk === null || this.curChunk.fontSize !== this.textBox.curFontSize) {
+        if (this.curChunk === null || this.curChunk.fontSize !== this.textBox.curFontSize ||
+            this.curChunk.widthFactor !== this.textBox.curWidthFactor ||
+            this.curChunk.fontName !== this.textBox.curFontName) {
             this._AddChunk()
         }
         this.curChunk.PushChar(c, shape)
     }
 
     FeedSpace() {
-        if (this.curChunk === null || this.curChunk.lastChar !== null) {
+        if (this.curChunk === null || this.curChunk.lastChar !== null ||
+            this.curChunk.widthFactor !== this.textBox.curWidthFactor ||
+            this.curChunk.fontSize !== this.textBox.curFontSize ||
+            this.curChunk.fontName !== this.textBox.curFontName) {
             this._AddChunk()
         }
         this.curChunk.PushSpace()
@@ -765,7 +806,7 @@ TextBox.Paragraph = class {
             this.lines.push(new TextBox.Paragraph.Line(this,
                                                        startChunkIdx,
                                                        curChunkIdx - startChunkIdx,
-                                                       curWidth))
+                                                       curWidth + (this.lines.length === 0 ? this.firstIndent : 0)))
             startChunkIdx = curChunkIdx
             curWidth = 0
         }
@@ -774,7 +815,7 @@ TextBox.Paragraph = class {
             const chunk = this.chunks[curChunkIdx]
             let chunkWidth = chunk.GetWidth(startChunkIdx === 0 || curChunkIdx !== startChunkIdx)
             if (boxWidth !== null && boxWidth !== 0) {
-                if (curWidth + chunkWidth > boxWidth) {
+                if (curWidth + chunkWidth > boxWidth - (this.lines.length === 0 ? this.firstIndent : 0)) {
                     if (curChunkIdx == 0 && chunk.leadingSpaces > 0) {
                         /* Special handling for initial leading spaces. In case the first word with
                          * spaces exceeds box width, empty line should be inserted for spaces, and
@@ -793,7 +834,7 @@ TextBox.Paragraph = class {
                     }
                 }
             }
-            chunk.position = curWidth
+            chunk.position = curWidth + (this.lines.length === 0 ? this.firstIndent : 0)
             curWidth += chunkWidth
         }
         if (startChunkIdx !== curChunkIdx && curWidth !== 0) {
@@ -845,6 +886,9 @@ TextBox.Paragraph.Chunk = class {
      */
     constructor(paragraph, fontSize, color, prevChunk) {
         this.paragraph = paragraph
+        this.widthFactor = paragraph.textBox.curWidthFactor
+        this.fontName = paragraph.textBox.curFontName
+        this.spaceShape = paragraph.textBox.charShapeProvider(" ", this.fontName)
         this.fontSize = fontSize
         this.color = color
         this.prevChunk = prevChunk
@@ -876,14 +920,14 @@ TextBox.Paragraph.Chunk = class {
             } else {
                 if (this.prevChunk && this.prevChunk.lastShape &&
                     this.prevChunk.fontSize === this.fontSize &&
-                    this.prevChunk.lastShape.font === this.paragraph.textBox.spaceShape.font) {
+                    this.prevChunk.lastShape.font === this.spaceShape.font) {
 
                     this.spaceStartKerning =
                         this.prevChunk.lastShape.font.GetKerning(this.prevChunk.lastChar, " ")
                 } else {
                     this.spaceStartKerning = 0
                 }
-                if (shape.font === this.paragraph.textBox.spaceShape.font) {
+                if (shape.font === this.spaceShape.font) {
                     this.spaceEndKerning = shape.font.GetKerning(" ", char)
                 } else {
                     this.spaceEndKerning = 0
@@ -901,15 +945,15 @@ TextBox.Paragraph.Chunk = class {
     }
 
     GetSpacingWidth() {
-        return (this.leadingSpaces * this.paragraph.textBox.spaceShape.advance +
-            this.spaceStartKerning + this.spaceEndKerning) * this.fontSize
+        return (this.leadingSpaces * this.spaceShape.advance +
+            this.spaceStartKerning + this.spaceEndKerning) * this.fontSize * this.widthFactor
     }
 
     GetWidth(withSpacing) {
         if (this.block === null) {
-            return 0
+            return withSpacing ? this.GetSpacingWidth() : 0
         }
-        let width = this.block.GetCurrentPosition()
+        let width = this.block.GetCurrentPosition() * this.widthFactor
         if (withSpacing) {
             width += this.GetSpacingWidth()
         }
@@ -1088,8 +1132,8 @@ class TextBlock {
             origin.x = this.bounds.xMax
             break
         case HAlign.MIDDLE:
-            origin.x = (this.bounds.xMax - this.bounds.xMin) / 2
-            origin.y = (this.bounds.yMax - this.bounds.yMin) / 2
+            origin.x = (this.bounds.xMax + this.bounds.xMin) / 2
+            origin.y = (this.bounds.yMax + this.bounds.yMin) / 2
             break
         case HAlign.ALIGNED: {
             const f = GetFitScale()
