@@ -139,6 +139,8 @@ export function prepareCad(dxf:Any):CadReport {
  const warn=(s:string)=>{if(!report.warnings.includes(s))report.warnings.push(s);};
  const overrides:Record<string,boolean>=dxf.cadLayerVisibility??{},blockLayers=new Set<string>();
  const layerShown=(name:string)=>overrides[name]??(layers[name]?layers[name].visible!==false&&!layers[name].frozen:true);
+ // Frozen, not just off: a frozen INSERT layer hides everything in the block; an off one only its layer-0 content.
+ const layerFrozen=(name:string)=>overrides[name]===undefined&&!!layers[name]?.frozen;
  for(const [name,lt] of Object.entries(dxf.tables?.lineType?.lineTypes??{}) as [string,Any][]){normalizeLineType(lt);if(lt.complex)warn('複合線型 '+name+' 的文字／形狀尚未繪製，僅顯示線段pattern');}
  for(const message of dxf.cadDiagnostics??[])warn(message);
  const supported=new Set(['LINE','LWPOLYLINE','POLYLINE','ARC','CIRCLE','ELLIPSE','POINT','SPLINE','INSERT','TEXT','MTEXT','3DFACE','SOLID','DIMENSION','ATTRIB','ATTDEF','HATCH']);
@@ -155,7 +157,8 @@ export function prepareCad(dxf:Any):CadReport {
   out.layer=e.layer&&e.layer!=='0'?e.layer:layer;
   // Block content is drawn under its INSERT's layer, so an off/frozen layer of a nested entity must hide it here.
   // Uses the effective layer, so layer-0 content inheriting an off layer from its INSERT hides too.
-  if(stack.length&&out.layer&&out.layer!=='0'){blockLayers.add(out.layer);if(!layerShown(out.layer))out.hidden=true;}out.trueColor=resolveCadColor(e,layers,layer,color);out.color=out.trueColor;
+  // An INSERT on an off (not frozen) layer still shows its content on other layers, as CAD does: only frozen hides it all.
+  if(stack.length&&out.layer&&out.layer!=='0'){blockLayers.add(out.layer);if(e.type==='INSERT'?layerFrozen(out.layer):!layerShown(out.layer))out.hidden=true;}out.trueColor=resolveCadColor(e,layers,layer,color);out.color=out.trueColor;
   const lt=String(e.lineType??'BYLAYER');out.lineType=lt.toUpperCase()==='BYLAYER'?layers[out.layer]?.lineType??'CONTINUOUS':lt.toUpperCase()==='BYBLOCK'?lineType:lt;
   if(!['CONTINUOUS','BYLAYER','BYBLOCK'].includes(out.lineType.toUpperCase())&&!dxf.tables?.lineType?.lineTypes?.[out.lineType])warn('缺少線型定義：'+out.lineType+'，暫以實線顯示');
   if(!supported.has(e.type))counts.set(e.type,(counts.get(e.type)??0)+1);
@@ -170,10 +173,14 @@ export function prepareCad(dxf:Any):CadReport {
    const key=JSON.stringify([e.name,out.layer,out.trueColor,out.lineType,out.cadLineweight]);let name=memo.get(key);
    if(!name){if(memo.size>=20000)throw Error('圖塊繼承變體超過安全上限');name='__fatcat_'+memo.size;memo.set(key,name);variants[name]={...block,name,cadName:block.cadName??block.name,entities:adaptList(block.entities??[],(child:Any,owner:Any)=>adapt(child,owner?.layer??out.layer,owner?.trueColor??out.trueColor,owner?.lineType??out.lineType,[...stack,e.name],owner?.cadLineweight??out.cadLineweight))};}
    out.name=name;
+   // The scene draws a top-level INSERT's whole block on the INSERT's layer, so an off layer there hid everything in it
+   // (14F 牆板放樣: the 動力插座 xref sits on「!外參-器具平面圖」, off in 14F; ZWCAD still shows its sockets on
+   // E-插作-器具-牆板). Draw it on layer 0 instead; its layer-0 content already took the off layer above and stays hidden.
+   if(!stack.length&&!layerShown(out.layer)&&!layerFrozen(out.layer)&&layerShown('0')){blockLayers.add(out.layer);out.cadInsertLayer=out.layer;out.layer='0';}
   }
   return out;
  };
- dxf.entities=adaptList(dxf.entities??[],(e:Any,owner:Any)=>owner?adapt(e,owner.layer,owner.trueColor,owner.lineType,[],owner.cadLineweight):adapt(attdefAsText(e),'0',0xffffff,'CONTINUOUS',[]));
+ dxf.entities=adaptList(dxf.entities??[],(e:Any,owner:Any)=>owner?adapt(e,owner.cadInsertLayer??owner.layer,owner.trueColor,owner.lineType,[],owner.cadLineweight):adapt(attdefAsText(e),'0',0xffffff,'CONTINUOUS',[]));
  // A REGION has no shape we can read (ACIS), but a hatch filled from it keeps the same outline as its boundary
  // (鴻群 t4: piping drawn as a region outline with ANSI31 inside showed as loose dashes). Draw those loops as the region.
  for(const list of [dxf.entities,...Object.values(variants).map((v:Any)=>v.entities)]){const n=linkRegionHatches(list);if(n)counts.set('REGION',(counts.get('REGION')??0)-n);}

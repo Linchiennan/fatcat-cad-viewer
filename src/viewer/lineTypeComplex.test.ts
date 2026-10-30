@@ -80,6 +80,8 @@ describe("layer-0 content inheriting an off layer", () => {
     };
     prepareCad(d);
     const outer = d.blocks[d.entities[0].name].entities[0];
-    expect(outer.hidden).toBe(true);
+    // The INSERT on the off layer is kept (content on other layers would still show, 14F 牆板放樣); its layer-0 circle hides.
+    expect(outer.hidden).toBeFalsy();
+    expect(d.blocks[outer.name].entities[0]).toMatchObject({ type: "CIRCLE", layer: "OFF", hidden: true });
   });
 });
