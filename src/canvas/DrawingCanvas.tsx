@@ -26,6 +26,9 @@ import { removeSelected } from './selection';
 type CanvasCommon = DrawingCanvasEvents & {
   /** Drawable file (DXF, converted DWG or the xref-assembled file). A new File object = load again. */
   file: File;
+  /** The new file is the same sheet with its references applied: keep showing the last picture until it is drawn,
+   *  instead of a blank canvas for two seconds (用戶 2026-10-30「有停頓感」). */
+  holdPicture?: boolean;
   /** Measuring / info state; `enabled` false when neither is on. */
   measurement: MeasurementSettings;
   selectionTool?: 'single' | 'box' | null;
@@ -82,6 +85,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   /** Builds the measuring overlay for a projection (null when nothing is measured); read by the export. */
   const measureModelRef = useRef<((project: (pts: readonly DrawingPoint[]) => DrawingPoint[], ppu: number) => OverlayModel) | null>(null);
   readyRef.current = ready;
+  const holdRef = useRef(false);
+  holdRef.current = !!props.holdPicture;
+  const [held, setHeld] = useState<HTMLCanvasElement | null>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
   const marksRef = useRef(marks);
   marksRef.current = marks;
@@ -141,17 +147,20 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     e.load(props.file, (stage, done, total) => events.current.onProgress(stage, done, total), undefined, ctrl.signal)
       .then(() => {
         if (ctrl.signal.aborted) return;
+        setHeld(null);
         setReady(true);
         sheetReady(e);
         events.current.onReady();
       })
-      .catch((err) => { if (!ctrl.signal.aborted && !isAbort(err)) events.current.onError(err); });
+      .catch((err) => { if (!ctrl.signal.aborted && !isAbort(err)) { setHeld(null); events.current.onError(err); } });
     const resize = typeof ResizeObserver === "function" ? new ResizeObserver(() => redraw()) : null;
     resize?.observe(el);
     return () => {
       ctrl.abort();
       resize?.disconnect();
       for (const f of off) f();
+      // holdRef already carries the next file's holdPicture: cleanup runs after the new props rendered.
+      setHeld(holdRef.current ? (e as { snapshot?(): HTMLCanvasElement | null }).snapshot?.() ?? null : null);
       e.dispose();
       if (engine.current === e) engine.current = null;
     };
@@ -303,6 +312,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   return (
     <div className={`drawing-canvas${m.enabled ? " measuring" : ""}`}>
       <div ref={host} className="drawing-engine" />
+      {held ? <HeldPicture canvas={held} /> : null}
       {model ? <MeasureOverlay model={model} aim={aim} snapAt={snapAt} /> : null}
       {e && (markup || marks.length) ? (
         <MarkupLayer active={!!markup && markup.tool !== "none" && editingIndex === undefined} marks={visibleMarks} tool={markup?.tool ?? "move"} color={markup?.color ?? "#ff3b30"} project={project} unproject={unproject} ppu={ppu}
@@ -315,3 +325,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     </div>
   );
 });
+
+/** The last picture of the sheet, over the empty canvas while the same sheet is drawn again with its references. */
+function HeldPicture({ canvas }: { canvas: HTMLCanvasElement }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    canvas.className = "held-picture-canvas";
+    el.appendChild(canvas);
+    return () => { canvas.remove(); };
+  }, [canvas]);
+  return <div ref={box} className="held-picture" aria-hidden="true" />;
+}

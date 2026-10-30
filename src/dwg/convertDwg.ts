@@ -30,21 +30,42 @@ type WorkerLike = Pick<Worker, "postMessage" | "terminate" | "addEventListener" 
 let workerFactory: () => WorkerLike = () =>
   new Worker(new URL("./dwg.worker.ts", import.meta.url), { type: "module", name: "fatcat-dwg-converter" });
 
-// One worker for the session with conversions queued on it, so the engine code the browser optimised on the first
+// Workers kept for the session with conversions queued on them, so the engine code the browser optimised on the first
 // conversion is kept (a worker per conversion paid ~430 MB each time). Dropped after a failure, timeout or cancel.
-let shared: WorkerLike | null = null;
-let queue: Promise<unknown> = Promise.resolve();
+// A device with 8 GB and 4 cores converts two at once: 13F 牆板放樣's four xref drawings took 2.2 s each in a row (用戶
+// 2026-10-30「外參加入後的載入很慢」). A smaller one keeps a single worker for memory. A lone conversion uses the first.
+type Slot = { worker: WorkerLike | null; busy: boolean };
+let slots: Slot[] = [];
+const waiting: ((slot: Slot) => void)[] = [];
+/** How many conversions run at once on this device. */
+export function conversionSlots(device: { deviceMemory?: number; hardwareConcurrency?: number } = (globalThis as { navigator?: object }).navigator ?? {}): number {
+  return (device.deviceMemory ?? 0) >= 8 && (device.hardwareConcurrency ?? 0) >= 4 ? 2 : 1;
+}
+let slotCount: number | null = null;
+/** Fix the number of conversion slots (tests); null goes back to conversionSlots(). */
+export function setConversionSlotCount(count: number | null): void { slotCount = count; for (const slot of slots) slot.worker?.terminate(); slots = []; }
+function acquire(): Promise<Slot> {
+  if (!slots.length) slots = Array.from({ length: slotCount ?? conversionSlots() }, () => ({ worker: null, busy: false }));
+  const free = slots.find((s) => !s.busy);
+  if (free) { free.busy = true; return Promise.resolve(free); }
+  return new Promise((resolve) => waiting.push(resolve));
+}
+function release(slot: Slot): void {
+  const next = waiting.shift();
+  if (next) next(slot); else slot.busy = false;
+}
 
 /** Replace how conversion workers are made (tests); null restores the real worker. */
 export function setDwgWorkerFactory(factory: (() => WorkerLike) | null): void {
   workerFactory = factory ?? (() => new Worker(new URL("./dwg.worker.ts", import.meta.url), { type: "module", name: "fatcat-dwg-converter" }));
-  shared?.terminate();
-  shared = null;
+  for (const slot of slots) slot.worker?.terminate();
+  slots = [];
 }
 
 const abortError = () => new DOMException("The DWG conversion was cancelled.", "AbortError");
 // The same File converts once per session: opening a drawing and then applying its xrefs converted it twice.
 const converted = new WeakMap<File, File>();
+const inflight = new WeakMap<File, Promise<File>>();
 let requestSerial = 0;
 
 /** Page base URL the worker uses to find public/runtime. */
@@ -72,14 +93,21 @@ export async function convertDwgToDxf(file: File, signal?: AbortSignal): Promise
   if (signal?.aborted) throw abortError();
   const done = converted.get(file);
   if (done) return done;
-  const run = queue.then(() => convertOnce(file, signal));
-  queue = run.catch(() => {});
-  const out = await run;
-  converted.set(file, out);
-  return out;
+  const running = inflight.get(file);
+  if (running) return running;
+  const run = (async () => {
+    const slot = await acquire();
+    try { return await convertOnce(file, slot, signal); } finally { release(slot); }
+  })();
+  inflight.set(file, run);
+  try {
+    const out = await run;
+    converted.set(file, out);
+    return out;
+  } finally { inflight.delete(file); }
 }
 
-async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
+async function convertOnce(file: File, slot: Slot, signal?: AbortSignal): Promise<File> {
   if (signal?.aborted) throw abortError();
   assertFileSize(file.size);
   let bytes: ArrayBuffer;
@@ -95,7 +123,7 @@ async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
   const reply = await new Promise<Extract<DwgReply, { ok: true }>>((resolve, reject) => {
     const id = ++requestSerial;
     let worker: WorkerLike;
-    try { worker = shared ??= workerFactory(); } catch (cause) {
+    try { worker = slot.worker ??= workerFactory(); } catch (cause) {
       reject(fail("DWG_RUNTIME_MISSING", "The DWG worker could not start: " + String(cause)));
       return;
     }
@@ -111,7 +139,7 @@ async function convertOnce(file: File, signal?: AbortSignal): Promise<File> {
       worker.removeEventListener("messageerror", onMessageError);
       if (!keep) {
         worker.terminate();
-        if (shared === worker) shared = null;
+        if (slot.worker === worker) slot.worker = null;
       }
       run();
     };

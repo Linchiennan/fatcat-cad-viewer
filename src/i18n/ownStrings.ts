@@ -57,6 +57,8 @@ export const OWN_STRINGS = {
   "viewer.fileSizeLine": { zh: "檔案大小: {size}", en: "File size: {size}" },
   "viewer.libraryButton": { zh: "我的圖面", en: "My drawings" },
   "viewer.spaceCaption": { zh: "模型", en: "Model" },
+  "viewer.xrefApplying": { zh: "正在找外參並套用", en: "finding and applying references" },
+  "viewer.xrefApplyingShort": { zh: " 套用中…", en: " applying…" },
   "viewer.stripWarn": { zh: " ⚠ {N}", en: " ⚠ {N}" },
   "load.progressLabel": { zh: "載入進度", en: "Loading progress" },
   "error.markLabel": { zh: "錯誤", en: "Error" },

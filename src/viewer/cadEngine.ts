@@ -862,6 +862,18 @@ export class DxfCadEngine implements FatcatCadEngine {
 
   // ---- teardown --------------------------------------------------------------------------------
 
+  /** A copy of what the canvas shows now, drawn in the same task so the WebGL buffer is still there; null when nothing is. */
+  snapshot(): HTMLCanvasElement | null {
+    if (this.disposed || !this.ready) return null;
+    try {
+      this.viewer.Render();
+      const copy = document.createElement("canvas");
+      copy.width = this.canvas.width; copy.height = this.canvas.height;
+      copy.getContext("2d")?.drawImage(this.canvas, 0, 0);
+      return copy;
+    } catch { return null; }
+  }
+
   dispose(): void {
     if (this.disposed) return;
     detachDebug(this);

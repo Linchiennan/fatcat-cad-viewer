@@ -81,12 +81,14 @@ export function FileBar({ name, size, source, file, entryId, cardOpen, onCard, o
 
 export type StripTab = "layers" | "missing" | "xrefs";
 
-export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, onSpace, onTab, onExport, onInspect }: {
+export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, xrefsApplying = false, onSpace, onTab, onExport, onInspect }: {
   spaces: CadSpace[];
   space: string;
   switching: boolean;
   missing: number;
   xrefsUnloaded: number;
+  /** references are being found and applied: say so instead of a red count (用戶 2026-10-30：載入很慢、有停頓感) */
+  xrefsApplying?: boolean;
   onSpace(name: string): void;
   onTab(tab: StripTab): void;
   onExport?(): void;
@@ -139,10 +141,10 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, o
   const ordered = [...(spaces.length ? spaces : [{ name: MODEL_SPACE, order: 0 }])].sort((a, b) => (a.name === MODEL_SPACE ? -1 : b.name === MODEL_SPACE ? 1 : a.order - b.order));
   // Unapplied xrefs take the share button's place on the first page, so they are seen on opening; once all are
   // applied, share comes back and xrefs return to the second page (用戶 2026-10-28).
-  const xrefsFirst = xrefsUnloaded > 0;
+  const xrefsFirst = xrefsUnloaded > 0 || xrefsApplying;
   const xrefButton = (
-    <button type="button" className={xrefsFirst ? "strip-xref-missing" : undefined} aria-label={xrefsUnloaded > 0 ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefUnloadedCount", { N: xrefsUnloaded })}` : undefined} onClick={() => onTab("xrefs")}>
-      {t("viewer.stripXrefs")}{xrefsUnloaded > 0 ? <em>{t("viewer.stripWarn", { N: xrefsUnloaded })}</em> : null}
+    <button type="button" className={xrefsApplying ? "strip-xref-applying" : xrefsFirst ? "strip-xref-missing" : undefined} aria-label={xrefsApplying ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefApplying")}` : xrefsUnloaded > 0 ? `${t("viewer.stripXrefs")}, ${t("viewer.xrefUnloadedCount", { N: xrefsUnloaded })}` : undefined} onClick={() => onTab("xrefs")}>
+      {t("viewer.stripXrefs")}{xrefsApplying ? <em>{t("viewer.xrefApplyingShort")}</em> : xrefsUnloaded > 0 ? <em>{t("viewer.stripWarn", { N: xrefsUnloaded })}</em> : null}
     </button>
   );
   const shareButton = onExport ? <button type="button" className="strip-export" aria-label={t("markup.share")} title={t("export.buttonTip")} onClick={onExport}>{t("markup.share")}</button> : null;

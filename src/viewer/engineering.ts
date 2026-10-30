@@ -112,6 +112,23 @@ export function linkRegionHatches(list:Any[]):number {
  }
  return outlined.size;
 }
+/**
+ * Adapts a list, giving an attribute on layer 0 the INSERT it belongs to as its layer, colour and line type, as CAD
+ * draws it: off with that layer. The scene looks the INSERT up by handle only among top-level entities, so inside a
+ * block (an xref is one) such attributes stayed on layer 0 and showed (13F 牆板放樣: 96 circuit numbers of「分路編號A」
+ * on 03／04's E-插作-迴路, which the host turns off, were drawn in white).
+ */
+function adaptList(list:Any[],adaptOne:(e:Any,owner:Any|null)=>Any):Any[]{
+ let insert:Any=null,adapted:Any=null;
+ return list.map((e:Any)=>{
+  const zero=!e.layer||e.layer==='0';
+  const owner=e.type==='ATTRIB'&&zero&&insert&&(e.ownerHandle===undefined||String(e.ownerHandle)===String(insert.handle))?adapted:null;
+  const out=adaptOne(e,owner);
+  if(e.type==='INSERT'){insert=e;adapted=out;}else if(e.type!=='ATTRIB'){insert=null;adapted=null;}
+  if(owner&&owner.hidden)out.hidden=true;
+  return out;
+ });
+}
 export function prepareCad(dxf:Any):CadReport {
  // Regions with readable ACIS text (DWG 2004/2010) become the lines and arcs of their outline.
  dxf.entities=expandRegions(dxf.entities??[]);
@@ -151,12 +168,12 @@ export function prepareCad(dxf:Any):CadReport {
   if(e.type==='INSERT'&&e.name){const block=blocks[e.name];if(!block){warn('缺少圖塊：'+e.name);return out;}
    if(stack.includes(e.name)||stack.length>=24){warn('循環或過深圖塊已略過：'+e.name);out.hidden=true;return out;}
    const key=JSON.stringify([e.name,out.layer,out.trueColor,out.lineType,out.cadLineweight]);let name=memo.get(key);
-   if(!name){if(memo.size>=20000)throw Error('圖塊繼承變體超過安全上限');name='__fatcat_'+memo.size;memo.set(key,name);variants[name]={...block,name,cadName:block.cadName??block.name,entities:(block.entities??[]).map((child:Any)=>adapt(child,out.layer,out.trueColor,out.lineType,[...stack,e.name],out.cadLineweight))};}
+   if(!name){if(memo.size>=20000)throw Error('圖塊繼承變體超過安全上限');name='__fatcat_'+memo.size;memo.set(key,name);variants[name]={...block,name,cadName:block.cadName??block.name,entities:adaptList(block.entities??[],(child:Any,owner:Any)=>adapt(child,owner?.layer??out.layer,owner?.trueColor??out.trueColor,owner?.lineType??out.lineType,[...stack,e.name],owner?.cadLineweight??out.cadLineweight))};}
    out.name=name;
   }
   return out;
  };
- dxf.entities=(dxf.entities??[]).map((e:Any)=>adapt(attdefAsText(e),'0',0xffffff,'CONTINUOUS',[]));
+ dxf.entities=adaptList(dxf.entities??[],(e:Any,owner:Any)=>owner?adapt(e,owner.layer,owner.trueColor,owner.lineType,[],owner.cadLineweight):adapt(attdefAsText(e),'0',0xffffff,'CONTINUOUS',[]));
  // A REGION has no shape we can read (ACIS), but a hatch filled from it keeps the same outline as its boundary
  // (鴻群 t4: piping drawn as a region outline with ANSI31 inside showed as loose dashes). Draw those loops as the region.
  for(const list of [dxf.entities,...Object.values(variants).map((v:Any)=>v.entities)]){const n=linkRegionHatches(list);if(n)counts.set('REGION',(counts.get('REGION')??0)-n);}

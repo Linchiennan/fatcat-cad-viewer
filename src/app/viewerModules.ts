@@ -12,6 +12,8 @@ import type { MarkTool } from "../viewer/markup";
 export type DrawingCanvasProps = DrawingCanvasEvents & {
   /** Drawable file: DXF (converted DWG) or the xref-assembled file. A new File object = load again. */
   file: File;
+  /** Same sheet with its references applied: keep the last picture until it is drawn (no blank flash). */
+  holdPicture?: boolean;
   /** Group B's engine factory (viewer/cadEngine createCadEngine); stable for the App's lifetime. */
   createEngine?(host: HTMLDivElement): CadEngine;
   /** Measuring / info state; `enabled` false when neither is on. */

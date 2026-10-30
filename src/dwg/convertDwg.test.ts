@@ -1,7 +1,7 @@
 // Main-thread side of the DWG conversion with a fake worker (T13 9-1).
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "../types/errors";
-import { conversionRebuiltBlocks, conversionWarnings, convertDwgToDxf, DWG_TIMEOUT_MS, setDwgWorkerFactory } from "./convertDwg";
+import { conversionRebuiltBlocks, conversionSlots, conversionWarnings, convertDwgToDxf, DWG_TIMEOUT_MS, setConversionSlotCount, setDwgWorkerFactory } from "./convertDwg";
 import { savedViewFor } from "../viewer/savedView";
 import { drawingIdentity } from "../viewer/readingPosition";
 
@@ -29,7 +29,7 @@ const use = (reply: Reply | null, postFails = false) => {
   setDwgWorkerFactory(() => (last = new FakeWorker(reply, postFails)) as unknown as Worker);
 };
 
-afterEach(() => { setDwgWorkerFactory(null); vi.useRealTimers(); });
+afterEach(() => { setDwgWorkerFactory(null); setConversionSlotCount(null); vi.useRealTimers(); });
 
 describe("convertDwgToDxf", () => {
   it("keeps one worker for the session and converts the same file only once (open, then apply its xrefs)", async () => {
@@ -168,5 +168,27 @@ describe("convertDwgToDxf", () => {
     const out = await convertDwgToDxf(dwg());
     expect(conversionRebuiltBlocks.get(out)).toBeUndefined();
     expect(conversionWarnings.get(out)).toBe(0);
+  });
+});
+
+// 用戶 2026-10-30「外參加入後的載入很慢」：13F 牆板放樣 的四張外參圖一張接一張轉，各 2.2 秒。
+describe("conversions at once", () => {
+  it("runs two on a device with 8 GB and 4 cores, one otherwise", () => {
+    expect(conversionSlots({ deviceMemory: 8, hardwareConcurrency: 8 })).toBe(2);
+    expect(conversionSlots({ deviceMemory: 4, hardwareConcurrency: 8 })).toBe(1);
+    expect(conversionSlots({ hardwareConcurrency: 8 })).toBe(1); // Safari / Firefox do not say: keep one
+  });
+  it("converts two files side by side on two workers, and a third waits for a free one", async () => {
+    setConversionSlotCount(2);
+    const made: FakeWorker[] = [];
+    setDwgWorkerFactory(() => { const w = new FakeWorker(null); made.push(w); return w as unknown as Worker; });
+    const runs = [convertDwgToDxf(dwg("AC1018 a")), convertDwgToDxf(dwg("AC1018 b")), convertDwgToDxf(dwg("AC1018 c"))];
+    await vi.waitFor(() => expect(made.map((w) => w.requests.length)).toEqual([1, 1]));
+    const answer = (w: FakeWorker, i: number) => w.dispatchEvent(new MessageEvent("message", { data: { id: w.requests[i].message.id, ok: true, dxf: dxfBytes(), savedView: null, diagnostics: 0, fallback: null } }));
+    answer(made[1], 0);
+    await vi.waitFor(() => expect(made[1].requests.length).toBe(2)); // the third went to the worker that finished
+    answer(made[0], 0); answer(made[1], 1);
+    expect((await Promise.all(runs)).map((f) => f.name)).toEqual(["plan.v2.dxf", "plan.v2.dxf", "plan.v2.dxf"]);
+    expect(made).toHaveLength(2);
   });
 });

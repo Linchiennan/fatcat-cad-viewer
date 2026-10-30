@@ -144,6 +144,10 @@ export function App() {
 
   // Engine output
   const [report, setReport] = useState<EngineReport | null>(null);
+  // References being found and applied after the drawing opened: the strip says so until that drawing is drawn.
+  const [xrefsApplying, setXrefsApplying] = useState(false);
+  const applyingFile = useRef<File | null>(null);
+  const reportBeforeApply = useRef<EngineReport | null>(null);
   const [spaces, setSpaces] = useState<CadSpace[]>([]);
   const [space, setSpace] = useState<string>(MODEL_SPACE);
   const [switching, setSwitching] = useState(false);
@@ -212,6 +216,7 @@ export function App() {
   const resetDrawingState = useCallback(() => {
     setSelecting(false); setSelectionCount(0);
     measurementKey.current = ""; setMeasureSaveFailed(false);
+    setXrefsApplying(false); applyingFile.current = null;
     setSaveFailed(false); setReport(null); setSpaces([]); setSpace(MODEL_SPACE); setSwitching(false); setIndex(null);
     setCadTab(null); dispatch({ type: "reset" }); setMeasureDetail(false); setCardPlace(null); setUnits(DEFAULT_UNITS);
     setMarking(false); setTextDialog(null); setShareNote(null); setMarkCount(0); setSearchOpen(false); setSearch(null);
@@ -373,12 +378,19 @@ export function App() {
     // Remembered references (picked before) apply even when nothing else is missing, e.g. all flagged saved unloaded.
     if (!paths.length && !(was.entryId && Object.keys(loadXrefMemory(was.entryId)).length)) return;
     const serial = request.current;
+    setXrefsApplying(true);
     autoAssembleXrefs(was.file, paths, was.entryId).then((found) => {
-      if (!found || serial !== request.current) return;
+      if (!found || serial !== request.current) { setXrefsApplying(false); return; }
       setXrefSession(was.file, found.files, found.statuses, found.mapping, found.manual);
-      setDrawable(found.file);
-    }).catch(() => { /* silent (T10 3.3) */ });
+      applyingFile.current = found.file;
+      reportBeforeApply.current = report; // the old sheet's report stays until the new one is drawn
+      setDrawable(found.file); // the strip says 套用中 until this drawing is drawn (report changes below)
+    }).catch(() => { setXrefsApplying(false); /* silent (T10 3.3) */ });
   }, [screen, report, last]);
+
+  useEffect(() => {
+    if (xrefsApplying && report && report !== reportBeforeApply.current && applyingFile.current && drawable === applyingFile.current) { setXrefsApplying(false); applyingFile.current = null; reportBeforeApply.current = null; }
+  }, [report, drawable, xrefsApplying]);
 
   // ---- modes (T10 4.2) --------------------------------------------------------------------------------
   const endMarkup = useCallback(() => { setMarking(false); setTextDialog(null); setShareNote(null); }, []);
@@ -633,7 +645,7 @@ export function App() {
       viewer = Pdf ? <Pdf ref={pdfRef} file={drawable} onProgress={onProgress} onReady={onReady} onError={onViewerError} /> : null;
     } else if (cad) {
       viewer = (
-        <cad.Canvas ref={canvasRef} file={drawable} createEngine={cad.createEngine} measurement={settings}
+        <cad.Canvas ref={canvasRef} file={drawable} holdPicture={xrefsApplying && drawable === applyingFile.current} createEngine={cad.createEngine} measurement={settings}
           selectionTool={selecting ? selectionTool : null} onSelectionCount={setSelectionCount}
           onDeleteMeasurements={indices => { const current = measureRef.current; applyMeasure({ ...current, settings: { ...current.settings, kept: removeSelected(current.settings.kept, indices) } }); }}
           markup={marking ? { tool: markTool, color: markColor, editingIndex: textDialog?.kind === "edit" ? textDialog.index : undefined, textAnchor: textDialog?.kind === "new" ? { at: textDialog.at, width: textDialog.width } : null, textPx } : null}
@@ -683,7 +695,7 @@ export function App() {
             <FileBar name={last.file.name} size={last.file.size} file={last.file} entryId={last.entryId} cardOpen={nameCard} onCard={setNameCard}
               onLibrary={openLibrary} onClose={() => setCloseConfirm(true)} />
             {showStrip ? (
-              <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded}
+              <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded} xrefsApplying={xrefsApplying}
                 onSpace={(name) => { setSwitching(true); canvasRef.current?.switchSpace(name); }}
                 onTab={(tab) => { setSearchOpen(false); endMeasure(); setCadTab(tab); }} /* 用戶 2026-10-28：量測中打開圖層等面板，自動結束量測 */ onExport={openExport} onInspect={toggleInspect} />
             ) : null}

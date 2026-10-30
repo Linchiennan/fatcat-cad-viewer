@@ -93,6 +93,9 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
    try{image.imageData=await rasterData(file);status.status='已載入：'+(file.webkitRelativePath||file.name);}catch(error){status.status='讀取失敗：'+String(error);}
   }
   const initial=Object.entries(doc.blocks??{}) as [string,Any][];
+  // Every matched DWG starts converting now (two at once on a capable device, convertDwg.ts) and is read in order below:
+  // one after another, 13F 牆板放樣's four reference drawings took 9 s (用戶 2026-10-30「外參加入後的載入很慢」).
+  for(const [name,block] of initial){if(!block.xrefPath||!(block.type&4)||(depth>0&&(block.type&8)))continue;const key=parent+'|'+name;if(disabled.has(key)||disabled.has(block.xrefPath))continue;const f=matchXref(block.xrefPath,parent,files,mapping,key);if(f&&/\.dwg$/i.test(f.name)&&!assembled.has(f))void convertDwgToDxf(f).catch(()=>{});}
   // Plain blocks can carry a path too (LibreDWG writes group 1 = name); never empty them as missing xrefs.
   for(const [name,block] of initial){if(!block.xrefPath||!(block.type&4))continue;
    const path=block.xrefPath,key=parent+'|'+name,status:XrefStatus={name,path,key,overlay:!!(block.type&8),status:'未載入'};statuses.push(status);if(depth===0)topLevel.set(status,name);
@@ -116,7 +119,8 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
     const ns=name+'|';const rename=(e:Any)=>{
      // Layer 0 of an xref is the host's layer 0, not "name|0": its content keeps following the INSERT's layer and
      // color (碁創潭子 屋頂排水: A/C symbol on layer 0 inside a block inserted on xref layer AC, orange in ZWCAD, white here).
-     const q={...e,layer:isLayerZero(e.layer)?'0':ns+e.layer,handle:ns+(e.handle??'')};
+     // The owner of an attribute is its INSERT, renamed the same way, so the attribute still finds it (13F 分路編號A).
+     const q={...e,layer:isLayerZero(e.layer)?'0':ns+e.layer,handle:ns+(e.handle??''),...(e.ownerHandle!==undefined?{ownerHandle:ns+e.ownerHandle}:{})};
      for(const k of ['name','block'])if(q[k]&&child.blocks?.[q[k]])q[k]=ns+q[k];
      if(q.lineType&&!['BYLAYER','BYBLOCK','CONTINUOUS'].includes(q.lineType.toUpperCase()))q.lineType=ns+q.lineType;
      if(q.styleName)q.styleName=ns+q.styleName;

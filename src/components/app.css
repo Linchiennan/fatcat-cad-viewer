@@ -277,6 +277,7 @@ button { cursor: pointer; }
 /* 外參沒套用完時佔第一頁分享的位置，紅字提醒（用戶 2026-10-28） */
 .check-strip-page > button.strip-xref-missing { color: #ff8a80; }
 .check-strip-page > button.strip-xref-missing em { color: #ff8a80; }
+.check-strip-page > button.strip-xref-applying, .check-strip-page > button.strip-xref-applying em { color: #ffcf7a; }
 .space-switch { position: relative; flex: 0 1 auto; max-width: 34%; padding: 0 14px; color: var(--accent-hi); }
 .space-switch svg { flex: none; width: 18px; height: 18px; }
 .space-name { overflow: hidden; text-overflow: ellipsis; }
@@ -790,3 +791,6 @@ button { cursor: pointer; }
 
 /* 量測時鎖點關閉：左上角（上方工具列下）紅字提醒；與置中的鎖點提示不會同時出現。 */
 .snap-off-warning { position: absolute; z-index: 35; left: 12px; top: calc(78px + var(--strip-h) + var(--safe-top)); padding: 4px 10px; border-radius: 8px; background: rgba(8, 16, 25, 0.82); color: #ff4d4f; font-size: 15px; font-weight: 700; white-space: nowrap; pointer-events: none; }
+/* last picture held while the same sheet is drawn again with its references (DrawingCanvas HeldPicture) */
+.held-picture { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.held-picture-canvas { width: 100%; height: 100%; display: block; }

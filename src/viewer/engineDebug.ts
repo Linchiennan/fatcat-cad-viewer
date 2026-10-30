@@ -23,6 +23,8 @@ export type FatcatDebug = {
   lastError(): string | null;
   /** Where each top-level entity of the sheet is drawn: handle → [minX, minY, maxX, maxY] (compare with ZWCAD). */
   xrefs(): unknown[] | null;
+  /** layers of the drawn sheet with their on/off as the drawing opened (xref layers included) */
+  layers(): unknown[] | null;
   entityBoxes(): Record<string, [number, number, number, number]> | null;
   /** PNG data URL of a drawing region as the export draws it (image comparison with a ZWCAD plot of the same region). */
   regionPng(minX: number, minY: number, maxX: number, maxY: number, widthPx: number, heightPx: number): Promise<string | null>;
@@ -56,6 +58,7 @@ export function makeDebugApi(): FatcatDebug {
     camera: () => current?.camera() ?? null,
     lastError: () => lastError,
     xrefs: () => ((current?.report() as { xrefs?: unknown[] } | null)?.xrefs) ?? null,
+    layers: () => ((current?.report() as { layers?: unknown[] } | null)?.layers) ?? null,
     entityBoxes: () => ((current?.report() as { entityBoxes?: Record<string, [number, number, number, number]> } | null)?.entityBoxes) ?? null,
     regionPng: async (minX, minY, maxX, maxY, widthPx, heightPx) => {
       const e = current;
