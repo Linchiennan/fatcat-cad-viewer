@@ -74,6 +74,23 @@ function matchingTail(tail: readonly string[], chain: readonly string[]): number
 }
 
 /**
+ * The candidates nearest to the main drawing: walking up from its folder, those inside the first folder that holds any.
+ * One import often holds many jobs (世舜「101年」: 6 jobs, each with its own 世舜圖框.dwg), so the top library folder is
+ * not the job; the nearest copy is (a drawing moved into「OLD」still reaches its job's frame two levels up).
+ */
+function nearest(cands: readonly Entry[], main: Entry, parents: ReadonlyMap<string, string>): Entry[] {
+  const level = (e: Entry) => {
+    const ups = new Set<string>();
+    for (let id = e.parentId, guard = 0; guard < 64; guard++) { ups.add(id); if (id === ROOT_ID) break; id = parents.get(id) ?? ROOT_ID; }
+    let n = 0;
+    for (let id = main.parentId; n < 64; n++) { if (ups.has(id)) return n; if (id === ROOT_ID) break; id = parents.get(id) ?? ROOT_ID; }
+    return 64;
+  };
+  const scored = cands.map((e) => ({ e, n: level(e) })), best = Math.min(...scored.map((x) => x.n));
+  return scored.filter((x) => x.n === best).map((x) => x.e);
+}
+
+/**
  * The library entry for a reference: the only same-name drawing, preferring the main drawing's folder. Only drawings of
  * the main drawing's project count: two jobs can both have a「圖框.dwg」, and taking the other job's one draws the wrong
  * frame without a word (用戶 2026-10-30「跨專案的外參比對沒有分隔」). Without folder data each folder is its own project.
@@ -101,7 +118,8 @@ export function pickLibraryEntry(path: string, entries: readonly Entry[], main?:
     if (top.length === 1) return top[0];
     if (top.length > 1 && main) {
       const own = top.filter((e) => projectOf(e.parentId, parents) === projectOf(main.parentId, parents));
-      if (own.length === 1) return own[0];
+      const near = own.length ? nearest(own, main, parents) : [];
+      if (near.length === 1) return near[0];
       return "ambiguous";
     }
   }
@@ -112,10 +130,9 @@ export function pickLibraryEntry(path: string, entries: readonly Entry[], main?:
   // No same-name drawing: a copy renamed with a prefix ("…__B3F 建築圖.dwg") counts when it is the only one nearby or overall.
   if (!hits.length) hits = others.filter((e) => [...names].some((n) => endsWithXrefName(e.name, n)));
   if (!hits.length) return null;
-  const near = main ? hits.filter((e) => e.parentId === main.parentId) : [];
-  if (near.length === 1) return near[0];
-  if (near.length > 1) return "ambiguous";
-  return hits.length === 1 ? hits[0] : "ambiguous";
+  if (hits.length === 1) return hits[0];
+  const near = main ? nearest(hits, main, parents) : [];
+  return near.length === 1 ? near[0] : "ambiguous";
 }
 
 /** One candidate file per reference path, with where it came from. */

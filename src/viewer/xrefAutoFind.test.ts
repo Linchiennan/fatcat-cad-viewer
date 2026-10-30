@@ -109,3 +109,27 @@ describe("references found by their saved path (13F 牆板放樣)", () => {
     expect(pickLibraryEntry(STRUCT, [main, other], main, parents, names)).toBeNull();
   });
 });
+
+// 世舜「101年」一次匯入 6 個案子，每案都有自己的 世舜圖框.dwg；弱電圖被搬進「OLD」後存的「..\世舜圖框.dwg」走不到。
+// 取離主圖最近的那一份；最近那一層有兩份以上、或這案根本沒有（只有別案有）就不猜。
+describe("several jobs imported together (世舜 101年)", () => {
+  const parents = new Map([["Y", "root"], ["A", "Y"], ["Aw", "A"], ["Ae", "Aw"], ["Ao", "Ae"], ["Ax", "Aw"], ["B", "Y"], ["Bw", "B"], ["Bc", "Bw"], ["C", "Y"], ["Cw", "C"], ["Cx", "Cw"]]);
+  const names = new Map([["Y", "101年"], ["A", "10115安城"], ["Aw", "1010822施工圖"], ["Ae", "005-S-弱電"], ["Ao", "OLD"], ["Ax", "001-XS-建築"], ["B", "10148安邑"], ["Bw", "08施工圖"], ["Bc", "006-C-給水"], ["C", "10175碁創"], ["Cw", "08施工圖"], ["Cx", "001-XS-建築"]]);
+  const frames = [entry("fa", "世舜圖框.dwg", "Aw"), entry("fb", "世舜圖框.dwg", "Bw"), entry("fc", "世舜圖框.dwg", "Cw")];
+  const plans = [entry("pa", "壹層平面圖.dwg", "Ax"), entry("pc", "壹層平面圖.dwg", "Cx")];
+  const FRAME = String.raw`..\世舜圖框.dwg`, PLAN = String.raw`..\001-XS-建築\壹層平面圖.dwg`;
+  it("takes the job's own frame for a drawing moved into OLD", () => {
+    const main = entry("m", "1010830壹層弱電平面圖.dwg", "Ao");
+    expect((pickLibraryEntry(FRAME, [main, ...frames, ...plans], main, parents, names) as { id: string }).id).toBe("fa");
+    expect((pickLibraryEntry(PLAN, [main, ...frames, ...plans], main, parents, names) as { id: string }).id).toBe("pa");
+  });
+  it("does not borrow another job's plan when this job has none", () => {
+    const main = entry("m", "給水平面圖.dwg", "Bc");
+    expect(pickLibraryEntry(PLAN, [main, ...frames, ...plans], main, parents, names)).toBe("ambiguous");
+    expect((pickLibraryEntry(FRAME, [main, ...frames, ...plans], main, parents, names) as { id: string }).id).toBe("fb");
+  });
+  it("still refuses two copies at the nearest level", () => {
+    const main = entry("m", "x.dwg", "Ae");
+    expect(pickLibraryEntry("世舜圖框.dwg", [main, entry("f1", "世舜圖框.dwg", "Aw"), entry("f2", "世舜圖框.dwg", "Ax")], main, parents, names)).toBe("ambiguous");
+  });
+});
