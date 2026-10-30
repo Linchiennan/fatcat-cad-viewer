@@ -1,6 +1,7 @@
 import {listCadFonts} from './cadFonts';
 import {shxMtextGeometry} from './shxMtext';
-import {fallbackMetrics,fittedShape,verticalPitch,verticalTextEntities} from './shxBigFontMetrics';
+import {fallbackMetrics,fittedShape,verticalMtextEntities,verticalPitch,verticalTextEntities} from './shxBigFontMetrics';
+import {plainCadText} from './textSearch';
 import {ShxFont,fontKey,shxTextGeometry} from './shxText';
 import {parse} from 'opentype.js';
 import {TextRenderer} from 'dxf-viewer/src/TextRenderer.js';
@@ -27,8 +28,15 @@ export function installCadFontScene(ctor:Any):void {
   this.cadFonts=new Map<string,ShxFont>();this.cadOutlineFonts=new Map();this.cadFontResults={rendered:0,fallback:0,routes:{}};this.cadStyles=dxf.tables?.style?.styles??{};
   const texts=[...(dxf.entities??[]),...Object.values(dxf.blocks??{}).flatMap((b:Any)=>b.entities??[])].map((e:Any)=>e.text??'').join('');
   for(const f of await listCadFonts())try{if(f.name.endsWith('.shx'))this.cadFonts.set(f.name,new ShxFont(f.data));else{const font=parse(f.data),renderer=new TextRenderer([async()=>font]);await renderer.FetchFonts(texts);this.cadOutlineFonts.set(f.name,{font,renderer});}}catch{this.cadFontResults.fallback++;}
+  // SHX text has no outline of its own, so it is drawn with the bundled light weight: CAD draws SHX as thin single strokes
+  // and the regular weight looked bold beside it (用戶 2026-10-30 選「另外加一套細體只給 SHX 用」). The light font is the
+  // last of the engine fonts and is only read when the drawing has text on an SHX style.
+  const base=Array.isArray(fonts)&&fonts.length>2?fonts.slice(0,-1):fonts,light=Array.isArray(fonts)&&fonts.length>2?fonts[fonts.length-1]:null;
+  this.cadShxRenderer=null;
+  const shxTexts=[...(dxf.entities??[]),...Object.values(dxf.blocks??{}).flatMap((b:Any)=>b.entities??[])].filter((e:Any)=>e.text&&isShxStyle(this.cadStyles[e.styleName??'STANDARD'])).map((e:Any)=>e.text).join('');
+  if(light&&shxTexts){try{const r=new TextRenderer([light]);await r.FetchFonts(shxTexts);this.cadShxRenderer=r;}catch{/* the regular weight stays */}}
   activeFontUsage={};
-  try{await build.call(this,dxf,fonts);this.cadFontDiagnostics={...this.cadFontResults,actualGlyphFonts:{...activeFontUsage},styles:Object.values(this.cadStyles).slice(0,64).map((s:Any)=>({style:s.styleName,requested:s.font||'(未指定檔名)',bigFont:s.bigFont||'',availableLocal:!!(this.cadFonts.has(fontKey(s.font??''))||this.cadOutlineFonts.has(fontKey(s.font??'')))})),note:'actualGlyphFonts counts actual outline glyph lookups during layout/render (including cached glyphs), not text content or pixel counts; rendered=local font entities, fallback=bundled route because requested font/glyphs/SHX formatting unavailable. routes=local filenames actually used.'};}finally{activeFontUsage=null;for(const f of this.cadFonts.values())f.release();}
+  try{await build.call(this,dxf,base);this.cadFontDiagnostics={...this.cadFontResults,actualGlyphFonts:{...activeFontUsage},styles:Object.values(this.cadStyles).slice(0,64).map((s:Any)=>({style:s.styleName,requested:s.font||'(未指定檔名)',bigFont:s.bigFont||'',availableLocal:!!(this.cadFonts.has(fontKey(s.font??''))||this.cadOutlineFonts.has(fontKey(s.font??'')))})),note:'actualGlyphFonts counts actual outline glyph lookups during layout/render (including cached glyphs), not text content or pixel counts; rendered=local font entities, fallback=bundled route because requested font/glyphs/SHX formatting unavailable. routes=local filenames actually used.'};}finally{activeFontUsage=null;for(const f of this.cadFonts.values())f.release();}
  };
  for(const name of ['_DecomposeText','_DecomposeAttribute']){
   const original=p[name];p[name]=function*(e:Any,ctx:Any){
@@ -39,16 +47,27 @@ export function installCadFontScene(ctor:Any):void {
    const outline=this.cadOutlineFonts?.get(fontKey(style.font??''));
    if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* generationMirror(effective,original.call(this,effective,ctx));this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
    if(font){const lines=shxTextGeometry(effective,font,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
-   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withBigFontPitch(this.textRenderer,style,()=>generationMirror(effective,original.call(this,effective,ctx)));
+   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withShxRenderer(this,style,()=>withBigFontPitch(this.textRenderer,style,()=>generationMirror(effective,original.call(this,effective,ctx))));
   };
  }
  const mtext=p._DecomposeMText;p._DecomposeMText=function*(e:Any,ctx:Any){
   const style=this.cadStyles?.[e.styleName??'STANDARD']??{},outline=this.cadOutlineFonts?.get(fontKey(style.font??''));
+  // Vertical style and direction "top to bottom" (3) or "by style" (5): upright characters in columns, as single-line text.
+  const vertical=e.drawingDirection===1?null:verticalPitch(style);
+  if(vertical){for(const c of verticalMtextEntities(e,vertical,plainCadText))yield* p._DecomposeText.call(this,{...c,cadVerticalChar:true},ctx);return;}
   const shx=this.cadFonts?.get(fontKey(style.font??'')),big=this.cadFonts?.get(fontKey(style.bigFont??''));
   if(shx){const lines=shxMtextGeometry(e,shx,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
   if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* mtext.call(this,e,ctx);this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
-  if(this.cadFontResults)this.cadFontResults.fallback++;yield* withBigFontPitch(this.textRenderer,style,()=>mtext.call(this,e,ctx));
+  if(this.cadFontResults)this.cadFontResults.fallback++;yield* withShxRenderer(this,style,()=>withBigFontPitch(this.textRenderer,style,()=>mtext.call(this,e,ctx)));
  };
+}
+/** A style drawn from SHX shapes (no font file, a .shx file or a name without extension), not an outline font. */
+export function isShxStyle(style:Any):boolean{const font=String(style?.font??'').trim();return !/\.(ttf|ttc|otf)$/i.test(font);}
+/** Runs SHX-style text with the light-weight renderer when it was loaded. */
+function* withShxRenderer(scene:Any,style:Any,run:()=>Generator<Any>):Generator<Any>{
+ const light=scene.cadShxRenderer;if(!light||!isShxStyle(style)){yield* run();return;}
+ const previous=scene.textRenderer;scene.textRenderer=light;
+ try{yield* run();}finally{scene.textRenderer=previous;}
 }
 function* withBigFontPitch(renderer:Any,style:Any,run:()=>Generator<Any>):Generator<Any>{
  const previous=renderer.fatcatPitch;renderer.fatcatPitch=fallbackMetrics(style);

@@ -103,3 +103,17 @@ describe("embedded OLE pictures", () => {
     expect(doc.cadUnsupported.OLE2FRAME).toBeUndefined();
   });
 });
+
+describe("static pictures pasted into CAD (CONTENTS stream)", () => {
+  it("reads a StaticDib BMP (上晴 B區0818) and a placeable StaticMetafile WMF (惠宇 X05 公設標示)", () => {
+    const bmp = new Uint8Array(70); const v = new DataView(bmp.buffer);
+    bmp[0] = 0x42; bmp[1] = 0x4d; v.setUint32(2, 70, true); v.setUint32(10, 54, true); v.setUint32(14, 40, true);
+    v.setInt32(18, 2, true); v.setInt32(22, 2, true); v.setUint16(26, 1, true); v.setUint16(28, 24, true);
+    expect(oleImage(makeCfb("CONTENTS", bmp))).toMatchObject({ mime: "image/bmp" });
+    const wmf = new Uint8Array([1, 0, 9, 0, 0, 3, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0]);
+    const placeable = new Uint8Array(22 + wmf.length); new DataView(placeable.buffer).setUint32(0, 0x9ac6cdd7, true); placeable.set(wmf, 22);
+    const picture = oleImage(makeCfb("CONTENTS", placeable));
+    expect(picture.mime).toBe("image/wmf");
+    expect(Array.from(picture.bytes.subarray(0, 4))).toEqual([1, 0, 9, 0]);
+  });
+});

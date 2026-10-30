@@ -34,7 +34,8 @@ type Any = any;
  * a desktop), and the loading screen can be cancelled at any time. */
 export const LOAD_TIMEOUT_MS = 600_000;
 /** Bundled fonts, in fallback order (T14 3.3-10). */
-export const ENGINE_FONTS = ["fonts/LiberationSans-Regular.ttf", "fonts/NotoSansCJKtc-Regular.otf"];
+// The last one is the light weight for SHX text only (cadFontsScene: read only when a drawing has SHX-style text).
+export const ENGINE_FONTS = ["fonts/LiberationSans-Regular.ttf", "fonts/NotoSansCJKtc-Regular.otf", "fonts/NotoSansCJKtc-Light.otf"];
 /** Prefix of the assembled-document files our xrefs module writes. */
 const JSON_PREFIX = "FATCAT-DXF-JSON\n";
 const BACKGROUND = "#0b1118";

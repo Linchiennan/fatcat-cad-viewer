@@ -143,6 +143,22 @@ export function presentationImage(cfb: Uint8Array): OleImage | null {
   return null;
 }
 
+/**
+ * A picture pasted as a static object ("Picture (Device Independent Bitmap)" StaticDib, "Picture (Metafile)"
+ * StaticMetafile) keeps it in CONTENTS: a BMP file, or a placeable WMF (22-byte header, key 0x9AC6CDD7).
+ * 上晴 B區0818 and 惠宇 X05／X06 showed "no picture" because only Ole10Native and OlePres000 were read.
+ */
+export function staticPicture(cfb: Uint8Array): OleImage | null {
+  const contents = readCfbStream(cfb, "CONTENTS");
+  if (!contents || contents.length < 26) return null;
+  if (sniff(contents, 0) === "image/bmp") return { bytes: contents, mime: "image/bmp" };
+  const key = new DataView(contents.buffer, contents.byteOffset, 4).getUint32(0, true);
+  const wmf = key === 0x9ac6cdd7 ? contents.subarray(22) : contents;
+  if (wmf[2] === 9 && wmf[3] === 0 && (wmf[0] === 1 || wmf[0] === 2)) return { bytes: wmf, mime: "image/wmf" };
+  if (contents[0] === 1 && contents[1] === 0 && contents[2] === 0 && contents[3] === 0 && contents[40] === 0x20 && contents[41] === 0x45) throw Error("內嵌圖片為 EMF 格式，尚未支援");
+  return null;
+}
+
 /** Picture bytes inside OLE2FRAME data, or an explanation of why there is none. */
 export function oleImage(data: Uint8Array): OleImage {
   const start = findSignature(data);
@@ -150,7 +166,7 @@ export function oleImage(data: Uint8Array): OleImage {
   const cfb = data.subarray(start);
   const native = readCfbStream(cfb, "\u0001Ole10Native");
   if (!native || native.length < 8) {
-    const preview = presentationImage(cfb);
+    const preview = presentationImage(cfb) ?? staticPicture(cfb);
     if (preview) return preview;
     throw Error(describeDocument(cfb) + "，沒有預覽畫面，無法顯示（請在電腦 CAD 查看）");
   }

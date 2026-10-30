@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeWmfText, renderWmf, wmfInfo } from "./wmf";
+import { decodeDib, decodeWmfText, renderWmf, wmfInfo } from "./wmf";
 
 // Builds a small WMF the way Excel writes its table previews.
 function wmf(build: (rec: (fn: number, ...words: number[]) => void, bytes: (fn: number, data: number[]) => void) => void): Uint8Array {
@@ -77,5 +77,43 @@ describe("WMF preview playback", () => {
 
   it("rejects data that is not a WMF", () => {
     expect(() => wmfInfo(new Uint8Array(40))).toThrow(/WMF/);
+  });
+});
+
+// 2×2 DIB: bottom-up rows, so the first stored row is the bottom one. Pixels: top red, green / bottom blue, white.
+function dib24(): number[] {
+  const h = new Array(40).fill(0);
+  h[0] = 40; h[4] = 2; h[8] = 2; h[12] = 1; h[14] = 24;
+  const row = (a: number[], b: number[]) => [...a, ...b, 0, 0]; // 6 bytes + 2 padding
+  return [...h, ...row([255, 0, 0], [255, 255, 255]), ...row([0, 0, 255], [0, 255, 0])]; // BGR
+}
+
+describe("bitmaps inside a WMF (惠宇 X05 公設標示: the picture is one DIBSTRETCHBLT)", () => {
+  it("decodes 24-bit, palette and bit-field DIBs top row first", () => {
+    const d = decodeDib(new Uint8Array(dib24()));
+    expect([d.width, d.height, d.bottomUp]).toEqual([2, 2, true]);
+    expect(Array.from(d.rgba)).toEqual([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]);
+    const pal = new Array(40).fill(0); pal[0] = 40; pal[4] = 2; pal[8] = 0xff; pal[9] = 0xff; pal[10] = 0xff; pal[11] = 0xff; pal[12] = 1; pal[14] = 1; // height -1: top-down
+    const one = decodeDib(new Uint8Array([...pal, 0, 0, 0, 0, 255, 255, 255, 0, 0b01000000, 0, 0, 0]));
+    expect(Array.from(one.rgba)).toEqual([0, 0, 0, 255, 255, 255, 255, 255]);
+    const bf = new Array(40).fill(0); bf[0] = 40; bf[4] = 1; bf[8] = 1; bf[12] = 1; bf[14] = 32; bf[16] = 3;
+    const masks = [0x00ff0000, 0x0000ff00, 0x000000ff].flatMap(m => [m & 0xff, (m >> 8) & 0xff, (m >> 16) & 0xff, m >>> 24]);
+    expect(Array.from(decodeDib(new Uint8Array([...bf, ...masks, 0x30, 0x20, 0x10, 0])).rgba)).toEqual([0x10, 0x20, 0x30, 255]);
+    expect(() => decodeDib(new Uint8Array([40, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 1, 0, 24, 0, 1, 0, 0, 0, ...new Array(24).fill(0)]))).toThrow(/壓縮/);
+  });
+
+  it("draws a DIBSTRETCHBLT bitmap into its destination rectangle", () => {
+    const sample = wmf((rec, push) => {
+      rec(0x020c, 100, 200);
+      const words = [0x0020, 0x00cc, 2, 2, 0, 0, 50, 100, 10, 20]; // SRCCOPY; source 2×2 at 0,0; destination 100×50 at (20,10)
+      push(0x0b41, [...words.flatMap(w => [w & 0xff, w >> 8]), ...dib24()]);
+    });
+    const { ctx, calls } = recorder();
+    const made: unknown[] = [];
+    const result = renderWmf(sample, ctx, 400, 200, (p) => { made.push(p); return "IMG" as unknown as CanvasImageSource; });
+    expect(result.skipped).toEqual({});
+    expect(made).toHaveLength(1);
+    expect(calls).toContainEqual(["translate", 40, 20]);
+    expect(calls).toContainEqual(["drawImage", "IMG", 0, 0, 2, 2, 0, 0, 200, 100]);
   });
 });

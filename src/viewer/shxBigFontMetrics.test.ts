@@ -123,3 +123,29 @@ describe("big fonts named with a folder (t4 鴻群 \\RUBON\\CHINA)", () => {
     expect(bigFontPitch("china")).toBe(1.125);
   });
 });
+
+import { verticalMtextEntities } from "./shxBigFontMetrics";
+import { plainCadText } from "./textSearch";
+
+// 惠宇 W02「每4各樓層銜接一次」：MTEXT on a vertical romans + chineset style, height 9.1, width 56.7, top-left at
+// (2615.06, 1600.56). ZWCAD: column 1「每4各樓層」centred x 2619.3, column 2「銜接一次」x 2631.5; 每 centre y about 1595.9.
+describe("vertical MTEXT", () => {
+  const e = { text: "每4各樓層銜接一次", height: 9.1, width: 56.69613810211922, position: { x: 2615.06288862004, y: 1600.561023274151 }, direction: { x: 1, y: 0 }, attachmentPoint: 1 };
+  it("runs down in columns that break at the box width and go to the right, as ZWCAD draws it", () => {
+    const parts = verticalMtextEntities(e, verticalPitch({ standardFlag: 4, font: "romans.shx", bigFont: "chineset.shx" })!, plainCadText);
+    expect(parts.map(p => p.text).join("")).toBe("每4各樓層銜接一次");
+    const xs = [...new Set(parts.map(p => p.startPoint.x.toFixed(1)))];
+    expect(xs).toHaveLength(2);
+    expect(parts.filter(p => p.startPoint.x.toFixed(1) === xs[0])).toHaveLength(5);
+    expect(Math.abs(parts[0].startPoint.x - 2619.3)).toBeLessThan(0.5);
+    expect(Math.abs(parts[5].startPoint.x - 2631.5)).toBeLessThan(0.5);
+    // ZWCAD centres (character outlines): 每 1595.9, 4 1585.8, 各 1572.6, 樓 1562.5, 層 1552.2 / 銜 1595.9, 接 1585.6, 一 1575.5, 次 1565.2
+    const zw = [1595.9, 1585.8, 1572.6, 1562.5, 1552.2, 1595.9, 1585.6, 1575.5, 1565.2];
+    parts.forEach((p, i) => expect(Math.abs(p.startPoint.y - zw[i])).toBeLessThan(0.7));
+    expect(parts.every(p => p.halign === 4 && p.textHeight === 9.1 && p.rotation === 0)).toBe(true);
+  });
+  it("starts a new column at each paragraph", () => {
+    const parts = verticalMtextEntities({ ...e, text: "一二\\P三", width: 0 }, 1.125, plainCadText);
+    expect(new Set(parts.map(p => p.startPoint.x.toFixed(3))).size).toBe(2);
+  });
+});

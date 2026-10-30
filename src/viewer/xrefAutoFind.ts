@@ -2,7 +2,7 @@
 // A browser or the Android app cannot look into the opened file's folder, so the search covers what
 // the app may read: drawings already in the library (same folder first) and folders the user chose
 // once and asked to remember. Only a single same-name match is used; anything ambiguous stays manual.
-import { listLibraryDrawings, readLibraryDrawing } from "../library/drawingLibrary";
+import { listLibraryDrawings, listLibraryFolders, readLibraryDrawing, ROOT_ID } from "../library/drawingLibrary";
 import { assembleXrefs, endsWithXrefName, normalizeCadPath, type XrefStatus } from "./xrefs";
 import { rememberedFolderFiles } from "./xrefFolders";
 import { rememberedXrefFiles } from "./xrefMemory";
@@ -15,10 +15,29 @@ export function xrefFileNames(path: string): string[] {
 }
 
 type Entry = { id: string; name: string; parentId: string };
-/** The library entry for a reference: the only same-name drawing, preferring the main drawing's folder. */
-export function pickLibraryEntry(path: string, entries: readonly Entry[], main?: Entry): Entry | "ambiguous" | null {
+/**
+ * The project a library folder belongs to: its top folder under the root (the root itself for drawings kept there).
+ * `parents` maps folder id → parent folder id.
+ */
+export function projectOf(folderId: string, parents: ReadonlyMap<string, string>): string {
+  let id = folderId;
+  for (let guard = 0; guard < 64; guard++) {
+    const up = parents.get(id);
+    if (!up || up === ROOT_ID) return id;
+    id = up;
+  }
+  return id;
+}
+
+/**
+ * The library entry for a reference: the only same-name drawing, preferring the main drawing's folder. Only drawings of
+ * the main drawing's project count: two jobs can both have a「圖框.dwg」, and taking the other job's one draws the wrong
+ * frame without a word (用戶 2026-10-30「跨專案的外參比對沒有分隔」). Without folder data each folder is its own project.
+ */
+export function pickLibraryEntry(path: string, entries: readonly Entry[], main?: Entry, parents: ReadonlyMap<string, string> = new Map()): Entry | "ambiguous" | null {
   const names = new Set(xrefFileNames(path));
-  const others = entries.filter((e) => e.id !== main?.id);
+  const project = main ? projectOf(main.parentId, parents) : null;
+  const others = entries.filter((e) => e.id !== main?.id && (project === null || projectOf(e.parentId, parents) === project));
   let hits = others.filter((e) => names.has(normalizeCadPath(e.name).split("/").at(-1) ?? ""));
   // No same-name drawing: a copy renamed with a prefix ("…__B3F 建築圖.dwg") counts when it is the only one nearby or overall.
   if (!hits.length) hits = others.filter((e) => [...names].some((n) => endsWithXrefName(e.name, n)));
@@ -33,10 +52,14 @@ export function pickLibraryEntry(path: string, entries: readonly Entry[], main?:
 async function findFiles(paths: readonly string[], entryId?: string): Promise<{ file: File; origin: string }[]> {
   const out: { file: File; origin: string }[] = [], left: string[] = [];
   let entries: Entry[] = [];
-  try { entries = await listLibraryDrawings(); } catch { /* No library (private window): folders only. */ }
+  const parents = new Map<string, string>();
+  try {
+    entries = await listLibraryDrawings();
+    for (const f of await listLibraryFolders()) parents.set(f.id, f.parentId);
+  } catch { /* No library (private window): folders only. */ }
   const main = entries.find((e) => e.id === entryId);
   for (const path of paths) {
-    const hit = pickLibraryEntry(path, entries, main);
+    const hit = pickLibraryEntry(path, entries, main, parents);
     if (hit && hit !== "ambiguous") {
       try { out.push({ file: await readLibraryDrawing(hit.id), origin: "圖面庫" }); continue; } catch { /* Fall through to folders. */ }
     }

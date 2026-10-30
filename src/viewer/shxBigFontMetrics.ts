@@ -98,6 +98,57 @@ export function verticalPitch(style: { font?: string; bigFont?: string; standard
 }
 
 type P = { x: number; y: number; z?: number };
+
+/** Column spacing of vertical MTEXT in text heights (惠宇 W02, see verticalMtextEntities). */
+export const VERTICAL_MTEXT_COLUMN = 1.34;
+/**
+ * Cell of a half-width character (drawn from the text font, not the big font) in vertical text: romans is 21 above and
+ * 7 below, and its vertical moves step (21 + 7 + 1) / 21 = 1.381 h. W02's「4」measured 12.58 at h 9.1 (1.382), top at the
+ * cell top; it pushed「各樓層」0.3 h further down than a big-font cell would.
+ */
+export const VERTICAL_HALF_CELL = 29 / 21;
+const HALF_WIDTH = /^[!-~]$/;
+
+type MtextLike = { text?: string; height?: number; width?: number; position?: P; direction?: P; rotation?: number; attachmentPoint?: number; lineSpacing?: number };
+/**
+ * Vertical MTEXT (a vertical SHX style; direction "top to bottom" or "by style"): each paragraph runs down in upright
+ * characters, starting a new column when the next one would pass the box width (group 41 is the column length), and
+ * columns go to the right. Measured in ZWCAD on 惠宇 W02「每4各樓層銜接一次」(romans + chineset, height 9.1, width 56.7):
+ * 5 + 4 characters, 1.125 h apart, columns 1.34 h apart, the first centred half a height right of a top-left insertion.
+ * Returns single-character TEXT parts centred on their points.
+ */
+export function verticalMtextEntities<T extends MtextLike>(e: T, pitch: number, plain: (raw: string) => string): (T & { type: string; text: string; textHeight: number; rotation: number; halign: number; valign: number; startPoint: P; endPoint: P })[] {
+  const h = e.height || 1, step = pitch * h, colStep = VERTICAL_MTEXT_COLUMN * h * (e.lineSpacing || 1);
+  const limit = e.width && e.width > 0 ? e.width + 1e-9 : Infinity;
+  const cell = (ch: string) => (HALF_WIDTH.test(ch) ? VERTICAL_HALF_CELL * h : step);
+  const columns: string[][] = [];
+  for (const paragraph of String(e.text ?? "").split(/\\P|\^J/)) {
+    const chars = [...plain(paragraph)].filter(ch => ch !== " ");
+    let column: string[] = [], used = 0;
+    for (const ch of chars) {
+      if (column.length && used + cell(ch) > limit) { columns.push(column); column = []; used = 0; }
+      column.push(ch); used += cell(ch);
+    }
+    columns.push(column);
+  }
+  const tallest = Math.max(0, ...columns.map(c => c.reduce((n, ch) => n + cell(ch), 0))), wide = Math.max(0, columns.length - 1) * colStep + h;
+  const a = Math.min(9, Math.max(1, e.attachmentPoint ?? 1)), hor = (a - 1) % 3, ver = Math.floor((a - 1) / 3);
+  const left = -hor * wide / 2, top = ver * tallest / 2;
+  const angle = e.direction && (e.direction.x || e.direction.y) ? Math.atan2(e.direction.y, e.direction.x) : e.rotation ?? 0;
+  const cos = Math.cos(angle), sin = Math.sin(angle), at = e.position ?? { x: 0, y: 0 };
+  const out: ReturnType<typeof verticalMtextEntities<T>> = [];
+  columns.forEach((column, c) => {
+    let cellTop = top;
+    for (const text of column) {
+      // A big-font character is centred in its cell; a text-font one (half width) hangs from the cell top.
+      const x = left + h / 2 + c * colStep, y = cellTop - (HALF_WIDTH.test(text) ? h / 2 : step / 2);
+      const centre = { x: at.x + x * cos - y * sin, y: at.y + x * sin + y * cos, z: at.z ?? 0 };
+      out.push({ ...e, type: "TEXT", text, textHeight: h, rotation: (angle * 180) / Math.PI, halign: 4, valign: 0, startPoint: centre, endPoint: centre });
+      cellTop -= cell(text);
+    }
+  });
+  return out;
+}
 /**
  * One upright single-character TEXT per character, stacked downward and centred on the column.
  * CAD stores the column's top centre as the insertion point; with middle justification (72=4) the

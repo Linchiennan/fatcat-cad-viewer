@@ -25,7 +25,7 @@ Copyright (C) 2026 大肥貓
 - 壓縮檔：libarchive-wasm（MIT），內含 libarchive（BSD）、zlib、bzip2、xz、OpenSSL（Apache-2.0）
 - SHX 字型：@mlightcad/shx-parser（MIT）；壓縮：fflate（MIT）
 - 介面與平台：React（MIT）、Capacitor（MIT）、AndroidX（Apache-2.0）
-- 字型：Noto Sans CJK TC、Liberation Sans（SIL Open Font License 1.1）
+- 字型：Noto Sans CJK TC（Regular、Light）、Liberation Sans（SIL Open Font License 1.1）
 
 ## 修改過的第三方檔案
 

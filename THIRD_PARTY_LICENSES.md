@@ -38,6 +38,7 @@
 | 字型 | 授權 | 授權原文 |
 |---|---|---|
 | Noto Sans CJK TC Regular（notofonts/noto-cjk，未修改） | SIL OFL 1.1 | licenses/noto-cjk-OFL-1.1.txt |
+| Noto Sans CJK TC Light 2.004（notofonts/noto-cjk，未修改；SHX 文字替代用） | SIL OFL 1.1 | licenses/noto-cjk-OFL-1.1.txt |
 | Liberation Sans Regular 2.1.5（未修改） | SIL OFL 1.1 | licenses/liberation-fonts-OFL-1.1.txt |
 
 ## Android 原生層

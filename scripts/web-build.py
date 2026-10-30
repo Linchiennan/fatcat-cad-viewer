@@ -94,7 +94,7 @@ banned = [p for p in files if p not in demo and p.suffix.lower() in ['.dwg', '.d
 assert not banned, banned
 for url in core + runtime:
     assert url == './' or (out / url[2:]).is_file(), url
-for needed in ['./runtime/libredwg/libredwg-web.wasm', './runtime/libarchive/libarchive.wasm', './runtime/pdfjs/pdf.worker.min.mjs', './fonts/NotoSansCJKtc-Regular.otf', './fonts/LiberationSans-Regular.ttf']:
+for needed in ['./runtime/libredwg/libredwg-web.wasm', './runtime/libarchive/libarchive.wasm', './runtime/pdfjs/pdf.worker.min.mjs', './fonts/NotoSansCJKtc-Regular.otf', './fonts/NotoSansCJKtc-Light.otf', './fonts/LiberationSans-Regular.ttf']:
     assert needed in runtime, needed
 mf = json.loads((out / 'manifest.webmanifest').read_text(encoding='utf8'))
 for icon in mf['icons']:

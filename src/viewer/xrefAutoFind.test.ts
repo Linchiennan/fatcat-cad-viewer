@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { pickLibraryEntry, xrefFileNames } from "./xrefAutoFind";
+import { pickLibraryEntry, projectOf, xrefFileNames } from "./xrefAutoFind";
+
+// 用戶 2026-10-30「跨專案的外參比對沒有分隔，不同案子同檔名的外參可能套錯」：只在主圖所在的案子（圖面庫最上層資料夾）裡找。
+describe("references stay inside the main drawing's project", () => {
+  // root ─ 14H ─ 建築 (主圖) / 圖框 (惠宇圖框)；root ─ 15C ─ 圖框 (惠宇圖框)
+  const parents = new Map([["p14h", "root"], ["p14h-arch", "p14h"], ["p14h-frame", "p14h"], ["p15c", "root"], ["p15c-frame", "p15c"]]);
+  const main = { id: "m", name: "1F 平面.dwg", parentId: "p14h-arch" };
+  it("finds the project top folder of any folder", () => {
+    expect(projectOf("p14h-frame", parents)).toBe("p14h");
+    expect(projectOf("p15c", parents)).toBe("p15c");
+    expect(projectOf("root", parents)).toBe("root");
+  });
+  it("takes the frame from another folder of the same job, never from another job", () => {
+    const own = { id: "f14", name: "惠宇圖框.dwg", parentId: "p14h-frame" }, other = { id: "f15", name: "惠宇圖框.dwg", parentId: "p15c-frame" };
+    expect(pickLibraryEntry("惠宇圖框.dwg", [main, own, other], main, parents)).toEqual(own);
+    expect(pickLibraryEntry("惠宇圖框.dwg", [main, other], main, parents)).toBeNull();
+    expect(pickLibraryEntry("..\\B3F 建築圖.dwg", [main, { id: "c", name: "15C__B3F 建築圖.dwg", parentId: "p15c" }], main, parents)).toBeNull();
+  });
+});
 import { endsWithXrefName, matchXref } from "./xrefs";
 
 const entry = (id: string, name: string, parentId = "root") => ({ id, name, parentId });
@@ -25,7 +43,7 @@ describe("finding external references by themselves", () => {
 
   it("never guesses between several candidates and never uses the drawing itself", () => {
     const main = entry("m", "主圖.dwg", "a");
-    expect(pickLibraryEntry("惠宇圖框.dwg", [main, entry("x1", "惠宇圖框.dwg", "b"), entry("x2", "惠宇圖框.dwg", "c")], main)).toBe("ambiguous");
+    expect(pickLibraryEntry("惠宇圖框.dwg", [main, entry("x1", "惠宇圖框.dwg", "a"), entry("x3", "惠宇圖框.dwg", "a")], main)).toBe("ambiguous");
     expect(pickLibraryEntry("主圖.dwg", [main], main)).toBeNull();
     expect(pickLibraryEntry("沒有.dwg", [main], main)).toBeNull();
   });
@@ -35,7 +53,7 @@ describe("finding external references by themselves", () => {
     const main = entry("m", "03--消防施工圖__1081030-B3F施工圖__TO(林主任)B3F 施工圖.dwg", "f");
     const copy = entry("x", "03--消防施工圖__1081030-B3F施工圖__B3F 建築圖.dwg", "f");
     expect(pickLibraryEntry("..\\建築\\B3F 建築圖.dwg", [main, copy], main)).toEqual(copy);
-    expect(pickLibraryEntry("B3F 建築圖.dwg", [main, copy, entry("e", "B3F 建築圖.dwg", "g")], main)).toMatchObject({ id: "e" }); // same name wins
+    expect(pickLibraryEntry("B3F 建築圖.dwg", [main, copy, entry("e", "B3F 建築圖.dwg", "f")], main)).toMatchObject({ id: "e" }); // same name wins
     expect(pickLibraryEntry("B3F 建築圖.dwg", [main, copy, entry("y", "舊版__B3F 建築圖.dwg", "f")], main)).toBe("ambiguous");
     expect(pickLibraryEntry("a.dwg", [main, entry("d", "data.dwg", "f"), entry("k", "一樓建築圖.dwg", "f")], main)).toBeNull();
     expect(pickLibraryEntry("建築圖.dwg", [main, entry("k", "一樓建築圖.dwg", "f")], main)).toBeNull(); // no separator before it

@@ -1,9 +1,9 @@
 // Windows Metafile (WMF) playback onto a 2D canvas, for the preview picture Office stores in
 // embedded Excel / Word objects (\u0002OlePres000). Covers the records Office and GDI write for
-// tables and text; anything else is skipped and counted. Only local bytes; never fetch.
+// tables and text, and bitmaps (DIB blits); anything else is skipped and counted. Only local bytes; never fetch.
 type Ctx = Pick<CanvasRenderingContext2D,
   "save" | "restore" | "beginPath" | "moveTo" | "lineTo" | "closePath" | "rect" | "ellipse" | "clip" | "fill" | "stroke" |
-  "fillRect" | "fillText" | "measureText" | "translate" | "rotate" | "setLineDash"> & {
+  "fillRect" | "fillText" | "measureText" | "translate" | "rotate" | "setLineDash" | "scale" | "drawImage"> & {
   fillStyle: unknown; strokeStyle: unknown; lineWidth: number; lineCap: string; lineJoin: string; font: string; textBaseline: string;
 };
 
@@ -40,6 +40,69 @@ function* records(bytes: Uint8Array): Generator<{ fn: number; at: number; words:
     at += words * 2;
   }
 }
+
+export type DibPixels = { width: number; height: number; rgba: Uint8ClampedArray; bottomUp: boolean };
+const MAX_DIB_PIXELS = 32 * 1024 * 1024;
+
+/** Pixels of a packed DIB (info or core header; 1/4/8/16/24/32 bits; BI_RGB or BI_BITFIELDS), top row first. */
+export function decodeDib(bytes: Uint8Array): DibPixels {
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (bytes.length < 12) throw Error("內嵌點陣圖資料不完整");
+  const size = v.getUint32(0, true), core = size === 12;
+  if (!core && (size < 40 || bytes.length < size)) throw Error("內嵌點陣圖格式異常");
+  const width = core ? v.getUint16(4, true) : v.getInt32(4, true), rawHeight = core ? v.getInt16(6, true) : v.getInt32(8, true);
+  const bits = v.getUint16(core ? 10 : 14, true), compression = core ? 0 : v.getUint32(16, true);
+  if (compression !== 0 && compression !== 3) throw Error("內嵌點陣圖是壓縮格式，尚未支援");
+  const height = Math.abs(rawHeight);
+  if (!(width > 0 && height > 0) || width * height > MAX_DIB_PIXELS) throw Error("內嵌點陣圖尺寸無效");
+  let at = size;
+  let masks: number[] | null = null;
+  if (bits === 16 || bits === 32) {
+    // BI_BITFIELDS keeps three masks after a 40-byte header, inside a larger one; plain 16 bits is 5-5-5, 32 bits BGRX.
+    if (compression === 3) { const m = size === 40 ? at : 40; masks = [v.getUint32(m, true), v.getUint32(m + 4, true), v.getUint32(m + 8, true)]; if (size === 40) at += 12; }
+    else masks = bits === 16 ? [0x7c00, 0x03e0, 0x001f] : [0xff0000, 0xff00, 0xff];
+  }
+  const palette: number[][] = [];
+  if (bits <= 8) {
+    const count = (core ? 0 : v.getUint32(32, true)) || 1 << bits, entry = core ? 3 : 4;
+    for (let i = 0; i < count; i++, at += entry) palette.push([bytes[at + 2], bytes[at + 1], bytes[at]]);
+  } else if (![16, 24, 32].includes(bits)) throw Error("內嵌點陣圖位元數不支援");
+  const stride = ((width * bits + 31) >> 5) * 4;
+  if (at + stride * height > bytes.length) throw Error("內嵌點陣圖資料不完整");
+  const channel = (value: number, mask: number) => {
+    if (!mask) return 0;
+    const shift = 31 - Math.clz32(mask & -mask), max = mask >>> shift;
+    return Math.round(((value & mask) >>> shift) * 255 / max);
+  };
+  const rgba = new Uint8ClampedArray(width * height * 4), bottomUp = rawHeight > 0;
+  for (let y = 0; y < height; y++) {
+    const row = at + (bottomUp ? height - 1 - y : y) * stride;
+    for (let x = 0; x < width; x++) {
+      const o = (y * width + x) * 4;
+      let rgb: number[];
+      if (bits <= 8) {
+        const bit = x * bits, byte = bytes[row + (bit >> 3)], index = (byte >> (8 - bits - (bit & 7))) & ((1 << bits) - 1);
+        rgb = palette[index] ?? [0, 0, 0];
+      } else if (bits === 24) rgb = [bytes[row + x * 3 + 2], bytes[row + x * 3 + 1], bytes[row + x * 3]];
+      else {
+        const value = bits === 16 ? v.getUint16(row + x * 2, true) : v.getUint32(row + x * 4, true);
+        rgb = masks!.map((m) => channel(value, m));
+      }
+      rgba[o] = rgb[0]; rgba[o + 1] = rgb[1]; rgba[o + 2] = rgb[2]; rgba[o + 3] = 255;
+    }
+  }
+  return { width, height, rgba, bottomUp };
+}
+
+type ImageMaker = (pixels: DibPixels) => CanvasImageSource;
+const defaultImage: ImageMaker = ({ width, height, rgba }) => {
+  const canvas: OffscreenCanvas | HTMLCanvasElement = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(width, height)
+    : Object.assign(document.createElement("canvas"), { width, height });
+  const g = canvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+  if (!g) throw Error("無法建立圖片畫布");
+  g.putImageData(new ImageData(rgba as Uint8ClampedArray<ArrayBuffer>, width, height), 0, 0);
+  return canvas;
+};
 
 /** Window origin and extent the metafile draws in (its own logical units). */
 export function wmfInfo(bytes: Uint8Array): WmfInfo {
@@ -91,7 +154,7 @@ function cssFont(f: Font, px: number): string {
 }
 
 /** Play the metafile so its window fills a canvas of width x height pixels. */
-export function renderWmf(bytes: Uint8Array, ctx: Ctx, width: number, height: number): WmfResult {
+export function renderWmf(bytes: Uint8Array, ctx: Ctx, width: number, height: number, makeImage: ImageMaker = defaultImage): WmfResult {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const i16 = (o: number) => view.getInt16(o, true), u16 = (o: number) => view.getUint16(o, true), u32 = (o: number) => view.getUint32(o, true);
   const header = new DataView(bytes.buffer, bytes.byteOffset, HEADER_WORDS * 2);
@@ -128,6 +191,18 @@ export function renderWmf(bytes: Uint8Array, ctx: Ctx, width: number, height: nu
   const points = (at: number, n: number) => { const p: [number, number][] = []; for (let i = 0; i < n; i++) p.push([X(i16(at + i * 4)), Y(i16(at + i * 4 + 2))]); return p; };
   const path = (polys: [number, number][][], close: boolean) => { ctx.beginPath(); for (const p of polys) { p.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); if (close) ctx.closePath(); } };
   const shape = (build: () => void) => withClip(() => { build(); if (fillBrush()) ctx.fill(s.polyFill); build(); if (strokePen()) ctx.stroke(); });
+  // A DIB copied into the destination rectangle (source y counts from the bottom row of a bottom-up DIB).
+  const blit = (r: { fn: number; at: number; words: number }, dib: number, xs: number, ys: number, ws: number, hs: number, xd: number, yd: number, wd: number, hd: number) => {
+    let pixels: DibPixels, image: CanvasImageSource;
+    try { pixels = decodeDib(bytes.subarray(dib, r.at + (r.words - 3) * 2)); image = makeImage(pixels); } catch { skip(r.fn); return; }
+    const top = pixels.bottomUp ? pixels.height - ys - Math.abs(hs) : ys;
+    const x0 = X(xd), x1 = X(xd + wd), y0 = Y(yd), y1 = Y(yd + hd);
+    withClip(() => {
+      ctx.translate(x0, y0);
+      ctx.scale(x1 < x0 ? -1 : 1, y1 < y0 ? -1 : 1);
+      ctx.drawImage(image, xs, Math.max(0, top), Math.abs(ws), Math.abs(hs), 0, 0, Math.abs(x1 - x0), Math.abs(y1 - y0));
+    });
+  };
   const fillRect = (left: number, top: number, right: number, bottom: number, style: string) =>
     withClip(() => { ctx.fillStyle = style; ctx.fillRect(X(left), Y(top), X(right) - X(left), Y(bottom) - Y(top)); });
 
@@ -224,10 +299,21 @@ export function renderWmf(bytes: Uint8Array, ctx: Ctx, width: number, height: nu
         shape(() => { ctx.beginPath(); ctx.ellipse((X(l) + X(rt)) / 2, (Y(t) + Y(b)) / 2, Math.abs(X(rt) - X(l)) / 2, Math.abs(Y(b) - Y(t)) / 2, 0, 0, Math.PI * 2); });
         break;
       }
+      case 0x0f43: { // STRETCHDIB: rop, colour use, source h/w/y/x, destination h/w/y/x, then the DIB
+        blit(r, a + 22, i16(a + 12), i16(a + 10), i16(a + 8), i16(a + 6), i16(a + 20), i16(a + 18), i16(a + 16), i16(a + 14));
+        break;
+      }
       case 0x0940: case 0x0b41: {
         // Without a bitmap the blit only paints a pattern: PATCOPY with the brush, BLACKNESS, WHITENESS.
         const rop = u32(a), withBitmap = r.fn === 0x0940 ? nParams > 9 : nParams > 11;
-        if (withBitmap) { skip(r.fn); break; }
+        if (withBitmap && r.fn === 0x0b41) { // rop, source h/w/y/x, destination h/w/y/x, DIB (Office 365 X05 公設標示 picture)
+          blit(r, a + 20, i16(a + 10), i16(a + 8), i16(a + 6), i16(a + 4), i16(a + 18), i16(a + 16), i16(a + 14), i16(a + 12));
+          break;
+        }
+        if (withBitmap) { // rop, source y/x, destination h/w/y/x (source size = destination size), DIB
+          blit(r, a + 16, i16(a + 6), i16(a + 4), i16(a + 10), i16(a + 8), i16(a + 14), i16(a + 12), i16(a + 10), i16(a + 8));
+          break;
+        }
         const o = r.fn === 0x0940 ? a + 10 : a + 14;
         const h = i16(o), w = i16(o + 2), y = i16(o + 4), x = i16(o + 6);
         if (rop === 0x00f00021) { if (s.brush.style !== 1) fillRect(x, y, x + w, y + h, s.brush.color); }
