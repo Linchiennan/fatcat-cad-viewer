@@ -71,6 +71,10 @@ export function dashSegments(points:DrawingPoint[],pattern:number[],scale:number
  const total=path.slice(1).reduce((s,p,i)=>s+Math.hypot(p.x-path[i].x,p.y-path[i].y),0);
  const continuous=()=>path.slice(1).map((p,i)=>[path[i],p]);
  if(total/cycle*pat.length>DASH_LIMIT)return continuous();
+ // A pattern under a thousandth of the line's own size reads as a solid line in CAD; cut up, its dots shrank to nothing
+ // (貝拉婚紗 壹層平面圖 tree A$C67243E36: DOT2 × 0.2 = dots 0.025 apart on a 50-wide outline, gone in the viewer).
+ const xs=path.map(p=>p.x),ys=path.map(p=>p.y);
+ if(cycle*1000<Math.hypot(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys)))return continuous();
  // Too short for one whole pattern: CAD draws it solid (碁創潭子 肆層弱電 9F8A: 35.3 long on HIDDENX2 × LTSCALE 50 = 37.5,
  // solid in ZWCAD; cutting it left only the first 25-long dash).
  if(total<cycle-1e-9)return continuous();

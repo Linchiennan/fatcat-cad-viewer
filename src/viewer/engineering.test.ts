@@ -28,4 +28,10 @@ describe('dense line types (PARK B4F 柱牆套圖)', () => {
     expect(dashSegments([{ x: 0, y: 0 }, { x: 0, y: 35.3 }], [0.5, -0.25], 50, false)).toEqual([[{ x: 0, y: 0 }, { x: 0, y: 35.3 }]]);
     expect(dashSegments([{ x: 0, y: 0 }, { x: 0, y: 40 }], [0.5, -0.25], 50, false).length).toBe(2);
   });
+  it('draws a closed outline on a pattern under a thousandth of its size solid (貝拉婚紗 樹 DOT2 × 0.2)', () => {
+    const tree = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 30 }, { x: 0, y: 30 }];
+    expect(dashSegments(tree, [0, -0.125], 0.2, true)).toHaveLength(4);
+    // the same dots on a 2-wide outline stay dots
+    expect(dashSegments(tree.map((p) => ({ x: p.x / 20, y: p.y / 20 })), [0, -0.125], 0.2, true).length).toBeGreaterThan(100);
+  });
 });
