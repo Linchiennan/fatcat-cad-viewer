@@ -43,7 +43,9 @@ export function installCadFontScene(ctor:Any):void {
    const style=this.cadStyles?.[e.styleName??'STANDARD']??{},font=this.cadFonts?.get(fontKey(style.font??'')),big=this.cadFonts?.get(fontKey(style.bigFont??''));
    const vertical=e.cadVerticalChar?null:verticalPitch(style);
    if(vertical){for(const c of verticalTextEntities({...e,textHeight:e.textHeight||style.fixedTextHeight||1},vertical))yield* p[name].call(this,{...c,cadVerticalChar:true},ctx);return;}
-   const effective={...e,textHeight:e.textHeight||style.fixedTextHeight||1,xScale:e.xScale??style.widthFactor??1,obliqueAngle:e.obliqueAngle??style.obliqueAngle??0,textGenerationFlag:e.textGenerationFlag??style.textGenerationFlag??0};
+   // TEXT 41 is optional with default 1: a text without it is at width 1 whatever its STYLE says (世舜 弱電圖 GENIE 0.8:
+   // 41 texts store 0.8, 110 store nothing and ZWCAD draws those 1.25× wider than the style width would).
+   const effective={...e,textHeight:e.textHeight||style.fixedTextHeight||1,xScale:e.xScale??1,obliqueAngle:e.obliqueAngle??style.obliqueAngle??0,textGenerationFlag:e.textGenerationFlag??style.textGenerationFlag??0};
    const outline=this.cadOutlineFonts?.get(fontKey(style.font??''));
    if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* generationMirror(effective,original.call(this,effective,ctx));this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
    if(font){const lines=shxTextGeometry(effective,font,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
