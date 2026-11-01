@@ -170,6 +170,7 @@ export class TextRenderer {
             }
             block.PushChar(char, shape)
         }
+        block.fatcatPenStart = true
         yield* block.Render(startPos, endPos, rotation, widthFactor, hAlign, vAlign, color, layer)
     }
 
@@ -1123,7 +1124,7 @@ class TextBlock {
 
         switch (hAlign) {
         case HAlign.LEFT:
-            origin.x = this.bounds.xMin
+            origin.x = this.fatcatPenStart ? 0 : this.bounds.xMin
             break
         case HAlign.CENTER:
             origin.x = (this.bounds.xMax - this.bounds.xMin) / 2

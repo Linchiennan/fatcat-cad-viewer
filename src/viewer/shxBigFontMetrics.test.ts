@@ -119,8 +119,10 @@ describe("big fonts named with a folder (t4 鴻群 \\RUBON\\CHINA)", () => {
     expect(bigFontFile("\\RUBON\\CHINA")).toBe("chineset.shx");
     expect(bigFontFile("/rubon/rubonu")).toBe("chineset.shx");
     expect(bigFontFile("china")).toBe("china.shx");
-    expect(bigFontPitch("\\RUBON\\CHINA")).toBe(1); // ZWCAD advances these 1.0 text heights; china.shx would give 1.125
-    expect(bigFontPitch("china")).toBe(1.125);
+    expect(bigFontPitch("\\RUBON\\CHINA")).toBe(1); // ZWCAD advances these 1.0 text heights
+    // ZWCAD 實排 china.shx 也是 1.0（zw_bigfont_pitch_by_textfont.py；太原段 給排水圖例 TXT＋CHINA 整行長 13%）
+    expect(bigFontPitch("china")).toBe(1);
+    expect(bigFontPitch("lchina")).toBe(1.75);
   });
 });
 

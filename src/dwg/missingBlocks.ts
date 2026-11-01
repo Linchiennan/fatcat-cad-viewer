@@ -221,12 +221,14 @@ export function readerTexts(db: Any): Record<string, string> {
 export function applyReaderTexts(doc: Any, texts: Record<string, string>): number {
   let fixed = 0;
   const all = [...(doc.entities ?? []), ...Object.values(doc.blocks ?? {}).flatMap((b: Any) => b.entities ?? [])];
+  // one-line text: the break is dropped at the end and becomes a space inside, as decodeCaretText does (世舜 太原段 弱電
+  // 「…數位式電纜線」+ Enter, garbled in the DXF, ended in a "?" once the reader's text came in with its raw line feed)
+  const oneLine = (e: Any, t: string) => (e.type === "MTEXT" ? t : t.replace(/[\r\n]+$/, "").replace(/\r?\n/g, " "));
   for (const e of all) {
     const better = e.handle && texts[e.handle];
     if (!better || typeof e.text !== "string" || better === e.text) continue;
-    // one-line text: the break is dropped at the end and becomes a space inside, as decodeCaretText does
-    if (CARET_ONLY.test(e.text) && /\S/.test(better)) { e.text = e.type === "MTEXT" ? better : better.replace(/[\r\n]+$/, "").replace(/\r?\n/g, " "); fixed++; continue; }
-    if (suspectTextCount(e.text) > 0 || MIF_CODE.test(better) || (e.text.startsWith(better) && (MIF_CODE.test(e.text) || MIF_PIECE.test(e.text.slice(better.length))))) { e.text = better; fixed++; }
+    if (CARET_ONLY.test(e.text) && /\S/.test(better)) { e.text = oneLine(e, better); fixed++; continue; }
+    if (suspectTextCount(e.text) > 0 || MIF_CODE.test(better) || (e.text.startsWith(better) && (MIF_CODE.test(e.text) || MIF_PIECE.test(e.text.slice(better.length))))) { e.text = oneLine(e, better); fixed++; }
   }
   return fixed;
 }

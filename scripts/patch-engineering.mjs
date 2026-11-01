@@ -57,3 +57,8 @@ patch('parser/DxfParser.js',"dxf.cadUnsupported ??= {}; dxf.cadUnsupported[curr.
 // which only holds when the glyphs start at 0. A "(" reaching below the baseline (鴻群 t4「面積(m²)」) sat a sixth of
 // its height too low. Use the centre of the extents.
 patch('TextRenderer.js','        case HAlign.MIDDLE:\n            origin.x = (this.bounds.xMax - this.bounds.xMin) / 2\n            origin.y = (this.bounds.yMax - this.bounds.yMin) / 2','        case HAlign.MIDDLE:\n            origin.x = (this.bounds.xMax + this.bounds.xMin) / 2\n            origin.y = (this.bounds.yMax + this.bounds.yMin) / 2');
+// TEXT "Left" starts at the insertion point, leading spaces included, but upstream lined up the first inked glyph with it:
+// 世舜 太原段 弱電「  防盜主機…」(two leading spaces) slid 2 text heights left and covered its own「7.」. Only single-line
+// TEXT: MTEXT places its word chunks itself and keeps lining up their first strokes.
+patch('TextRenderer.js','            block.PushChar(char, shape)\n        }\n        yield* block.Render(startPos,','            block.PushChar(char, shape)\n        }\n        block.fatcatPenStart = true\n        yield* block.Render(startPos,');
+patch('TextRenderer.js','        case HAlign.LEFT:\n            origin.x = this.bounds.xMin\n','        case HAlign.LEFT:\n            origin.x = this.fatcatPenStart ? 0 : this.bounds.xMin\n');

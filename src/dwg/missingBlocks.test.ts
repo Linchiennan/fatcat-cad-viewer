@@ -109,6 +109,17 @@ describe("text LibreDWG's DXF writer mis-decoded (15A 客變圖 R2004 Big5 MTEXT
     expect(applyReaderTexts(doc, { "11BCC": "器\n", M1: "甲\\P乙", B1: "\n" })).toBe(2);
     expect(doc.entities.map((e) => e.text)).toEqual(["器", "甲\\P乙", "^J"]);
   });
+
+  // 太原段 弱電「T: 電話水平配管線…數位式電纜線」+ Enter：DXF 是亂碼＋"^J"，備援讀到的字尾帶真的換行，單行字畫成「?」
+  it("drops the raw line break of a garbled one-line text replaced by the reader's", () => {
+    const doc = { entities: [
+      { type: "TEXT", handle: "T1", text: "q\\U+0724t\\U+07BDu^J" },
+      { type: "TEXT", handle: "T2", text: "q\\U+0724t\\U+07BDu" },
+      { type: "MTEXT", handle: "M1", text: "q\\U+0724t\\U+07BDu" },
+    ], blocks: {} };
+    expect(applyReaderTexts(doc, { T1: "電話水平配管線\n", T2: "甲\n乙", M1: "甲\n" })).toBe(3);
+    expect(doc.entities.map((e) => e.text)).toEqual(["電話水平配管線", "甲 乙", "甲\n"]);
+  });
 });
 
 import { headerArrowSize } from "./missingBlocks";
