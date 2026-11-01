@@ -78,11 +78,16 @@ export function dashSegments(points:DrawingPoint[],pattern:number[],scale:number
  // Too short for one whole pattern: CAD draws it solid (碁創潭子 肆層弱電 9F8A: 35.3 long on HIDDENX2 × LTSCALE 50 = 37.5,
  // solid in ZWCAD; cutting it left only the first 25-long dash).
  if(total<cycle-1e-9)return continuous();
- let k=0,left=Math.abs(pat[0])||Math.max(cycle*0.001,1e-7);
+ // A dot (zero-length element) comes out as a zero-length pair [p, p], drawn as a point by the caller: the tiny segment
+ // it used to be covered no pixel, so DOT line types showed nothing at all.
+ let k=0,left=Math.abs(pat[0]);
  for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],len=Math.hypot(b.x-a.x,b.y-a.y);if(!len)continue;let pos=0;
-  while(pos<len-1e-10){if(output.length>=DASH_LIMIT)return continuous();const step=Math.min(left,len-pos);
-   if(pat[k]>=0)output.push([{x:a.x+(b.x-a.x)*pos/len,y:a.y+(b.y-a.y)*pos/len},{x:a.x+(b.x-a.x)*(pos+step)/len,y:a.y+(b.y-a.y)*(pos+step)/len}]);
-   pos+=step;left-=step;if(left<=1e-10){k=(k+1)%pat.length;left=Math.abs(pat[k])||Math.max(cycle*0.001,1e-7);}
+  const at=(t:number)=>({x:a.x+(b.x-a.x)*t/len,y:a.y+(b.y-a.y)*t/len});
+  while(pos<len-1e-10){if(output.length>=DASH_LIMIT)return continuous();
+   if(left<=1e-10){if(pat[k]>=0){const p=at(pos);output.push([p,p]);}k=(k+1)%pat.length;left=Math.abs(pat[k]);continue;}
+   const step=Math.min(left,len-pos);
+   if(pat[k]>=0)output.push([at(pos),at(pos+step)]);
+   pos+=step;left-=step;if(left<=1e-10){k=(k+1)%pat.length;left=Math.abs(pat[k]);}
   }
  }
  return output;
@@ -294,7 +299,7 @@ export function installEngineeringScene(ctor:Any):void {
     const offset=(p:DrawingPoint,n:DrawingPoint,w:number,sign:number)=>({x:p.x+n.x*w*sign/2,y:p.y+n.y*w*sign/2});
     const edges=path.slice(1).map((b:Any,i:number)=>{const a=path[i],len=Math.hypot(b.x-a.x,b.y-a.y);return {a,b,len,n:{x:-(b.y-a.y)/len,y:(b.x-a.x)/len},wa:a.startWidth??width,wb:a.endWidth??a.startWidth??width};}).filter(q=>q.len>1e-12);
     let edgeIndex=0;
-    for(const [a,b] of segments){const middle={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    for(const [a,b] of segments){if(a===b)continue;const middle={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
      const matches=(q:typeof edges[number])=>{const t=((middle.x-q.a.x)*(q.b.x-q.a.x)+(middle.y-q.a.y)*(q.b.y-q.a.y))/(q.len*q.len);return (b.x-a.x)*(q.b.x-q.a.x)+(b.y-a.y)*(q.b.y-q.a.y)>0&&t>=-1e-8&&t<=1+1e-8&&Math.abs((middle.x-q.a.x)*q.n.x+(middle.y-q.a.y)*q.n.y)<1e-7*q.len;};
      while(edgeIndex<edges.length&&!matches(edges[edgeIndex]))edgeIndex++;const edge=edges[edgeIndex];if(!edge)continue;
      if(Math.hypot(b.x-edge.b.x,b.y-edge.b.y)<1e-8)edgeIndex++;
@@ -304,7 +309,11 @@ export function installEngineeringScene(ctor:Any):void {
     // Fill continuous corners with a bounded bevel (never unbounded acute miters).
     if(!pattern.length)for(let i=prim.shape?0:1;i<edges.length;i++){const prev=edges[(i+edges.length-1)%edges.length],next=edges[i];if(Math.hypot(prev.b.x-next.a.x,prev.b.y-next.a.y)>1e-8)continue;for(const sign of [-1,1])yield mesh([next.a,offset(next.a,prev.n,prev.wb,sign),offset(next.a,next.n,next.wa,sign)],[0,1,2]);}
    }
-   else yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:1,vertices:segments.flat(),shape:false});
+   else {
+    const dashes=segments.filter(([a,b])=>a!==b),dots=segments.filter(([a,b])=>a===b).map(([a])=>a);
+    if(dashes.length)yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:1,vertices:dashes.flat(),shape:false});
+    if(dots.length)yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:0,vertices:dots,indices:undefined,shape:false});
+   }
   }};
  }
 }

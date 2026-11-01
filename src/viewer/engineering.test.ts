@@ -34,4 +34,13 @@ describe('dense line types (PARK B4F 柱牆套圖)', () => {
     // the same dots on a 2-wide outline stay dots
     expect(dashSegments(tree.map((p) => ({ x: p.x / 20, y: p.y / 20 })), [0, -0.125], 0.2, true).length).toBeGreaterThan(100);
   });
+  // 點線（DOT 類）以前每個點是極短線段，一個像素都蓋不到，整條線看不見
+  it('gives each dot of a DOT line type as a zero-length pair at its place, for drawing as a point', () => {
+    const seg = dashSegments([{ x: 0, y: 0 }, { x: 100, y: 0 }], [0, -5], 1, false);
+    expect(seg).toHaveLength(20);
+    expect(seg.every(([a, b]) => a === b)).toBe(true);
+    expect(seg.map(([a]) => a.x)).toEqual(Array.from({ length: 20 }, (_, i) => i * 5));
+    // dash-dot: the dash, then the dot after the gap
+    expect(dashSegments([{ x: 0, y: 0 }, { x: 20, y: 0 }], [6, -2, 0, -2], 1, false).slice(0, 2)).toEqual([[{ x: 0, y: 0 }, { x: 6, y: 0 }], [{ x: 8, y: 0 }, { x: 8, y: 0 }]]);
+  });
 });
