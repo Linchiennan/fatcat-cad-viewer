@@ -36,4 +36,13 @@ describe("整個資料夾匯入", () => {
     const main = all.find((d) => d.name === "A01.dwg")!;
     expect(pickLibraryEntry("..\\圖框\\公司圖框.dwg", all, main)).toMatchObject({ name: "公司圖框.dwg", parentId: folder.id });
   });
+
+  // 惠宇敦南 330 張、693 MB：對話框答應「全部加入」，結果被壓縮檔的解壓總量 128 MB 上限整批擋掉、一張都沒加
+  it("資料夾總量超過壓縮檔的解壓上限也照樣加入（檔案本來就在裝置上）；壓縮檔仍受限", async () => {
+    const big = (path: string) => { const f = picked(path); Object.defineProperty(f, "size", { value: 100 * 1024 * 1024 }); return f; };
+    const files = [big("案/A.dwg"), big("案/B.dwg")];
+    const { drawings } = await lib.importArchiveToLibrary(lib.folderImportItems(files), lib.ROOT_ID, "案", undefined, true, true);
+    expect(drawings).toHaveLength(2);
+    await expect(lib.importArchiveToLibrary(lib.folderImportItems(files), lib.ROOT_ID, "案.zip")).rejects.toMatchObject({ code: "ARCHIVE_LIMIT" });
+  });
 });

@@ -356,7 +356,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
     setPickOffer(null);
     if (!items.length) return;
     void runBusy(async () => {
-      const result = await importArchiveToLibrary(items, folderId, offer.name, undefined, false);
+      const result = await importArchiveToLibrary(items, folderId, offer.name, undefined, false, true);
       refresh();
       goToFolder(result.folder.id);
       setNotice({ text: t("library.folderImported", { n: result.drawings.length, name: result.folder.name }), error: false });
@@ -370,7 +370,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   const importFolder = (offer: { name: string; items: ArchiveImportItem[] }) => {
     setFolderOffer(null);
     void runBusy(async () => {
-      const result = await importArchiveToLibrary(offer.items, folderId, offer.name);
+      const result = await importArchiveToLibrary(offer.items, folderId, offer.name, undefined, true, true);
       refresh();
       goToFolder(result.folder.id);
       setNotice({ text: t("library.folderImported", { n: result.drawings.length, name: result.folder.name }), error: false });

@@ -73,6 +73,9 @@ export class ArchiveListBuilder {
   readonly items: ArchiveItem[] = [];
   private readonly keys = new Set<string>();
   private total = 0;
+  /** onDisk: the files already sit on the device (a picked folder), nothing is unpacked, so the unpacked-total cap
+   * does not apply; space is checked by the store itself (惠宇敦南 330 drawings, 693 MB, were all refused). */
+  constructor(private readonly onDisk = false) {}
 
   add(entry: RawArchiveEntry): ArchiveItem {
     if (this.items.length >= ARCHIVE_LIMITS.entries) throw overLimit("too many entries");
@@ -84,7 +87,7 @@ export class ArchiveListBuilder {
     if (!Number.isSafeInteger(size) || size < 0) throw new LibraryError("ARCHIVE_UNREADABLE", "bad entry size");
     if (size > ARCHIVE_LIMITS.entryBytes) throw overLimit("entry too large");
     this.total += size;
-    if (this.total > ARCHIVE_LIMITS.totalBytes) throw overLimit("total too large");
+    if (!this.onDisk && this.total > ARCHIVE_LIMITS.totalBytes) throw overLimit("total too large");
     const name = path.slice(path.lastIndexOf("/") + 1);
     const format = entry.directory || !entry.regular ? null : detectDrawingFormat(name);
     const supported = !entry.directory && entry.regular && size > 0 && isImportableFormat(format);
@@ -95,8 +98,8 @@ export class ArchiveListBuilder {
 }
 
 /** Run the whole listing through the shared rules. */
-export function buildArchiveList(entries: Iterable<RawArchiveEntry>): ArchiveItem[] {
-  const builder = new ArchiveListBuilder();
+export function buildArchiveList(entries: Iterable<RawArchiveEntry>, onDisk = false): ArchiveItem[] {
+  const builder = new ArchiveListBuilder(onDisk);
   for (const e of entries) builder.add(e);
   return builder.items;
 }

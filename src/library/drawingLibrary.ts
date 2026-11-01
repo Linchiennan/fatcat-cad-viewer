@@ -592,6 +592,8 @@ export async function importArchiveToLibrary(
   items: readonly ArchiveImportItem[], parentId: string, archiveName: string, signal?: AbortSignal,
   /** false: the files came from a browser multi-pick, so there is no real source to record (shown as 瀏覽器不提供). */
   sourceFromArchive = true,
+  /** true: picked files or a picked folder, already on the device; no unpacked-total cap (see ArchiveListBuilder). */
+  onDisk = false,
 ): Promise<{ folder: LibraryFolderEntry; drawings: LibraryDrawingEntry[] }> {
   if (signal?.aborted) throw abortError();
   if (items.length === 0) throw fail("INVALID_FILE", "nothing to import");
@@ -605,7 +607,7 @@ export async function importArchiveToLibrary(
     }
     return { path, name, format: format!, file: item.file };
   });
-  buildArchiveList(prepared.map((p) => ({ path: p.path, size: p.file.size, directory: false, regular: true })));
+  buildArchiveList(prepared.map((p) => ({ path: p.path, size: p.file.size, directory: false, regular: true })), onDisk);
   if (prepared.length > ARCHIVE_LIMITS.entries) throw fail("ARCHIVE_LIMIT", "too many entries");
   const fileKeys = new Set(prepared.map((p) => archivePathKey(p.path)));
   for (const p of prepared) {
