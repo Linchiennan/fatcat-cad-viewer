@@ -132,4 +132,10 @@ describe("several jobs imported together (世舜 101年)", () => {
     const main = entry("m", "x.dwg", "Ae");
     expect(pickLibraryEntry("世舜圖框.dwg", [main, entry("f1", "世舜圖框.dwg", "Aw"), entry("f2", "世舜圖框.dwg", "Ax")], main, parents, names)).toBe("ambiguous");
   });
+  // 惠宇敦南 12018-幹線及接地圖：存的是 D:\… 絕對路徑，同資料夾就有一份、底下 OLD 又有一份；ZWCAD 用同資料夾那份
+  it("takes the copy right beside the main drawing over one in a subfolder of it", () => {
+    const main = entry("m", "幹線.dwg", "Ae");
+    const beside = entry("b", "外參建築圖.dwg", "Ae"), old = entry("o", "外參建築圖.dwg", "Ao");
+    expect((pickLibraryEntry(String.raw`D:\01陳\12018外參建築圖\外參建築圖.dwg`, [main, beside, old], main, parents, names) as { id: string }).id).toBe("b");
+  });
 });

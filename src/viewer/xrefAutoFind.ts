@@ -106,6 +106,13 @@ export function pickLibraryEntry(path: string, entries: readonly Entry[], main?:
     const there = entries.filter((e) => e.id !== main?.id && e.parentId === walked && names.has(fileName(e)));
     if (there.length === 1) return there[0];
   }
+  // 1b. As CAD does next: a same-name drawing right in the main drawing's own folder. A copy further down (an「OLD」
+  //    subfolder) used to tie with it as just as near and nothing loaded (惠宇敦南 12018-幹線及接地圖: saved path on
+  //    D:\…, the frame beside it and another in OLD; ZWCAD drew the beside one).
+  if (main) {
+    const beside = entries.filter((e) => e.id !== main.id && e.parentId === main.parentId && names.has(fileName(e)));
+    if (beside.length === 1) return beside[0];
+  }
   // 2. The path's last folders (外部參考 / 002-結構平面圖) against each same-name drawing's folders: a folder imported on
   //    its own (no common parent) is still found, taking the deepest match, inside the job when several match as deep.
   const tail = savedFolders(path);
