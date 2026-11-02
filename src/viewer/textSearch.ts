@@ -16,7 +16,7 @@ export function plainCadText(raw: string): string {
     .replace(/\\~/g, " ")
     .replace(/\\([\\{}])/g, "$1")
     .replace(/[{}]/g, "")
-    .replace(/%%[cC]/g, "Ø").replace(/%%[dD]/g, "°").replace(/%%[pP]/g, "±").replace(/%%[uUoO]/g, "").replace(/%%%/g, "%")
+    .replace(/%%[cC]/g, "Ø").replace(/%%[dD]/g, "°").replace(/%%[pP]/g, "±").replace(/%%[uUoO]/g, "").replace(/%%%/g, "%").replace(/%%(\d{1,3})/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/\s+/g, " ")
     .trim();
 }

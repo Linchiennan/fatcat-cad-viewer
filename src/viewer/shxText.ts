@@ -12,7 +12,7 @@ function glyphCode(font:ShxFont,char:string):number|undefined {
 /** Return null for unsupported layout/missing glyph: caller retains CJK fallback. */
 export function shxTextGeometry(e:any,font:ShxFont,bigFont?:ShxFont):P[][]|null {
  if(font.fontData.content.orientation==='vertical'||String(e.text??'').length>10000)return null;
- const text=String(e.text??'').replace(/%%d/gi,'°').replace(/%%p/gi,'±').replace(/%%c/gi,'Ø').replace(/\\U\+([0-9a-f]{4})/gi,(_,n)=>String.fromCharCode(parseInt(n,16)));
+ const text=String(e.text??'').replace(/%%d/gi,'°').replace(/%%p/gi,'±').replace(/%%c/gi,'Ø').replace(/%%(\d{1,3})/g,(_,n)=>String.fromCharCode(Number(n))).replace(/\\U\+([0-9a-f]{4})/gi,(_,n)=>String.fromCharCode(parseInt(n,16)));
  if(text.includes('\\')||text.includes('%%'))return null;
  const height=e.textHeight??10,paths:P[][]=[];let advance=0;
  for(const ch of text){let f=font,code=glyphCode(f,ch);if(code===undefined&&bigFont){f=bigFont;code=glyphCode(f,ch);}if(code===undefined)return null;

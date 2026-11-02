@@ -5,7 +5,7 @@ import {Matrix3, Shape, Vector2} from "three"
 import {MTextFormatParser} from "./MTextFormatParser.js"
 
 /** Regex for parsing special characters in text entities. */
-const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\U\+([0-9a-f]{4}))/gi
+const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\U\+([0-9a-f]{4}))|(?:%%(\d{1,3}))/gi
 
 /**
  * Parse special characters in text entities and convert them to corresponding unicode
@@ -15,7 +15,8 @@ const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\U\+([0-9a-f]{4}))/gi
  * @return {string} String with special characters replaced.
  */
 export function ParseSpecialChars(text) {
-    return text.replaceAll(SPECIAL_CHARS_RE, (match, p1, p2) => {
+    return text.replaceAll(SPECIAL_CHARS_RE, (match, p1, p2, p3) => {
+        if (p3 !== undefined) return String.fromCharCode(parseInt(p3, 10))
         if (p1 !== undefined) {
             switch (p1.toLowerCase()) {
             case "d":

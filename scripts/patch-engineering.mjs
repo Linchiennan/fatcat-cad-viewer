@@ -62,3 +62,6 @@ patch('TextRenderer.js','        case HAlign.MIDDLE:\n            origin.x = (th
 // TEXT: MTEXT places its word chunks itself and keeps lining up their first strokes.
 patch('TextRenderer.js','            block.PushChar(char, shape)\n        }\n        yield* block.Render(startPos,','            block.PushChar(char, shape)\n        }\n        block.fatcatPenStart = true\n        yield* block.Render(startPos,');
 patch('TextRenderer.js','        case HAlign.LEFT:\n            origin.x = this.bounds.xMin\n','        case HAlign.LEFT:\n            origin.x = this.fatcatPenStart ? 0 : this.bounds.xMin\n');
+// %%nnn: character by decimal code (喬瓏 管道間配罝-RF「2%%34RP」is 2"RP in ZWCAD).
+patch('TextRenderer.js',"const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\\\U\\+([0-9a-f]{4}))/gi","const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\\\U\\+([0-9a-f]{4}))|(?:%%(\\d{1,3}))/gi");
+patch('TextRenderer.js',"    return text.replaceAll(SPECIAL_CHARS_RE, (match, p1, p2) => {","    return text.replaceAll(SPECIAL_CHARS_RE, (match, p1, p2, p3) => {\n        if (p3 !== undefined) return String.fromCharCode(parseInt(p3, 10))");
