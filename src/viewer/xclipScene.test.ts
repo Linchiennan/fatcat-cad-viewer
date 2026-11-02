@@ -132,3 +132,17 @@ describe("clipped copies keep only what can show", () => {
     expect(insideClip([line(1000, 1000, 1001, 1001)], square.map(([x, y]) => ({ x, y })))).toHaveLength(1);
   });
 });
+
+// 惠宇 006 浴室落水頭：詳圖泡泡是 369 點的圓，超過 256 點整個不裁，五個浴室平面全畫出來疊在一起
+describe("clip outlines over the point limit", () => {
+  it("thins a many-point circle to the limit instead of dropping the clip", async () => {
+    const { fitClip } = await import("./xclipScene");
+    const circle = Array.from({ length: 369 }, (_, i) => ({ x: 100 * Math.cos((i / 369) * 2 * Math.PI), y: 100 * Math.sin((i / 369) * 2 * Math.PI) }));
+    const thin = fitClip(circle)!;
+    expect(thin.length).toBeLessThanOrEqual(XCLIP_POINT_LIMIT);
+    expect(thin.length).toBeGreaterThan(100);
+    // a jagged outline that thinning would change is still refused
+    const jagged = Array.from({ length: 400 }, (_, i) => ({ x: i, y: i % 2 ? 50 : 0 }));
+    expect(fitClip(jagged)).toBeNull();
+  });
+});

@@ -20,6 +20,29 @@ const BLOCK_INSTANCE = 5;
 export const xclipTooLargeWarning = (block: string, points: number) =>
   `XCLIP 邊界超過256點（圖塊 ${block}，${points} 點）；此裁切已略過、未以外接框冒充，請在原CAD簡化邊界`;
 
+/**
+ * A clip polygon within XCLIP_POINT_LIMIT points, or null. A longer one is thinned evenly, kept only when every dropped
+ * point stays within 0.2 % of the clip's size of the thinned outline: detail bubbles are circles stored as 369 points,
+ * skipped whole before (惠宇 006 浴室落水頭: five clipped plans drawn in full over each other).
+ */
+export function fitClip(polygon: DrawingPoint[]): DrawingPoint[] | null {
+  if (polygon.length <= XCLIP_POINT_LIMIT) return polygon;
+  const step = Math.ceil(polygon.length / XCLIP_POINT_LIMIT), kept: number[] = [];
+  for (let i = 0; i < polygon.length; i += step) kept.push(i);
+  const thin = kept.map((i) => polygon[i]);
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const p of polygon) { a = Math.min(a, p.x); b = Math.min(b, p.y); c = Math.max(c, p.x); d = Math.max(d, p.y); }
+  const limit = Math.hypot(c - a, d - b) * 0.002;
+  for (let k = 0; k < kept.length; k++) {
+    const p = polygon[kept[k]], q = polygon[kept[(k + 1) % kept.length]], dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy);
+    for (let i = kept[k] + 1; i < (k + 1 < kept.length ? kept[k + 1] : polygon.length); i++) {
+      const r = polygon[i], off = len > 0 ? Math.abs((r.x - p.x) * dy - (r.y - p.y) * dx) / len : Math.hypot(r.x - p.x, r.y - p.y);
+      if (off > limit) return null;
+    }
+  }
+  return thin;
+}
+
 /** Clip tables attached to the serialized scene. Points are in the root block's coordinates. */
 export type XclipTables = {
   top: Record<string, { points: DrawingPoint[]; offset: DrawingPoint }>;
@@ -66,8 +89,8 @@ export function prepareXclips(dxf: Any): XclipPreparation {
     const clip = parseDxfXclip(e);
     if (holdsClip(e.name, [])) out.keep.add(e.name);
     if (!clip) continue;
-    const polygon = expandClipRectangle(clip);
-    if (polygon.length > XCLIP_POINT_LIMIT) { out.warnings.push(xclipTooLargeWarning(e.name, polygon.length)); continue; }
+    const raw = expandClipRectangle(clip), polygon = fitClip(raw);
+    if (!polygon) { out.warnings.push(xclipTooLargeWarning(e.name, raw.length)); continue; }
     const alias = XCLIP_BLOCK_PREFIX + (e.handle ? String(e.handle) : "n" + serial++);
     blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name, entities: insideClip(blocks[e.name].entities ?? [], polygon) };
     if (out.keep.has(e.name)) out.keep.add(alias);
@@ -153,8 +176,8 @@ export function installXclipScene(sceneClass: Any): void {
     const nestedCtx = blockCtx.NestedBlockContext(block, entity);
     let tag = inherited;
     if (clip) {
-      const polygon = expandClipRectangle(clip);
-      if (polygon.length > XCLIP_POINT_LIMIT) (this.cadSceneWarnings ??= []).push(xclipTooLargeWarning(entity.name, polygon.length));
+      const raw = expandClipRectangle(clip), polygon = fitClip(raw);
+      if (!polygon) (this.cadSceneWarnings ??= []).push(xclipTooLargeWarning(entity.name, raw.length));
       else {
         tag = state.next++;
         const m: Matrix3 = nestedCtx.transform;
