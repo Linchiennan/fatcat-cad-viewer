@@ -12,6 +12,9 @@ export const ARCHIVE_LIMITS = {
   pathLength: 2048,
   segmentLength: 220,
 } as const;
+/** Drawings in one picked folder (already on the device): the 5,000-item cap the app uses for folders elsewhere.
+ * The archive cap of 1,000 refused a whole job (喬瓏 127鑫元鴻: 1,729 drawings). */
+export const FOLDER_ENTRY_LIMIT = 5000;
 
 /** One archive entry as listed for the dialog (T12 3.4.4). */
 export type ArchiveItem = {
@@ -78,7 +81,7 @@ export class ArchiveListBuilder {
   constructor(private readonly onDisk = false) {}
 
   add(entry: RawArchiveEntry): ArchiveItem {
-    if (this.items.length >= ARCHIVE_LIMITS.entries) throw overLimit("too many entries");
+    if (this.items.length >= (this.onDisk ? FOLDER_ENTRY_LIMIT : ARCHIVE_LIMITS.entries)) throw overLimit("too many entries");
     const path = normalizeArchivePath(entry.path);
     const key = archivePathKey(path);
     if (this.keys.has(key)) throw invalidPath("duplicate path");

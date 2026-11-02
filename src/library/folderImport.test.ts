@@ -45,4 +45,12 @@ describe("整個資料夾匯入", () => {
     expect(drawings).toHaveLength(2);
     await expect(lib.importArchiveToLibrary(lib.folderImportItems(files), lib.ROOT_ID, "案.zip")).rejects.toMatchObject({ code: "ARCHIVE_LIMIT" });
   });
+
+  // 喬瓏 127鑫元鴻 1,729 張：壓縮檔的 1,000 筆上限把整個資料夾擋掉
+  it("資料夾超過壓縮檔的 1,000 筆上限也照樣加入；壓縮檔仍受限", async () => {
+    const files = Array.from({ length: 1200 }, (_, i) => picked(`案/圖${i}.dwg`));
+    const { drawings } = await lib.importArchiveToLibrary(lib.folderImportItems(files), lib.ROOT_ID, "案", undefined, true, true);
+    expect(drawings).toHaveLength(1200);
+    await expect(lib.importArchiveToLibrary(lib.folderImportItems(files), lib.ROOT_ID, "案.zip")).rejects.toMatchObject({ code: "ARCHIVE_LIMIT" });
+  });
 });

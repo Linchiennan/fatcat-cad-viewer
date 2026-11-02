@@ -1,7 +1,7 @@
 // Drawing library data layer on IndexedDB (T11 3, 7.1). Owner: P4 group A.
 // Every function rejects with LibraryError (types/errors) on failure; a cancelled import rejects with AbortError.
 import { LibraryError, type LibraryErrorCode } from "../types/errors";
-import { ARCHIVE_LIMITS, buildArchiveList, normalizeArchivePath, archivePathKey, isImportableFormat } from "../files/archivePaths";
+import { ARCHIVE_LIMITS, FOLDER_ENTRY_LIMIT, buildArchiveList, normalizeArchivePath, archivePathKey, isImportableFormat } from "../files/archivePaths";
 import { detectDrawingFormat, formatSizeLimit, hasForbiddenNameCharacter, isArchiveFormat, tooLargeMessage, type DrawingFormat } from "../files/fileTypes";
 import { drawingIdentity, loadPosition, savePosition } from "../viewer/readingPosition";
 import { diagnosticError, recordDiagnostic } from "../viewer/parseAudit";
@@ -608,7 +608,7 @@ export async function importArchiveToLibrary(
     return { path, name, format: format!, file: item.file };
   });
   buildArchiveList(prepared.map((p) => ({ path: p.path, size: p.file.size, directory: false, regular: true })), onDisk);
-  if (prepared.length > ARCHIVE_LIMITS.entries) throw fail("ARCHIVE_LIMIT", "too many entries");
+  if (prepared.length > (onDisk ? FOLDER_ENTRY_LIMIT : ARCHIVE_LIMITS.entries)) throw fail("ARCHIVE_LIMIT", "too many entries");
   const fileKeys = new Set(prepared.map((p) => archivePathKey(p.path)));
   for (const p of prepared) {
     const parts = p.path.split("/");
