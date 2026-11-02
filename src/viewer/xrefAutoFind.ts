@@ -127,7 +127,8 @@ export function pickLibraryEntry(path: string, entries: readonly Entry[], main?:
       const own = top.filter((e) => projectOf(e.parentId, parents) === projectOf(main.parentId, parents));
       const near = own.length ? nearest(own, main, parents) : [];
       if (near.length === 1) return near[0];
-      return "ambiguous";
+      // Folder names tie between far copies: fall through to the nearest same-name drawing (喬瓏 127鑫元鴻 排水-5F0417:
+      // 「..\002-X-結構\X-5F.dwg」matched 10 old sets elsewhere; the one sent with it sits in the sibling 5F-套圖-CAD).
     }
   }
   // 3. No usable path: the only same-name drawing of the main drawing's project.

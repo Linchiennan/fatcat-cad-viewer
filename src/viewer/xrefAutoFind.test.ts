@@ -132,6 +132,14 @@ describe("several jobs imported together (世舜 101年)", () => {
     const main = entry("m", "x.dwg", "Ae");
     expect(pickLibraryEntry("世舜圖框.dwg", [main, entry("f1", "世舜圖框.dwg", "Aw"), entry("f2", "世舜圖框.dwg", "Ax")], main, parents, names)).toBe("ambiguous");
   });
+  // 喬瓏 127鑫元鴻 排水-5F0417：「..\002-X-結構\X-5F.dwg」對上別處兩套舊圖的 002-X-結構，同一包寄來的在旁邊資料夾
+  it("falls back to the nearest copy when the saved folder names tie between far copies", () => {
+    const p = new Map([["J", "root"], ["S", "J"], ["S1", "S"], ["S1x", "S1"], ["S2", "S"], ["S2x", "S2"], ["M", "J"], ["Mp", "M"], ["Ma", "Mp"], ["Mb", "Mp"]]);
+    const n = new Map([["J", "127鑫元鴻"], ["S", "08施工圖"], ["S1", "0917"], ["S1x", "002-X-結構"], ["S2", "送審008"], ["S2x", "002-X-結構"], ["M", "E-mail原始檔"], ["Mp", "TO-0417"], ["Ma", "4F-套圖修改-CAD"], ["Mb", "5F-套圖-CAD"]]);
+    const main = entry("m", "排水-5F0417.dwg", "Ma"), sent = entry("x", "X-5F.dwg", "Mb");
+    const all = [main, entry("o1", "X-5F.dwg", "S1x"), entry("o2", "X-5F.dwg", "S2x"), sent];
+    expect((pickLibraryEntry(String.raw`..\002-X-結構\X-5F.dwg`, all, main, p, n) as { id: string }).id).toBe("x");
+  });
   // 惠宇敦南 12018-幹線及接地圖：存的是 D:\… 絕對路徑，同資料夾就有一份、底下 OLD 又有一份；ZWCAD 用同資料夾那份
   it("takes the copy right beside the main drawing over one in a subfolder of it", () => {
     const main = entry("m", "幹線.dwg", "Ae");
