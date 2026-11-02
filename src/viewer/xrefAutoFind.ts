@@ -195,9 +195,11 @@ export async function autoAssembleXrefs(source: File, paths: readonly string[], 
     todo.forEach((p) => tried.add(normalizeCadPath(p)));
     const found = (await findFiles(todo, entryId)).filter((f) => !files.some((g) => g.name === f.file.name));
     if (!found.length) break;
-    for (const f of found) { files.push(f.file); origins.set(f.file.webkitRelativePath || f.file.name, f.origin); }
+    // Two references inside different references can name the same drawing (喬瓏 天花板套圖-5F: 監控-5F and 動力-5F-CT both
+    // attach X-5F): adding it twice made the name ambiguous and neither copy loaded.
+    for (const f of found) { if (files.some((g) => g.name === f.file.name)) continue; files.push(f.file); origins.set(f.file.webkitRelativePath || f.file.name, f.origin); }
     result = await assembleXrefs(source, files, mapping, new Set(), manual);
-    todo = result.statuses.filter((s) => s.status.startsWith("找不到") && !tried.has(normalizeCadPath(s.path))).map((s) => s.path);
+    todo = [...new Set(result.statuses.filter((s) => s.status.startsWith("找不到") && !tried.has(normalizeCadPath(s.path))).map((s) => s.path))];
   }
   if (!result) return null;
   for (const s of result.statuses) {
