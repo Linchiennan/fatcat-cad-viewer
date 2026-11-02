@@ -290,13 +290,25 @@ export function installEngineeringScene(ctor:Any):void {
  report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;if(this.cadBoxes){(report as Any).entityBoxes=this.cadBoxes;this.cadBoxes=null;}dxf.cadReport=report;};
  // Load hidden layers; saved ON/OFF is applied to actual GPU layer objects after loading.
  p._FilterEntity=function(e:Any){return !e.hidden&&e.type!=='REGION'&&(!this.options.suppressPaperSpace||!e.inPaperSpace);};
+ /** The line itself, in its line type: dashes as segments, dots as points. */
+ const hairline=function*(view:Any,e:Any,prim:Any){
+  const pattern=view.cadLineTypes[e.lineType]?.pattern??[];
+  if(!pattern.length){yield prim;return;}
+  const segments=dashSegments(prim.vertices,pattern,view.cadScale*Math.abs(e.lineTypeScale??1),!!prim.shape);
+  const dashes=segments.filter(([a,b])=>a!==b),dots=segments.filter(([a,b])=>a===b).map(([a])=>a);
+  if(dashes.length)yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:1,vertices:dashes.flat(),shape:false});
+  if(dots.length)yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:0,vertices:dots,indices:undefined,shape:false});
+ };
  for(const method of ['_DecomposeLine','_DecomposePolyline','_DecomposeArc','_DecomposeCircle','_DecomposeEllipse']){
   const orig=p[method];p[method]=function*(e:Any,ctx:Any){
    // POLYLINE keeps its default width in 40/41 (startWidth/endWidth); LWPOLYLINE in 43 (width)
    const wide=method==='_DecomposePolyline'&&(e.width>0||e.startWidth>0||e.endWidth>0||e.vertices?.some((v:Any)=>v.startWidth>0||v.endWidth>0));
    if(wide&&!e.isPolyfaceMesh&&!e.includesCurveFitVertices&&!e.includesSplineFitVertices){
-    const first=orig.call(this,e,ctx).next().value;if(!first)return;
+    const prims=[...orig.call(this,e,ctx)],first=prims[0];if(!first)return;
     yield* complexLinePrimitives(this,e,first,ctx);
+    // CAD draws a wide polyline at least one pixel wide: the fill alone vanishes once its width is under a pixel
+    // (喬瓏 動力-5F0419: width-1 wiring, 12.7% of the drawing missing when zoomed out).
+    for(const prim of prims)if(prim.type===1||prim.type===2)yield* hairline(this,e,prim);
     const meshes=widePolyline(polylineVertexWidths(e),!!e.shape,e.width??e.startWidth??0,this.cadLineTypes[e.lineType]?.pattern??[],this.cadScale*Math.abs(e.lineTypeScale??1));
     for(const mesh of meshes){if(e.extrusionDirection?.z<0)mesh.vertices=mesh.vertices.map(v=>({x:-v.x,y:v.y}));yield Object.assign(Object.create(Object.getPrototypeOf(first)),first,{type:3,...mesh});}return;
    }
@@ -311,6 +323,7 @@ export function installEngineeringScene(ctor:Any):void {
    if(pattern.length)segments=dashSegments(prim.vertices,pattern,this.cadScale*Math.abs(e.lineTypeScale??1),!!prim.shape);
    else {const pts=prim.shape?[...prim.vertices,prim.vertices[0]]:prim.vertices;segments=pts.slice(1).map((b:DrawingPoint,i:number)=>[pts[i],b]);}
    if(hasWidth){
+    yield* hairline(this,e,prim);
     const path:Any[]=prim.shape?[...prim.vertices,prim.vertices[0]]:prim.vertices;
     const mesh=(vertices:DrawingPoint[],indices:number[])=>Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:3,vertices,indices});
     const offset=(p:DrawingPoint,n:DrawingPoint,w:number,sign:number)=>({x:p.x+n.x*w*sign/2,y:p.y+n.y*w*sign/2});
@@ -326,11 +339,7 @@ export function installEngineeringScene(ctor:Any):void {
     // Fill continuous corners with a bounded bevel (never unbounded acute miters).
     if(!pattern.length)for(let i=prim.shape?0:1;i<edges.length;i++){const prev=edges[(i+edges.length-1)%edges.length],next=edges[i];if(Math.hypot(prev.b.x-next.a.x,prev.b.y-next.a.y)>1e-8)continue;for(const sign of [-1,1])yield mesh([next.a,offset(next.a,prev.n,prev.wb,sign),offset(next.a,next.n,next.wa,sign)],[0,1,2]);}
    }
-   else {
-    const dashes=segments.filter(([a,b])=>a!==b),dots=segments.filter(([a,b])=>a===b).map(([a])=>a);
-    if(dashes.length)yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:1,vertices:dashes.flat(),shape:false});
-    if(dots.length)yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:0,vertices:dots,indices:undefined,shape:false});
-   }
+   else yield* hairline(this,e,prim);
   }};
  }
 }
