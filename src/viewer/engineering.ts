@@ -158,6 +158,22 @@ export function prepareCad(dxf:Any):CadReport {
  const offXrefs=new Set((dxf.cadXrefStatuses??[]).filter((x:Any)=>x.status==='已關閉').map((x:Any)=>x.name));
  // Only blocks flagged as external references (70 bit 4); LibreDWG also writes a path (group 1) for plain blocks.
  for(const block of Object.values(blocks) as Any[])if(block.xrefPath&&(block.type&4))report.xrefs.push({name:block.name,path:block.xrefPath,overlay:!!(block.type&8),loaded:(block.entities?.length??0)>0,disabled:offXrefs.has(block.name),...(block.cadXrefUnloaded?{savedUnloaded:true}:{}),...(block.cadXrefNotNeeded?{notNeeded:true}:{}),...(block.cadXrefMismatch?{mismatch:block.cadXrefMismatch}:{})});
+ // What a block's content takes from the INSERT that places it (1 layer and so everything, 2 colour, 4 line type,
+ // 8 lineweight). Copies are made only per value that matters: keyed on all four, a block placed on many layers was
+ // copied for each (惠宇敦南 RF電氣1: 12 thousand entities became 400 thousand, 2 GB, the page froze).
+ // Only the block's own entities count: a nested INSERT with its own layer and colour fixes its block's values itself.
+ const inheritMemo=new Map<string,number>();
+ const inherits=(name:string):number=>{
+  let m=inheritMemo.get(name);if(m!==undefined)return m;
+  m=0;
+  for(const c of blocks[name]?.entities??[]){
+   if(!c.layer||c.layer==='0'){m=15;break;}
+   if(!Number.isInteger(c.trueColor)&&c.colorIndex===0)m|=2;
+   if(String(c.lineType??'').toUpperCase()==='BYBLOCK')m|=4;
+   if(c.lineweight===-2)m|=8;
+  }
+  inheritMemo.set(name,m);return m;
+ };
  const adapt=(e:Any,layer:string,color:number,lineType:string,stack:string[],inheritedWeight=0):Any=>{
   report.entityCount++;const out={...e};
   if(['TEXT','MTEXT','ATTRIB','ATTDEF'].includes(e.type))warn('字型以內附 Latin／繁中字型替代；SHX／原字型字寬未保證相同');
@@ -179,7 +195,8 @@ export function prepareCad(dxf:Any):CadReport {
   if(e.type==='DIMENSION'&&!e.block)warn('部分尺寸標註由引擎重建；箭頭／樣式未逐件核對');
   if(e.type==='INSERT'&&e.name){const block=blocks[e.name];if(!block){warn('缺少圖塊：'+e.name);return out;}
    if(stack.includes(e.name)||stack.length>=24){warn('循環或過深圖塊已略過：'+e.name);out.hidden=true;return out;}
-   const key=JSON.stringify([e.name,out.layer,out.trueColor,out.lineType,out.cadLineweight]);let name=memo.get(key);
+   const d=inherits(e.name),all=d&1;
+   const key=JSON.stringify([e.name,all?out.layer:'',all||d&2?out.trueColor:'',all||d&4?out.lineType:'',all||d&8?out.cadLineweight:'']);let name=memo.get(key);
    if(!name){if(memo.size>=20000)throw Error('圖塊繼承變體超過安全上限');name='__fatcat_'+memo.size;memo.set(key,name);variants[name]={...block,name,cadName:block.cadName??block.name,entities:adaptList(block.entities??[],(child:Any,owner:Any)=>adapt(child,owner?.layer??out.layer,owner?.trueColor??out.trueColor,owner?.lineType??out.lineType,[...stack,e.name],owner?.cadLineweight??out.cadLineweight))};}
    out.name=name;
    // The scene draws a top-level INSERT's whole block on the INSERT's layer, so an off layer there hid everything in it

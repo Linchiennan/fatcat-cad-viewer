@@ -119,3 +119,16 @@ describe("XCLIP materials", () => {
     expect(() => viewer._LoadBatch({}, { key: { blockName: null, geometryType: 1 } })).toThrow("original path");
   });
 });
+
+// 惠宇敦南 RF電氣1：33 個視埠各留一份完整模型（超過 1 GB）；裁切複本只留裁切範圍附近的物件
+describe("clipped copies keep only what can show", () => {
+  it("leaves out entities wholly outside the clip, keeps crossing ones and ones of unknown extent", async () => {
+    const { insideClip } = await import("./xclipScene");
+    const far = Array.from({ length: 600 }, (_, i) => line(1000 + i, 1000, 1001 + i, 1001));
+    const crossing = line(-10, 2, 10, 2), inside = line(1, 1, 2, 2), hatch = { type: "HATCH", layer: "L" };
+    const kept = insideClip([...far, crossing, inside, hatch], square.map(([x, y]) => ({ x, y })));
+    expect(kept).toEqual([crossing, inside, hatch]);
+    // small blocks are copied whole, as before
+    expect(insideClip([line(1000, 1000, 1001, 1001)], square.map(([x, y]) => ({ x, y })))).toHaveLength(1);
+  });
+});

@@ -60,6 +60,7 @@ export function selectCadSpace(source:Any,name:string):Any {
  if(name==='Model'){fillFields();return doc;}
  // Paper coordinates are measured in paper units, not the model's INSUNITS.
  doc.header={...doc.header,$INSUNITS:0};
+ const viewportBlocks=new Map<string,string>();
  for(const v of selected.filter((e:Any)=>e.type==='VIEWPORT'&&!(e.flags&131072)&&((e.id>1&&e.status!==0)||(e.id===0&&e.cadPaperViewportIndex>0)))){
   const warn=(why:string)=>doc.cadDiagnostics.push(`配置 ${name} 視埠 ${v.handle} 未顯示：${why}`);
   // Object-clipped viewport: use the boundary entity (paper coordinates) as the clip polygon.
@@ -78,7 +79,10 @@ export function selectCadSpace(source:Any,name:string):Any {
   const inverse=(x:number,y:number)=>({x:target.x+c*(x/scale+center.x)+s*(y/scale+center.y),y:target.y-s*(x/scale+center.x)+c*(y/scale+center.y)});
   const clip=boundary?boundary.map(p=>inverse(p.x-v.position.x,p.y-v.position.y)):[inverse(-v.width/2,-v.height/2),inverse(v.width/2,-v.height/2),inverse(v.width/2,v.height/2),inverse(-v.width/2,v.height/2)];
   const frozen=new Set(Object.entries(doc.tables?.layer?.layers??{}).filter(([,l]:[string,Any])=>(v.frozen??[]).includes(l.handle)).map(([n])=>n));
-  const block='__FATCAT_VIEWPORT_'+v.handle;doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:model.filter((e:Any)=>!frozen.has(e.layer))};
+  // Viewports freezing the same layers show the same model: one block for them all, each placed and clipped by its own
+  // INSERT (惠宇敦南 RF電氣1: 33 viewports each held a copy of the 12-thousand-entity model, 2 GB, the page froze).
+  const frozenKey=[...frozen].sort().join('\n');let block=viewportBlocks.get(frozenKey);
+  if(!block){block='__FATCAT_VIEWPORT_'+v.handle;doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:model.filter((e:Any)=>!frozen.has(e.layer))};viewportBlocks.set(frozenKey,block);}
   doc.entities.push({type:'INSERT',name:block,handle:'viewport-'+v.handle,layer:v.layer,position:offset,xScale:scale,yScale:scale,zScale:1,rotation:-v.twist,xdata:{FATCAT_XCLIP:{values:[{code:1000,value:clip.map(p=>p.x+','+p.y).join(';')}]}}});
  }
  fillFields();

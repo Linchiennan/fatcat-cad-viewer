@@ -69,13 +69,53 @@ export function prepareXclips(dxf: Any): XclipPreparation {
     const polygon = expandClipRectangle(clip);
     if (polygon.length > XCLIP_POINT_LIMIT) { out.warnings.push(xclipTooLargeWarning(e.name, polygon.length)); continue; }
     const alias = XCLIP_BLOCK_PREFIX + (e.handle ? String(e.handle) : "n" + serial++);
-    blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name };
+    blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name, entities: insideClip(blocks[e.name].entities ?? [], polygon) };
     if (out.keep.has(e.name)) out.keep.add(alias);
     e.name = alias;
     out.top.set(alias, polygon);
   }
   dxf.blocks = blocks;
   return out;
+}
+
+/** Rough extents of an entity, or null when it cannot be told cheaply (kept). */
+function roughBox(e: Any): [number, number, number, number] | null {
+  const pts = (list: Any[] | undefined, pad = 0): [number, number, number, number] | null => {
+    if (!list?.length) return null;
+    let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+    for (const p of list) { if (!Number.isFinite(p?.x) || !Number.isFinite(p?.y)) return null; a = Math.min(a, p.x); b = Math.min(b, p.y); c = Math.max(c, p.x); d = Math.max(d, p.y); }
+    return [a - pad, b - pad, c + pad, d + pad];
+  };
+  switch (e.type) {
+    case "LINE": return pts(e.vertices);
+    case "LWPOLYLINE": case "POLYLINE": {
+      // a bulge can swing out by up to half its chord: pad by the longest chord when there is one
+      const v = e.vertices ?? [];
+      let pad = 0;
+      if (v.some((q: Any) => q.bulge)) for (let i = 1; i < v.length; i++) pad = Math.max(pad, Math.hypot(v[i].x - v[i - 1].x, v[i].y - v[i - 1].y));
+      return pts(v, pad + (e.width ?? 0));
+    }
+    case "CIRCLE": case "ARC": return Number.isFinite(e.radius) ? pts([e.center], e.radius) : null;
+    case "TEXT": case "ATTRIB": case "MTEXT": {
+      const h = e.textHeight ?? e.height ?? 0, n = String(e.text ?? "").length;
+      return h > 0 ? pts([e.startPoint ?? e.position], h * (n + 2) * Math.max(1, Math.abs(e.xScale ?? 1)) + (e.width ?? 0)) : null;
+    }
+    default: return null;
+  }
+}
+
+/**
+ * Content of a clipped block copy: entities lying wholly outside the clip are left out. Every clipped INSERT gets its
+ * own copy of the geometry, so a layout of many viewports held the whole model once per viewport (惠宇敦南 RF電氣1:
+ * 33 viewports, over 1 GB); each now holds about what it shows. Anything whose extents are not cheap to tell stays.
+ */
+export function insideClip(entities: Any[], polygon: DrawingPoint[]): Any[] {
+  if (entities.length < 500 || polygon.length < 3) return entities;
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const p of polygon) { a = Math.min(a, p.x); b = Math.min(b, p.y); c = Math.max(c, p.x); d = Math.max(d, p.y); }
+  const m = Math.max(c - a, d - b) * 0.01;
+  a -= m; b -= m; c += m; d += m;
+  return entities.filter((e) => { const r = roughBox(e); return !r || !(r[2] < a || r[0] > c || r[3] < b || r[1] > d); });
 }
 
 type SceneState = XclipPreparation & { next: number; nested: Map<number, { parent?: number; points: DrawingPoint[]; root: string }> };
