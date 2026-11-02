@@ -26,6 +26,26 @@ describe("references inside references (昭盛 給水-7F: 33 files referenced 41
   });
 });
 
+// 昭盛 總套圖-3F：18 個外參各帶整份圖塊表，組起來 218 MB 超過 160 MB 上限、整張打不開；真正有插入的只有 35 MB
+describe("block definitions a reference brings but never draws", () => {
+  it("are dropped; used ones and the main drawing's own stay", async () => {
+    const child = ["0", "SECTION", "2", "BLOCKS",
+      "0", "BLOCK", "2", "USED", "70", "0", "10", "0", "20", "0", "0", "LINE", "8", "0", "10", "0", "20", "0", "11", "1", "21", "0", "0", "ENDBLK",
+      "0", "BLOCK", "2", "SPARE", "70", "0", "10", "0", "20", "0", "0", "LINE", "8", "0", "10", "0", "20", "0", "11", "1", "21", "0", "0", "ENDBLK",
+      "0", "ENDSEC", "0", "SECTION", "2", "ENTITIES", "0", "INSERT", "8", "0", "2", "USED", "10", "0", "20", "0", "0", "ENDSEC", "0", "EOF"].join("\n");
+    const root = ["0", "SECTION", "2", "BLOCKS",
+      "0", "BLOCK", "2", "A", "70", "4", "10", "0", "20", "0", "1", "A.dxf", "0", "ENDBLK",
+      "0", "BLOCK", "2", "MINE", "70", "0", "10", "0", "20", "0", "0", "ENDBLK",
+      "0", "ENDSEC", "0", "SECTION", "2", "ENTITIES", "0", "INSERT", "8", "0", "2", "A", "10", "0", "20", "0", "0", "ENDSEC", "0", "EOF"].join("\n");
+    const { file } = await assembleXrefs(new File([root], "main.dxf"), [new File([child], "A.dxf")]);
+    const text = await file.text();
+    const blocks = JSON.parse(text.slice(text.indexOf("\n") + 1)).blocks;
+    expect(blocks["A|USED"]).toBeDefined();
+    expect(blocks["A|SPARE"]).toBeUndefined();
+    expect(blocks.MINE).toBeDefined();
+  });
+});
+
 describe("references saved unloaded (世舜 A1至A18施工平面圖: ZWCAD leaves them unloaded)", () => {
   it("marks only xref blocks, matching names with \\U+ codes decoded", () => {
     const doc: any = { blocks: { "参層": { type: 12 }, "壹層": { type: 12 }, "門": { type: 0 } } };

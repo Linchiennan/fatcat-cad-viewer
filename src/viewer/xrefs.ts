@@ -76,6 +76,22 @@ export async function parseCadFile(file:File):Promise<Any>{
  const parsed:Any=preserveCadMetadata(raw,dxfText);parsed.cadLayerStates=readLayerStates(dxfText);if(restored)(parsed.cadDiagnostics??=[]).push(`${restored} 個圖塊在 DWG 轉檔時遺漏，已改用備援讀取補回`);if(rebuilt?.error)(parsed.cadDiagnostics??=[]).push(`漏寫圖塊或文字的備援讀取失敗：${rebuilt.error}`);const textFixed=rebuilt?.texts?applyReaderTexts(parsed,rebuilt.texts):0;if(textFixed)(parsed.cadDiagnostics??=[]).push(`${textFixed} 段文字在 DWG 轉檔時解碼錯誤，已改用備援讀取修正`);for(const [type,n] of Object.entries(rebuilt?.skipped??{}))(parsed.cadDiagnostics??=[]).push(`補回的圖塊中有 ${n} 個 ${type} 尚未支援顯示`);if(repaired)(parsed.cadDiagnostics??=[]).push(repairWarning(repaired));await resolveOleImages(parsed);decodeMifEntities(parsed);decodeMifNames(parsed);markUnloadedXrefs(parsed,conversionUnloadedXrefs.get(source));decodeCaretEntities(parsed);if(conversionWarnings.get(source))(parsed.cadDiagnostics??=[]).push(file.name+'：DWG解析傳回 '+conversionWarnings.get(source)+' 筆診斷');return parsed;
 }
 /** Import into existing INSERT/BLOCK path; no network or alternate renderer. */
+/**
+ * Drop the block definitions references brought in that nothing draws: every reference copies its whole block table,
+ * and most of it is never inserted (昭盛 總套圖-3F: 18 references, 11,230 blocks, 218 MB, over the 160 MB limit so the
+ * drawing did not open; 2,105 blocks are used, 35 MB). Only names inside a reference ("X|…") go; an unused reference
+ * inside a reference keeps its record, emptied and marked not needed, so the panel still lists it.
+ */
+export function pruneUnusedXrefBlocks(doc:Any):void{
+ const blocks=doc.blocks??{},used=new Set<string>(),todo:Any[][]=[doc.entities??[]];
+ // Any entity naming a block keeps it (INSERT name, DIMENSION/table block), not only INSERTs.
+ while(todo.length)for(const e of todo.pop()!)for(const n of [e.name,e.block])if(typeof n==='string'&&!used.has(n)&&blocks[n]){used.add(n);todo.push(blocks[n].entities??[]);}
+ for(const [n,b] of Object.entries(blocks) as [string,Any][]){
+  if(!n.includes('|')||used.has(n))continue;
+  if(b.xrefPath&&(b.type&4)){b.entities=[];b.cadXrefNotNeeded=true;}else delete blocks[n];
+ }
+}
+
 /** `manual`: files the user picked in the xref panel; only these (or a manual mapping) load a reference saved unloaded. */
 export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<string,string>={},disabled:Set<string>=new Set(),manual:ReadonlySet<File>=new Set()):Promise<{file:File;statuses:XrefStatus[]}> {
  if(files.length>64||files.reduce((sum,f)=>sum+f.size,0)>128*1024*1024)throw Error('外參超過64檔或128MB安全上限');
@@ -139,6 +155,7 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
   }
  }
  await resolve(root,rootFile.name,[rootFile],0);
+ pruneUnusedXrefBlocks(root);
  // Say where each top-level reference appears, so one used only on a sheet is not mistaken for missing.
  for(const [status,name] of topLevel)if(/^(已載入|找不到)/.test(status.status))status.status+=usageNote(blockUsage(root,name));
  root.cadXrefStatuses=statuses;
