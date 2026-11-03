@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { prepareCad } from "./engineering";
+import { INSERT_CARRIER_LAYER, prepareCad } from "./engineering";
 
 // 14F 牆板放樣：外參「03-14F-動力插座」插在「!外參-器具平面圖」，這層在 14F 關閉（不是凍結）。
 // CAD：插入的圖層關閉只藏圖塊裡 0 層的東西，放在自己圖層的插座照樣顯示；凍結才全部藏。App 原本整個外參都不見。
@@ -48,5 +48,18 @@ describe("an INSERT on an off layer", () => {
     const inner = d.blocks[outer.name].entities;
     expect(inner.find((e: any) => e.type === "CIRCLE").hidden).toBe(true);
     expect(inner.find((e: any) => e.type === "TEXT").hidden).toBeFalsy();
+  });
+  // 127鑫元鴻 管道檢討：外參都插在 0 層，0 層本身也關閉；ZWCAD 照樣顯示 11 張平面，App 整張空白
+  it("still shows own-layer content when the INSERT sits on layer 0 and 0 is off", () => {
+    const d: any = doc(false);
+    d.tables.layer.layers["0"].visible = false;
+    d.entities[0].layer = "0";
+    const report = prepareCad(d);
+    const top = d.entities[0];
+    expect(top.layer).toBe(INSERT_CARRIER_LAYER);
+    expect(report.layers.map((l: any) => l.name)).not.toContain(INSERT_CARRIER_LAYER);
+    const inside = d.blocks[top.name].entities;
+    expect(inside.find((e: any) => e.type === "INSERT").hidden).toBeFalsy();
+    expect(inside.find((e: any) => e.type === "LINE").hidden).toBe(true);
   });
 });

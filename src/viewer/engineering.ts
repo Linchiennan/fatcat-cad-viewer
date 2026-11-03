@@ -49,6 +49,8 @@ export function advancedSnap(entities:MeasurableEntity[],target:DrawingPoint,tol
  return best;
 }
 const DASH_LIMIT=200000;
+/** Carries a top-level INSERT whose own layer and layer 0 are both off; not in the layer table, so always drawn. */
+export const INSERT_CARRIER_LAYER='__fatcat_insert';
 // Segments one hatch may produce before it is drawn as its boundary only (see _DecomposeHatch below).
 export const DENSE_HATCH_SEGMENTS=100000;
 // Pattern segments a whole drawing may spend; past it only small hatches keep their pattern.
@@ -183,7 +185,7 @@ export function prepareCad(dxf:Any):CadReport {
   // Block content is drawn under its INSERT's layer, so an off/frozen layer of a nested entity must hide it here.
   // Uses the effective layer, so layer-0 content inheriting an off layer from its INSERT hides too.
   // An INSERT on an off (not frozen) layer still shows its content on other layers, as CAD does: only frozen hides it all.
-  if(stack.length&&out.layer&&out.layer!=='0'){blockLayers.add(out.layer);if(e.type==='INSERT'?layerFrozen(out.layer):!layerShown(out.layer))out.hidden=true;}out.trueColor=resolveCadColor(e,layers,layer,color);out.color=out.trueColor;
+  if(stack.length&&out.layer&&(out.layer!=='0'||!layerShown('0'))){blockLayers.add(out.layer);if(e.type==='INSERT'?layerFrozen(out.layer):!layerShown(out.layer))out.hidden=true;}out.trueColor=resolveCadColor(e,layers,layer,color);out.color=out.trueColor;
   const lt=String(e.lineType??'BYLAYER');out.lineType=lt.toUpperCase()==='BYLAYER'?layers[out.layer]?.lineType??'CONTINUOUS':lt.toUpperCase()==='BYBLOCK'?lineType:lt;
   if(!['CONTINUOUS','BYLAYER','BYBLOCK'].includes(out.lineType.toUpperCase())&&!dxf.tables?.lineType?.lineTypes?.[out.lineType])warn('缺少線型定義：'+out.lineType+'，暫以實線顯示');
   if(!supported.has(e.type))counts.set(e.type,(counts.get(e.type)??0)+1);
@@ -202,7 +204,9 @@ export function prepareCad(dxf:Any):CadReport {
    // The scene draws a top-level INSERT's whole block on the INSERT's layer, so an off layer there hid everything in it
    // (14F 牆板放樣: the 動力插座 xref sits on「!外參-器具平面圖」, off in 14F; ZWCAD still shows its sockets on
    // E-插作-器具-牆板). Draw it on layer 0 instead; its layer-0 content already took the off layer above and stays hidden.
-   if(!stack.length&&!layerShown(out.layer)&&!layerFrozen(out.layer)&&layerShown('0')){blockLayers.add(out.layer);out.cadInsertLayer=out.layer;out.layer='0';}
+   // Layer 0 can be off too (127鑫元鴻 管道檢討: every xref inserted on 0, and 0 off; ZWCAD shows all 11 floor plans):
+   // then use a layer missing from the table, which the scene always shows and the layer panel does not list.
+   if(!stack.length&&!layerShown(out.layer)&&!layerFrozen(out.layer)){blockLayers.add(out.layer);out.cadInsertLayer=out.layer;out.layer=layerShown('0')?'0':INSERT_CARRIER_LAYER;}
   }
   return out;
  };
