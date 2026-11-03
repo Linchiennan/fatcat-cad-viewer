@@ -29,7 +29,28 @@ export function collectRasters(doc:Any):RasterInstance[]{const result:RasterInst
  }visit(doc.entities??[],new Matrix3(),[],[]);return result;
 }
 /** IMAGE frames enter existing fit/layer geometry; pixels are local textures. */
-export function replaceRasterEntities(doc:Any):void{const replace=(es:Any[])=>es.map(e=>e.type==='IMAGE'?rasterOutline(e):e);doc.entities=replace(doc.entities??[]);for(const b of Object.values(doc.blocks??{}) as Any[])b.entities=replace(b.entities??[]);}
+/**
+ * A picture whose file is missing: CAD writes the saved path across the frame, fitted to its width with a small margin
+ * and centred on its height (ZWCAD, 喬瓏 頂版放樣套圖-辦公室-RF: 546 of 547 pixels, middle of the frame). It shows even
+ * with the frame turned off. Width per character is estimated (CJK 1, others 0.6 of the height).
+ */
+export function missingRasterLabel(e:Any):Any|null{
+ // A file that was found but could not be read (TIF, BMP) is a picture in CAD, not a missing one.
+ const path=String(e.imagePath??'');if(!path||e.imageData||e.imageError||e.cadOleImage)return null;
+ const [a,b,,d]=rasterOutline(e).vertices,ux=b.x-a.x,uy=b.y-a.y,vx=d.x-a.x,vy=d.y-a.y,width=Math.hypot(ux,uy),height=Math.hypot(vx,vy);
+ if(!(width>0&&height>0))return null;
+ // Fit (72=5) between the two margin points keeps the width exact whatever font replaces CAD's; the height follows the
+ // character count (the built-in fonts set CJK about 1.45 times wider than this count, measured on that drawing).
+ const ems=[...path].reduce((s,c)=>s+(c.codePointAt(0)!>=0x2e80?1:0.6),0),size=Math.min(width*0.986/ems/1.45,height*0.8),margin=width*0.007;
+ const at=(f:number)=>({x:a.x+ux*f+vx/2,y:a.y+uy*f+vy/2}),m=margin/width;
+ return {type:'TEXT',handle:e.handle+':path',layer:e.layer,color:e.color,colorIndex:e.colorIndex,trueColor:e.trueColor,text:path,textHeight:size,startPoint:at(m),endPoint:at(1-m),halign:5,valign:2,hidden:e.hidden};
+}
+/** frame: the drawing's image frame setting (RASTERVARIABLES 70; 0 = off). */
+export function replaceRasterEntities(doc:Any):void{
+ const frame=doc.cadImageFrame!==0;
+ const replace=(es:Any[])=>es.flatMap(e=>e.type!=='IMAGE'?[e]:[...(frame?[rasterOutline(e)]:[]),...[missingRasterLabel(e)].filter(Boolean)]);
+ doc.entities=replace(doc.entities??[]);for(const b of Object.values(doc.blocks??{}) as Any[])b.entities=replace(b.entities??[]);
+}
 export async function installRasters(viewer:Any,instances:RasterInstance[],warnings:string[]):Promise<{dispose:()=>void;showLayer:(name:string,visible:boolean)=>void;count:number}>{
  const meshes:Mesh[]=[];const origin=viewer.GetOrigin()??{x:0,y:0};
  for(const item of instances){const e=item.entity;try{

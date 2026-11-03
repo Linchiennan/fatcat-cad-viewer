@@ -106,7 +106,7 @@ export async function assembleXrefs(rootFile:File,files:File[],mapping:Record<st
    if(disabled.has(key)){image.hidden=true;status.status='已關閉';continue;}
    const file=matchXref(path,parent,files,mapping,key);
    if(!file){status.status='找不到或同名衝突，請逐檔對應';continue;}
-   try{image.imageData=await rasterData(file);status.status='已載入：'+(file.webkitRelativePath||file.name);}catch(error){status.status='讀取失敗：'+String(error);}
+   try{image.imageData=await rasterData(file);status.status='已載入：'+(file.webkitRelativePath||file.name);}catch(error){status.status='讀取失敗：'+String(error);image.imageError=String(error instanceof Error?error.message:error);}
   }
   const initial=Object.entries(doc.blocks??{}) as [string,Any][];
   // Every matched DWG starts converting now (two at once on a capable device, convertDwg.ts) and is read in order below:

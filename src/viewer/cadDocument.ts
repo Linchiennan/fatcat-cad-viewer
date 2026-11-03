@@ -105,6 +105,8 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  const activePaper=rows.find(r=>r.type==='BLOCK_RECORD'&&text(r,2).toLowerCase()==='*paper_space');
  const savedLayout=activePaper?layouts.find(l=>l.owner&&l.owner===text(activePaper,5))?.name:undefined;
  doc.cadSavedSpace=Number(doc.header?.$TILEMODE??1)===0&&savedLayout?savedLayout:'Model';
+ // IMAGEFRAME (RASTERVARIABLES 70): 0 hides picture frames; 1 and 2 show them on screen.
+ const rasterVars=rows.find(r=>r.type==='RASTERVARIABLES');if(rasterVars)doc.cadImageFrame=num(rasterVars,70,1);
  const byHandle=new Map<string,Any>();for(const e of [...(doc.entities??[]),...Object.values(doc.blocks??{}).flatMap((b:Any)=>b.entities??[])])if(e.handle)byHandle.set(String(e.handle),e);
  const paperViewportCounts=new Map<string,number>();
  // Arrow inputs the pinned parser drops: DIMLDRBLK handles and block-record names.
