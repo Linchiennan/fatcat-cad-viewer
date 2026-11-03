@@ -282,10 +282,8 @@ export class DxfCadEngine implements FatcatCadEngine {
       this.space = space;
       this.saved = saved;
       shownSpace.set(identity, space);
-      for (const layer of report.layers) {
-        if (typeof memory[layer.name] === "boolean") layer.visible = memory[layer.name];
-        this.applyLayer(layer.name, layer.visible);
-      }
+      for (const layer of report.layers) if (typeof memory[layer.name] === "boolean") layer.visible = memory[layer.name];
+      this.applyLayersQuietly(report.layers);
       if (this.viewer.parsedDxf) this.viewer.parsedDxf = undefined;
       this.openView(position);
       this.ready = true;
@@ -357,6 +355,27 @@ export class DxfCadEngine implements FatcatCadEngine {
       if (count > 0) { meshes++; verts += count; }
     });
     return { meshes, verts };
+  }
+
+  /**
+   * Opening a sheet sets every layer at once without drawing in between. ShowLayer redraws the whole scene each call
+   * and applyLayer scans all layers for XCLIP copies, so a drawing with thousands of layers (惠宇敦南 A06-09 天花板
+   * 平剖面圖) spent minutes redrawing and the page froze before it ever showed.
+   */
+  private applyLayersQuietly(layers: readonly { name: string; visible: boolean }[]): void {
+    const viewerLayers: Map<string, { objects: { visible: boolean }[] }> | undefined = this.viewer.layers;
+    const clipped = new Map<string, string[]>();
+    for (const layer of viewerLayers?.keys?.() ?? []) {
+      if (typeof layer === "string" && layer.startsWith(XCLIP_LAYER_PREFIX)) {
+        const base = xclipBaseLayer(layer);
+        clipped.set(base, [...(clipped.get(base) ?? []), layer]);
+      }
+    }
+    for (const { name, visible } of layers) {
+      for (const n of [name, ...(clipped.get(name) ?? [])]) for (const obj of viewerLayers?.get(n)?.objects ?? []) obj.visible = visible;
+      this.rasters?.showLayer(name, visible);
+    }
+    this.render();
   }
 
   /** Show / hide a layer on the GPU (and the synthetic XCLIP layers made from it, and its images). */

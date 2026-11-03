@@ -66,7 +66,7 @@ class FakeViewer {
     this.parsedDxf = result.dxf ?? sceneResult();
     this.bounds = result.bounds ?? { minX: 0, minY: 0, maxX: 100, maxY: 50 };
     this.origin = result.origin ?? { x: 10, y: 5 };
-    for (const l of this.parsedDxf.cadReport?.layers ?? []) this.layers.set(l.name, {});
+    for (const l of this.parsedDxf.cadReport?.layers ?? []) this.layers.set(l.name, { objects: [{ visible: true }] });
     p.resolve();
     return p;
   }
@@ -178,6 +178,20 @@ describe("CAD engine", () => {
     const error = await load.catch((e) => e);
     expect(error.code).toBe("DXF_OPEN_FAILED");
     expect(error.message).toContain("size exceeds");
+  });
+
+  // 惠宇敦南 A06-09 天花板平剖面圖：開圖時每個圖層各重畫一次整張，幾千個圖層讓頁面卡死 10 分鐘以上
+  it("sets every layer when a sheet opens without redrawing once per layer", async () => {
+    engine = make();
+    const layers = Array.from({ length: 500 }, (_, i) => ({ name: "L" + i, color: 0xffffff, visible: i % 2 === 0, originalVisible: i % 2 === 0 }));
+    const load = engine.load(jsonFile(), () => {});
+    await until(() => viewer.pending.length === 1);
+    const before = viewer.renders;
+    viewer.finish({ dxf: { ...sceneResult(), cadReport: { ...sceneResult().cadReport, layers } } });
+    await load;
+    expect(viewer.renders - before).toBeLessThan(10);
+    expect((viewer.layers.get("L1") as Any).objects[0].visible).toBe(false);
+    expect((viewer.layers.get("L2") as Any).objects[0].visible).toBe(true);
   });
 
   it("times out after the load limit", async () => {
@@ -348,7 +362,7 @@ describe("CAD engine", () => {
     expect(after.x).toBeCloseTo(before.x, 6);
     expect(engine.unproject(800, 0).x - engine.unproject(0, 0).x).toBeCloseTo(width, 6);
     expect(engine.report()!.layers.find((l) => l.name === "A")!.visible).toBe(false);
-    expect(viewer.shown.get("A")).toBe(false);
+    expect((viewer.layers.get("A") as Any).objects[0].visible).toBe(false);
     engine.panBy(100, 0);
     engine.command("home");
     expect(engine.unproject(400, 300).x).toBeCloseTo(before.x, 6);
