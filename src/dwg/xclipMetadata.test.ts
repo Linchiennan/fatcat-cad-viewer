@@ -45,6 +45,14 @@ describe("XCLIP metadata (T13 4.4)", () => {
     expect(transformClipBoundary([{ x: 1, y: 1 }, { x: 2, y: 2 }], [1, 2])).toEqual([{ x: 1, y: 1 }, { x: 2, y: 2 }]);
   });
 
+  // 惠宇敦南 A13 燈光計畫圖：裁切框自己的變換平移 80328,29540，只套第一個矩陣會把框放到圖外，整張 2F 平面不見
+  it("undoes the boundary's own transform before the inverse block transform", () => {
+    const inverseBlock = [1, 0, 0, -54220.72, 0, 1, 0, -9585.25, 0, 0, 1, 0], clip = [1, 0, 0, 80328.14, 0, 1, 0, 29540.2, 0, 0, 1, 0];
+    const out = transformClipBoundary([{ x: 135545.69, y: 40415.46 }, { x: 142793.46, y: 47560.3 }], [...inverseBlock, ...clip]);
+    expect(out[0].x).toBeCloseTo(996.83); expect(out[0].y).toBeCloseTo(1290.01);
+    expect(out[2].x).toBeCloseTo(8244.6); expect(out[2].y).toBeCloseTo(8434.85);
+  });
+
   it("keeps every other byte, line ends of LF files included", () => {
     const source = enc(drawing([[0, 0], [4, 4]]), "\n");
     const out = dec(annotateDxfXclips(source)), before = dec(source);

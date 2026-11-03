@@ -21,11 +21,22 @@ export function expandClipRectangle(points: readonly DrawingPoint[]): DrawingPoi
   return [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
 }
 
-/** Boundary in block coordinates: with >= 24 matrix values, the first of the last two 3x4 matrices is applied. */
+/**
+ * Boundary in block coordinates. The last 24 matrix values are two 3x4 matrices: the inverse block transform, then the
+ * clip boundary's own transform. The boundary is in clip coordinates, so its transform is undone first (惠宇敦南 A13
+ * 燈光計畫圖: boundary transform moved by 80328,29540; applying only the first matrix left the clip far off the plan and
+ * the whole 2F plan disappeared); it is the identity in most drawings.
+ */
 export function transformClipBoundary(points: readonly DrawingPoint[], matrix: readonly number[]): DrawingPoint[] {
   if (matrix.length < 24) return points.map((p) => ({ x: p.x, y: p.y }));
-  const m = matrix.slice(matrix.length - 24, matrix.length - 12);
-  return expandClipRectangle(points).map((p) => ({ x: m[0] * p.x + m[1] * p.y + m[3], y: m[4] * p.x + m[5] * p.y + m[7] }));
+  const m = matrix.slice(matrix.length - 24, matrix.length - 12), c = matrix.slice(matrix.length - 12);
+  const det = c[0] * c[5] - c[1] * c[4];
+  const unclip = (p: DrawingPoint): DrawingPoint => {
+    if (!det) return p;
+    const x = p.x - c[3], y = p.y - c[7];
+    return { x: (c[5] * x - c[1] * y) / det, y: (c[0] * y - c[4] * x) / det };
+  };
+  return expandClipRectangle(points).map(unclip).map((p) => ({ x: m[0] * p.x + m[1] * p.y + m[3], y: m[4] * p.x + m[5] * p.y + m[7] }));
 }
 
 /** Copy SPATIAL_FILTER boundaries onto their INSERT records. Idempotent: already annotated INSERTs are skipped. */
