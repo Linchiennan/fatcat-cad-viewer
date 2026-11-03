@@ -437,8 +437,7 @@ export class DxfCadEngine implements FatcatCadEngine {
       await this.load(file, () => {}, this.space);
       return true;
     }
-    for (const l of report.layers) if (l.name in state.layers) this.applyLayer(l.name, l.visible);
-    this.render();
+    this.applyLayersQuietly(report.layers.filter((l) => l.name in state.layers));
     return false;
   }
 
