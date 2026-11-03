@@ -61,6 +61,13 @@ describe("embedded OLE pictures", () => {
     expect(result.bytes.length).toBe(picture.length);
   });
 
+  // 喬瓏 127鑫元鴻 消防-2F-避難：內嵌 Excel 的最後一個扇區只存了 382／512 位元組，ZWCAD 照樣顯示，App 原本報「扇區越界」整張表不畫
+  it("still reads a picture whose last sector is cut short", () => {
+    const picture = bmp(40, 40), cfb = makeCfb("\u0001Ole10Native", native(picture));
+    const result = oleImage(withAcadHeader(cfb.subarray(0, cfb.length - 130)));
+    expect(result.mime).toBe("image/bmp");
+  });
+
   it("reads a mini-stream package and finds the PNG after its file-name header", () => {
     const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
     const payload = new Uint8Array([2, 0, 0x61, 0x2e, 0x70, 0x6e, 0x67, 0, ...png]);

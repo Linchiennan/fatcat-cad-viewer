@@ -29,11 +29,13 @@ function findSignature(bytes: Uint8Array, limit = 4096): number {
 /** Minimal read-only compound file reader; returns the named stream or null. */
 export function readCfbStream(file: Uint8Array, name: string): Uint8Array | null {
   const view = new DataView(file.buffer, file.byteOffset, file.byteLength);
-  const u16 = (o: number) => view.getUint16(o, true), u32 = (o: number) => view.getUint32(o, true);
+  const u16 = (o: number) => o + 2 <= file.length ? view.getUint16(o, true) : 0, u32 = (o: number) => o + 4 <= file.length ? view.getUint32(o, true) : 0;
   if (file.length < 512) throw Error("內嵌物件資料不完整");
   const sectorSize = 1 << u16(0x1e), miniSize = 1 << u16(0x20);
   if (sectorSize !== 512 && sectorSize !== 4096) throw Error("內嵌物件格式異常（扇區大小）");
-  const sectors = Math.floor((file.length - sectorSize) / sectorSize);
+  // The last sector may be cut short (喬瓏 127鑫元鴻 消防-2F-避難: 382 of 512 bytes); CAD still shows the picture, so a
+  // partial sector counts and the missing bytes read as zeros.
+  const sectors = Math.ceil((file.length - sectorSize) / sectorSize);
   const sectorOffset = (s: number) => {
     if (s >= sectors) throw Error("內嵌物件格式異常（扇區越界）");
     return sectorSize + s * sectorSize;
