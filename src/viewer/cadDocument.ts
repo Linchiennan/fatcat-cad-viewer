@@ -19,6 +19,10 @@ function records(source:string):RecordDxf[]{
  }return out;
 }
 const text=(r:RecordDxf,c:number,f='')=>r.tags.find(t=>t[0]===c)?.[1]??f;
+/** The owner (330) outside the {ACAD_REACTORS …} / {ACAD_XDICTIONARY …} groups: a viewport's clip boundary lists the
+ * viewport as a reactor first (喬瓏 插座-2F: the Defpoints frame of a layout was read as owned by the viewport, so it
+ * was drawn in model space). */
+export function ownerOf(r:RecordDxf):string{let depth=0;for(const [c,v] of r.tags){if(c===102){depth+=String(v).startsWith('{')?1:-1;continue;}if(c===330&&depth<=0)return String(v);}return '';}
 const num=(r:RecordDxf,c:number,f=0)=>Number(text(r,c,String(f)));
 const point=(r:RecordDxf,c:number)=>({x:num(r,c),y:num(r,c+10),z:num(r,c+20)});
 /** Style fields shared by generated entities (colour, true colour, line type, lineweight). */
@@ -113,7 +117,7 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  const styleNames=new Map<string,string>(Object.values(doc.tables?.style?.styles??{}).filter((st:Any)=>st?.handle).map((st:Any)=>[String(st.handle),st.styleName??st.name]));
  const queues=new Map<string,Any[]>(),indices=new Map<string,number>();for(const [block,entities] of [['',doc.entities??[]],...Object.entries(doc.blocks??{}).map(([name,b]:[string,Any])=>[name,b.entities??[]])] as [string,Any[]][]){for(const e of entities){const key=block+'|'+e.type;if(!queues.has(key))queues.set(key,[]);queues.get(key)!.push(e);}}
  for(const r of rows){if(!['ENTITIES','BLOCKS'].includes(r.section)||['BLOCK','ENDBLK','SECTION','ENDSEC','SEQEND','VERTEX'].includes(r.type))continue;
-  const handle=text(r,5),owner=text(r,330);let space=text(r,410)||ownerSpace.get(owner)||(num(r,67)?'圖紙（未命名）':'Model');
+  const handle=text(r,5),owner=ownerOf(r);let space=text(r,410)||ownerSpace.get(owner)||(num(r,67)?'圖紙（未命名）':'Model');
   if(r.block&&r.block.toLowerCase().startsWith('*paper_space'))space=ownerSpace.get(owner)||space;
   if(space!=='Model'&&!layouts.some(l=>l.name===space))layouts.push({name:space,order:layouts.length});
   const queueKey=r.block+'|'+r.type,index=indices.get(queueKey)??0,queued=queues.get(queueKey)?.[index];indices.set(queueKey,index+1);let e=handle?byHandle.get(handle):queued;
