@@ -40,6 +40,7 @@
 | Noto Sans CJK TC Regular（notofonts/noto-cjk，未修改） | SIL OFL 1.1 | licenses/noto-cjk-OFL-1.1.txt |
 | Noto Sans CJK TC Light 2.004（notofonts/noto-cjk，未修改；SHX 文字替代用） | SIL OFL 1.1 | licenses/noto-cjk-OFL-1.1.txt |
 | Liberation Sans Regular 2.1.5（未修改） | SIL OFL 1.1 | licenses/liberation-fonts-OFL-1.1.txt |
+| Fatcat Symbols（由 Liberation Sans 的「=」「.」組成 ≒，scripts/make-symbol-font.py；依保留字型名稱規定改名） | SIL OFL 1.1 | public/fonts/LICENSE-FATCAT-SYMBOLS-OFL.txt |
 
 ## Android 原生層
 

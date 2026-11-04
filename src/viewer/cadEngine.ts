@@ -35,7 +35,9 @@ type Any = any;
 export const LOAD_TIMEOUT_MS = 600_000;
 /** Bundled fonts, in fallback order (T14 3.3-10). */
 // The last one is the light weight for SHX text only (cadFontsScene: read only when a drawing has SHX-style text).
-export const ENGINE_FONTS = ["fonts/LiberationSans-Regular.ttf", "fonts/NotoSansCJKtc-Regular.otf", "fonts/NotoSansCJKtc-Light.otf"];
+// FatcatSymbols (scripts/make-symbol-font.py) carries symbols neither Noto CJK TC nor Liberation has (≒). The light
+// weight stays last: cadFontsScene takes the last font for SHX-styled text.
+export const ENGINE_FONTS = ["fonts/LiberationSans-Regular.ttf", "fonts/NotoSansCJKtc-Regular.otf", "fonts/FatcatSymbols.ttf", "fonts/NotoSansCJKtc-Light.otf"];
 /** Prefix of the assembled-document files our xrefs module writes. */
 const JSON_PREFIX = "FATCAT-DXF-JSON\n";
 const BACKGROUND = "#0b1118";

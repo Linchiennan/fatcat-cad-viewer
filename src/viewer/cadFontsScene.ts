@@ -33,8 +33,9 @@ export function installCadFontScene(ctor:Any):void {
   // last of the engine fonts and is only read when the drawing has text on an SHX style.
   const base=Array.isArray(fonts)&&fonts.length>2?fonts.slice(0,-1):fonts,light=Array.isArray(fonts)&&fonts.length>2?fonts[fonts.length-1]:null;
   this.cadShxRenderer=null;
+  // SHX-styled text draws in the light weight, backed by FatcatSymbols (second to last in ENGINE_FONTS) for ≒ and the like.
   const shxTexts=[...(dxf.entities??[]),...Object.values(dxf.blocks??{}).flatMap((b:Any)=>b.entities??[])].filter((e:Any)=>e.text&&isShxStyle(this.cadStyles[e.styleName??'STANDARD'])).map((e:Any)=>e.text).join('');
-  if(light&&shxTexts){try{const r=new TextRenderer([light]);await r.FetchFonts(shxTexts);this.cadShxRenderer=r;}catch{/* the regular weight stays */}}
+  if(light&&shxTexts){try{const r=new TextRenderer([light,...(fonts.length>3?[fonts[fonts.length-2]]:[])]);await r.FetchFonts(shxTexts);this.cadShxRenderer=r;}catch{/* the regular weight stays */}}
   activeFontUsage={};
   try{await build.call(this,dxf,base);this.cadFontDiagnostics={...this.cadFontResults,actualGlyphFonts:{...activeFontUsage},styles:Object.values(this.cadStyles).slice(0,64).map((s:Any)=>({style:s.styleName,requested:s.font||'(未指定檔名)',bigFont:s.bigFont||'',availableLocal:!!(this.cadFonts.has(fontKey(s.font??''))||this.cadOutlineFonts.has(fontKey(s.font??'')))})),note:'actualGlyphFonts counts actual outline glyph lookups during layout/render (including cached glyphs), not text content or pixel counts; rendered=local font entities, fallback=bundled route because requested font/glyphs/SHX formatting unavailable. routes=local filenames actually used.'};}finally{activeFontUsage=null;for(const f of this.cadFonts.values())f.release();}
  };
