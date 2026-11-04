@@ -50,6 +50,41 @@ export function segmentOutside(a: P, b: P, poly: P[]): [P, P][] {
 const box = (ps: P[]) => ps.reduce((m, p) => ({ minX: Math.min(m.minX, p.x), minY: Math.min(m.minY, p.y), maxX: Math.max(m.maxX, p.x), maxY: Math.max(m.maxY, p.y) }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
 const overlaps = (a: Any, b: Any) => a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
 
+/** Points along an arc from angle a0 counter-clockwise by sweep, at most 2° apart. */
+function arcPoints(c: P, r: number, a0: number, sweep: number): P[] {
+  const n = Math.max(2, Math.ceil(Math.abs(sweep) / (Math.PI / 90)));
+  return Array.from({ length: n + 1 }, (_, i) => ({ x: c.x + r * Math.cos(a0 + sweep * i / n), y: c.y + r * Math.sin(a0 + sweep * i / n) }));
+}
+
+/**
+ * Arcs, circles and bulged polylines as point runs, so the wipeout cut works on them as on straight lines
+ * (惠宇 007 廚房水電配置圖: arcs and circles under the notes' wipeouts still showed). Mirrored (negative extrusion)
+ * and wide ones are left alone.
+ */
+function curveRun(e: Any): P[] | null {
+  if ((e.extrusionDirection?.z ?? 1) < 0) return null;
+  if (e.type === "CIRCLE" && e.center && e.radius > 0) return arcPoints(e.center, e.radius, 0, 2 * Math.PI);
+  if (e.type === "ARC" && e.center && e.radius > 0 && Number.isFinite(e.startAngle) && Number.isFinite(e.endAngle)) {
+    let sweep = e.endAngle - e.startAngle;
+    while (sweep <= 0) sweep += 2 * Math.PI;
+    return arcPoints(e.center, e.radius, e.startAngle, sweep);
+  }
+  if (e.type === "LWPOLYLINE" && Array.isArray(e.vertices) && e.vertices.length >= 2 && !e.width && !e.vertices.some((v: Any) => v.startWidth || v.endWidth)) {
+    const vs = e.vertices, out: P[] = [{ x: vs[0].x, y: vs[0].y }];
+    for (let i = 0; i < (e.shape ? vs.length : vs.length - 1); i++) {
+      const a = vs[i], b = vs[(i + 1) % vs.length], bulge = a.bulge ?? 0;
+      if (!bulge) { out.push({ x: b.x, y: b.y }); continue; }
+      const chord = Math.hypot(b.x - a.x, b.y - a.y), theta = 4 * Math.atan(bulge);
+      if (!(chord > 0)) continue;
+      const r = chord / (2 * Math.sin(Math.abs(theta) / 2)), mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const h = r * Math.cos(Math.abs(theta) / 2) * Math.sign(bulge), c = { x: mid.x - (b.y - a.y) / chord * h, y: mid.y + (b.x - a.x) / chord * h };
+      out.push(...arcPoints(c, r, Math.atan2(a.y - c.y, a.x - c.x), theta).slice(1));
+    }
+    return out;
+  }
+  return null;
+}
+
 function points(e: Any): P[] | null {
   if (e.type === "LINE" && e.vertices?.length === 2) return e.vertices;
   if (e.type === "LWPOLYLINE" && Array.isArray(e.vertices)) return e.vertices;
@@ -67,14 +102,15 @@ export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFr
     const wb = box(w.polygon), wo = order(w), next: Any[] = [];
     for (const e of list) {
       if (order(e) >= wo || e.cadWipeoutPiece === wo || (e.cadSpace ?? "Model") !== (w.cadSpace ?? "Model")) { next.push(e); continue; }
-      const ps = points(e);
-      if (!ps || !overlaps(box(ps), wb)) { next.push(e); continue; }
       const straight = e.type === "LINE" || (e.type === "LWPOLYLINE" && !e.vertices.some((v: Any) => v.bulge) && !e.width && !e.vertices.some((v: Any) => v.startWidth || v.endWidth));
-      if (!straight) {
+      const run = straight ? null : curveRun(e);
+      const ps = run ?? points(e);
+      if (!ps || !overlaps(box(ps), wb)) { next.push(e); continue; }
+      if (!straight && !run) {
         if (ps.some((p) => inside(p, w.polygon)) || e.type !== "LWPOLYLINE") skipped.set(e.type, (skipped.get(e.type) ?? 0) + 1);
         next.push(e); continue;
       }
-      const vs: P[] = e.type === "LINE" ? e.vertices : e.shape ? [...e.vertices, e.vertices[0]] : e.vertices;
+      const vs: P[] = run ?? (e.type === "LINE" ? e.vertices : e.shape ? [...e.vertices, e.vertices[0]] : e.vertices);
       const pieces: [P, P][] = [];
       let touched = false;
       for (let i = 0; i + 1 < vs.length; i++) {

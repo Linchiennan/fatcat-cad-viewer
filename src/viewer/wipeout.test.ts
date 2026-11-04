@@ -68,3 +68,24 @@ describe("WIPEOUT boundary handling", () => {
     expect(out.some((e) => String(e.handle).includes(":w"))).toBe(false);
   });
 });
+
+describe("WIPEOUT over arcs, circles and bulged polylines (惠宇 007 廚房水電配置圖)", () => {
+  const inside = (p: { x: number; y: number }) => p.x > 1e-6 && p.x < 10 - 1e-6 && p.y > 1e-6 && p.y < 10 - 1e-6;
+  it("cuts a circle crossing the wipeout and keeps what lies outside", () => {
+    const skipped = new Map<string, number>();
+    const out = applyWipeouts([{ type: "CIRCLE", handle: "10", layer: "0", cadSpace: "Model", center: { x: 10, y: 5 }, radius: 3 }, wipe("20")], byHandle, false, skipped);
+    expect(skipped.size).toBe(0);
+    const pts = out.flatMap((e) => e.vertices ?? []);
+    expect(out.every((e) => e.type === "LWPOLYLINE" && e.cadWipeoutSource === "CIRCLE")).toBe(true);
+    expect(pts.some(inside)).toBe(false);
+    expect(Math.max(...pts.map((p) => p.x))).toBeCloseTo(13, 6);
+  });
+  it("cuts an arc and a bulged polyline the same way, and leaves untouched ones whole", () => {
+    const arc = { type: "ARC", handle: "11", layer: "0", cadSpace: "Model", center: { x: 5, y: 12 }, radius: 4, startAngle: Math.PI, endAngle: 2 * Math.PI };
+    const bulged = { type: "LWPOLYLINE", handle: "12", layer: "0", cadSpace: "Model", shape: false, vertices: [{ x: -2, y: 5, bulge: 1 }, { x: 4, y: 5 }] };
+    const far = { type: "CIRCLE", handle: "13", layer: "0", cadSpace: "Model", center: { x: 50, y: 50 }, radius: 1 };
+    const out = applyWipeouts([arc, bulged, far, wipe("20")], byHandle, false, new Map());
+    expect(out.filter((e) => String(e.handle).startsWith("11") || String(e.handle).startsWith("12")).flatMap((e) => e.vertices).some(inside)).toBe(false);
+    expect(out.find((e) => e.handle === "13")).toBe(far);
+  });
+});
