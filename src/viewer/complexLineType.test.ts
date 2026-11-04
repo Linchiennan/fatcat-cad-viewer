@@ -17,3 +17,11 @@ it('draws the stock ltypeshp circle when the shape-file style was dropped (惠�
  expect(s.cadComplexResults?.rendered).toBeGreaterThan(0);
  expect(d.cadReport.warnings.some((w:string)=>w.includes('FENCELINE1'))).toBe(false);
 });
+it('does not list a line-type text drawn in a substitute font as not drawn (喬瓏 鑫元鴻 新3-4IN排水管)',async()=>{
+ class S extends DxfScene{};installCadFontScene(S);installEngineeringScene(S);
+ const d:any={tables:{style:{styles:{AE:{handle:'27AED7',styleName:'AE',font:'romans.shx',bigFont:'ae.shx'}}},lineType:{lineTypes:{PIPE:{complex:true,pattern:[0.5,-0.125,-0.125],elements:[{length:0.5,flags:0},{length:-0.125,flags:2,styleHandle:'27AED7',scale:0.125,rotation:0,x:-0.0225,y:-0.0625,text:'I'},{length:-0.125,flags:0}]}}}},entities:[{type:'LINE',lineType:'PIPE',vertices:[{x:0,y:0},{x:10,y:0}]},{type:'TEXT',text:'I',startPoint:{x:0,y:5},textHeight:1}]}; // drawings carry Latin text, so the fonts load
+ const {parse}=await import('opentype.js');const fonts=['LiberationSans-Regular.ttf','NotoSansCJKtc-Regular.otf'].map(n=>async()=>{const b=fs.readFileSync('public/fonts/'+n);return parse(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength));});
+ const s:any=new S();await s.Build(d,fonts);
+ expect(s.cadComplexResults?.rendered).toBeGreaterThan(0);
+ expect(d.cadReport.warnings.some((w:string)=>w.includes('PIPE'))).toBe(false);
+});

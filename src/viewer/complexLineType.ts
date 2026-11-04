@@ -30,7 +30,9 @@ export function* complexLinePrimitives(scene:Any,e:Any,prim:Any,ctx:Any):Generat
   const style:Any=Object.values(scene.cadStyles??{}).find((s:Any)=>s.handle===el.styleHandle);
   if(el.flags&2){
    const text={...e,type:'TEXT',text:el.text??'',styleName:style?.styleName,textHeight:(style?.fixedTextHeight||1)*(el.scale??1)*scale,startPoint:origin,endPoint:undefined,halign:0,valign:0,rotation:rotation*180/Math.PI,lineType:'CONTINUOUS',xScale:style?.widthFactor??1,width:0};
-   const before=scene.cadFontResults?.fallback??0;let emitted=false;for(const p of scene._DecomposeText(text,ctx)){emitted=true;yield p;}if(emitted){result.rendered++;if((scene.cadFontResults?.fallback??0)>before)result.missing.add(e.lineType);}else result.missing.add(e.lineType);
+   // Text drawn in a substitute font is drawn: the font note already says so (喬瓏 鑫元鴻 空調-2F: the "I" of
+   // 新3-4IN排水管 in romans.shx was listed as 尚未繪製 among the missing items).
+   let emitted=false;for(const p of scene._DecomposeText(text,ctx)){emitted=true;yield p;}if(emitted)result.rendered++;else result.missing.add(e.lineType);
   }else {const font=style&&scene.cadFonts?.get(fontKey(style.font??''));const nativeScale=font?.fontData.header.fontType==='shapes'&&!(0 in font.fontData.content.data)?1:font?.fontData.content.height;const shape=font?.getCharShape(el.shape,(el.scale??1)*scale*nativeScale)??builtinShape(style,el.shape,(el.scale??1)*scale);if(!shape){result.missing.add(e.lineType);continue;}
    const c=Math.cos(rotation),s=Math.sin(rotation);for(const path of shape.polylines){const vertices=path.map((p:Any)=>({x:origin.x+p.x*c-p.y*s,y:origin.y+p.x*s+p.y*c}));yield* scene._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,width:0,lineType:'CONTINUOUS',shape:false},ctx);}result.rendered++;
   }
