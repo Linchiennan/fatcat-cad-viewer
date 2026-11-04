@@ -47,8 +47,10 @@ export function missingBlockNames(dxf: string): string[] {
  * Line types layers or entities name (group 6) that the DXF's LTYPE table lacks. The writer can leave some out
  * (惠宇敦南 B1F牆面施工圖: CENTERX2 and EB_DASHDOT, 2 of 1435, so their layers drew solid).
  */
-export function missingLineTypeNames(dxf: string): string[] {
-  const lines = dxf.split(/\r?\n/), wanted = new Set<string>(), defined = new Set<string>();
+export function missingLineTypeNames(dxf: string, minEntityUses = 10): string[] {
+  // Recovering re-reads the whole DWG (6 s on 惠宇敦南 15F撒水配管, for two bound-xref names 4 lines used): only a line
+  // type a layer uses, or at least minEntityUses entities use, is worth it.
+  const lines = dxf.split(/\r?\n/), layerUse = new Set<string>(), entityUse = new Map<string, number>(), defined = new Set<string>();
   let section = "", table = "", record = "";
   for (let i = 0; i + 1 < lines.length; i += 2) {
     const code = lines[i].trim(), value = lines[i + 1];
@@ -59,9 +61,11 @@ export function missingLineTypeNames(dxf: string): string[] {
       continue;
     }
     if (section === "TABLES" && table === "LTYPE" && record === "LTYPE" && code === "2") defined.add(value.toUpperCase());
-    else if (code === "6" && ((section === "TABLES" && record === "LAYER") || section === "ENTITIES" || section === "BLOCKS")) wanted.add(value);
+    else if (code === "6" && section === "TABLES" && record === "LAYER") layerUse.add(value);
+    else if (code === "6" && (section === "ENTITIES" || section === "BLOCKS")) entityUse.set(value, (entityUse.get(value) ?? 0) + 1);
   }
-  return [...new Set([...wanted].filter((n) => n && !/^(BYLAYER|BYBLOCK|CONTINUOUS)$/i.test(n) && !defined.has(n.toUpperCase())))];
+  const wanted = [...layerUse, ...[...entityUse].filter(([, n]) => n >= minEntityUses).map(([name]) => name)];
+  return [...new Set(wanted.filter((n) => n && !/^(BYLAYER|BYBLOCK|CONTINUOUS)$/i.test(n) && !defined.has(n.toUpperCase())))];
 }
 
 /** The reader's definitions of the named line types, in the dxf-viewer parser's shape (pattern, elements). */

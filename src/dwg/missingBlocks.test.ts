@@ -162,7 +162,10 @@ describe("line types the DXF writer left out (惠宇敦南 B1F牆面施工圖: C
     "0", "TABLE", "2", "LAYER", "0", "LAYER", "2", "41-穿樑", "6", "CENTERX2", "0", "LAYER", "2", "A", "6", "dashed", "0", "ENDTAB", "0", "ENDSEC",
     "0", "SECTION", "2", "ENTITIES", "0", "LINE", "8", "A", "6", "EB_DASHDOT", "0", "LINE", "8", "A", "6", "ByLayer", "0", "ENDSEC", "0", "EOF"].join("\n");
   it("finds names layers and entities use but the LTYPE table lacks", () => {
-    expect(missingLineTypeNames(dxf).sort()).toEqual(["CENTERX2", "EB_DASHDOT"]);
+    expect(missingLineTypeNames(dxf, 1).sort()).toEqual(["CENTERX2", "EB_DASHDOT"]);
+  });
+  it("skips names only a few entities use: recovering re-reads the whole DWG (惠宇敦南 15F撒水配管: 6 s for 4 lines)", () => {
+    expect(missingLineTypeNames(dxf)).toEqual(["CENTERX2"]);
   });
   it("takes their pattern from the object reader", () => {
     const db = { tables: { LTYPE: { entries: [{ name: "CENTERX2", description: "Center (2x)", totalPatternLength: 101.6, pattern: [
