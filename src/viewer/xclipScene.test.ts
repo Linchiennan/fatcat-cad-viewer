@@ -175,3 +175,22 @@ describe("wipeouts over INSERTs (澄品 B2~4F 臨時水電: a column symbol's fa
     expect(m.fragmentShader).toContain("!fatcatInside0(fatcatLocal) || fatcatInside1(fatcatLocal)");
   });
 });
+
+describe("wipeouts inside blocks (惠宇敦南 A06-09: 29 INSERTs under wipeouts of their own block)", () => {
+  it("carries the hole along the nested chain to the root block", async () => {
+    const { applyWipeouts } = await import("./wipeout");
+    const blocks: Any = {
+      C: { name: "C", position: { x: 0, y: 0 }, entities: [line(0, 0, 10, 0)] },
+      P: { name: "P", position: { x: 0, y: 0 }, entities: [
+        { type: "INSERT", handle: "10", name: "C", layer: "0", position: { x: 0, y: 0 } },
+        { type: "WIPEOUT", handle: "20", layer: "0", polygon: [{ x: 4, y: -1 }, { x: 6, y: -1 }, { x: 6, y: 1 }, { x: 4, y: 1 }] }] },
+    };
+    blocks.P.entities = applyWipeouts(blocks.P.entities, (e: Any) => parseInt(e.handle, 16), false, new Map(), blocks);
+    expect(blocks.P.entities[0].cadWipeoutMasks).toHaveLength(1);
+    const doc: Any = { ...layers, blocks, entities: [{ type: "INSERT", handle: "30", name: "P", layer: "0", position: { x: 100, y: 0 } }] };
+    const scene: Any = new Scene({});
+    await scene.Build(doc, []);
+    const nested = Object.values(scene.scene.fatcatClips?.nested ?? {}) as Any[];
+    expect(nested.some((n) => n.root === "P" && n.holes?.[0]?.length === 4)).toBe(true);
+  });
+});

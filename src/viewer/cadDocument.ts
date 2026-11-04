@@ -178,8 +178,8 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  const vars=rows.find(r=>r.type==='WIPEOUTVARIABLES'),showFrame=vars?num(vars,70,1)!==0:true,skipped=new Map<string,number>();
  if([...(doc.entities??[]),...Object.values(doc.blocks??{}).flatMap((b:Any)=>b.entities??[])].some((e:Any)=>e.type==='WIPEOUT')){
   doc.entities=applyWipeouts(doc.entities??[],order,showFrame,skipped,doc.blocks??{});
-  for(const b of Object.values(doc.blocks??{}) as Any[])if(b.entities?.some((e:Any)=>e.type==='WIPEOUT'))b.entities=applyWipeouts(b.entities,order,showFrame,skipped);
-  for(const [type,n] of skipped)(doc.cadDiagnostics??=[]).push(`遮罩下方可能有 ${type} ${n} 個未遮蔽（目前只遮線條、圓弧與最上層的圖塊，圖塊內部的遮罩尚未處理）`);
+  for(const b of Object.values(doc.blocks??{}) as Any[])if(b.entities?.some((e:Any)=>e.type==='WIPEOUT'))b.entities=applyWipeouts(b.entities,order,showFrame,skipped,doc.blocks);
+  for(const [type,n] of skipped)(doc.cadDiagnostics??=[]).push(`遮罩下方可能有 ${type} ${n} 個未遮蔽（陣列、鏡射或超過遮罩上限的圖塊尚未遮蔽）`);
  }
  doc.cadLayouts=layouts.sort((a,b)=>a.order-b.order);if(doc.cadUnsupported){delete doc.cadUnsupported.IMAGE;delete doc.cadUnsupported.VIEWPORT;delete doc.cadUnsupported.OLE2FRAME;delete doc.cadUnsupported.MULTILEADER;delete doc.cadUnsupported.LEADER;delete doc.cadUnsupported.WIPEOUT;delete doc.cadUnsupported.MLINE;delete doc.cadUnsupported.SEQEND;delete doc.cadUnsupported.TRACE;delete doc.cadUnsupported.XLINE;delete doc.cadUnsupported.RAY;if(rows.filter(r=>r.type==='ACAD_TABLE').every(r=>doc.blocks?.[text(r,2)]))delete doc.cadUnsupported.ACAD_TABLE;/* end-of-sequence marker, not a drawable object */}return doc;
 }

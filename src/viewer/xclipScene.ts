@@ -46,7 +46,7 @@ export function fitClip(polygon: DrawingPoint[]): DrawingPoint[] | null {
 /** Clip tables attached to the serialized scene. Points are in the root block's coordinates. */
 export type XclipTables = {
   top: Record<string, { points: DrawingPoint[]; offset: DrawingPoint; masks?: DrawingPoint[][] }>;
-  nested: Record<string, { parent?: number; points: DrawingPoint[]; offset: DrawingPoint; root: string }>;
+  nested: Record<string, { parent?: number; points: DrawingPoint[]; offset: DrawingPoint; root: string; holes?: DrawingPoint[][] }>;
 };
 
 export type XclipPreparation = {
@@ -81,7 +81,7 @@ export function prepareXclips(dxf: Any): XclipPreparation {
   const holdsClip = (name: string, stack: string[]): boolean => {
     if (memo.has(name)) return memo.get(name)!;
     if (stack.includes(name) || stack.length > 32) return false;
-    const found = (blocks[name]?.entities ?? []).some((e: Any) => e.type === "INSERT" && (parseDxfXclip(e) !== null || holdsClip(e.name, [...stack, name])));
+    const found = (blocks[name]?.entities ?? []).some((e: Any) => e.type === "INSERT" && (parseDxfXclip(e) !== null || e.cadWipeoutMasks?.length > 0 || holdsClip(e.name, [...stack, name])));
     memo.set(name, found);
     return found;
   };
@@ -161,7 +161,7 @@ export function insideClip(entities: Any[], polygon: DrawingPoint[]): Any[] {
   return entities.filter((e) => { const r = roughBox(e); return !r || !(r[2] < a || r[0] > c || r[3] < b || r[1] > d); });
 }
 
-type SceneState = XclipPreparation & { next: number; nested: Map<number, { parent?: number; points: DrawingPoint[]; root: string }> };
+type SceneState = XclipPreparation & { next: number; nested: Map<number, { parent?: number; points: DrawingPoint[]; root: string; holes?: DrawingPoint[][] }> };
 
 /** Patch a DxfScene class (in the viewer worker). */
 export function installXclipScene(sceneClass: Any): void {
@@ -188,21 +188,25 @@ export function installXclipScene(sceneClass: Any): void {
       return processInsert.call(this, entity, blockCtx);
     }
     const inherited: number | undefined = blockCtx.fatcatTag;
-    const clip = parseDxfXclip(entity);
-    if (!clip && inherited === undefined) return processInsert.call(this, entity, blockCtx);
+    const clip = parseDxfXclip(entity), masked = entity.cadWipeoutMasks?.length > 0;
+    if (!clip && !masked && inherited === undefined) return processInsert.call(this, entity, blockCtx);
     if (blockCtx.name === entity.name) return; // a block inserting itself
     const block = this.blocks.get(entity.name);
     if (!block) return;
     const nestedCtx = blockCtx.NestedBlockContext(block, entity);
     let tag = inherited;
+    let points: DrawingPoint[] = [];
     if (clip) {
       const raw = expandClipRectangle(clip), polygon = fitClip(raw);
       if (!polygon) (this.cadSceneWarnings ??= []).push(xclipTooLargeWarning(entity.name, raw.length));
-      else {
-        tag = state.next++;
-        const m: Matrix3 = nestedCtx.transform;
-        state.nested.set(tag, { parent: inherited, root: blockCtx.block.data.name, points: polygon.map((q) => { const v = new Vector2(q.x, q.y).applyMatrix3(m); return { x: v.x, y: v.y }; }) });
-      }
+      else points = polygon;
+    }
+    // Wipeouts inside the parent block over this INSERT (applyWipeouts): holes along the same chain as clips.
+    const holes = masked ? wipeoutMasks(entity, block.data) : [];
+    if (points.length || holes.length) {
+      tag = state.next++;
+      const m: Matrix3 = nestedCtx.transform, root = (ps: DrawingPoint[]) => ps.map((q) => { const v = new Vector2(q.x, q.y).applyMatrix3(m); return { x: v.x, y: v.y }; });
+      state.nested.set(tag, { parent: inherited, root: blockCtx.block.data.name, points: root(points), ...(holes.length ? { holes: holes.map(root) } : {}) });
     }
     nestedCtx.fatcatTag = tag;
     const inheritedLayer = entity.fatcatBaseLayer ?? entity.layer ?? "0";
@@ -249,10 +253,18 @@ export function clipChain(tables: XclipTables, block: string, layer: string | nu
   return [...out, ...chain.reverse()].filter((p) => p.length >= 3 && p.length <= XCLIP_POINT_LIMIT);
 }
 
-/** Wipeout holes for one block copy (block-local: minus the block offset). */
-export function maskChain(tables: XclipTables, block: string): DrawingPoint[][] {
-  const top = tables.top[block];
-  return (top?.masks ?? []).map((poly) => poly.map((q) => ({ x: q.x - top!.offset.x, y: q.y - top!.offset.y })));
+/** Wipeout holes for one definition batch: the block copy's own and those along its nested chain (block-local). */
+export function maskChain(tables: XclipTables, block: string, layer: string | null = null): DrawingPoint[][] {
+  const local = (points: DrawingPoint[], o: DrawingPoint) => points.map((q) => ({ x: q.x - o.x, y: q.y - o.y }));
+  const top = tables.top[block], out = (top?.masks ?? []).map((poly) => local(poly, top!.offset)), seen = new Set<number>();
+  for (let tag = xclipLayerTag(layer); tag !== null && tag !== undefined && !seen.has(tag);) {
+    seen.add(tag);
+    const n = tables.nested[tag];
+    if (!n || n.root !== block) break;
+    for (const h of n.holes ?? []) out.push(local(h, n.offset));
+    tag = n.parent ?? null;
+  }
+  return out.filter((p) => p.length >= 3 && p.length <= XCLIP_POINT_LIMIT);
 }
 
 /** Even-odd point-in-polygon, the same test the fragment shader makes. */
@@ -319,7 +331,7 @@ export function installXclipViewer(viewerClass: Any): void {
     const cache: Map<string, Material> = (this.fatcatClipMaterials ??= new Map());
     const add = (obj: Any) => { this.scene.add(obj); (obj._dxfViewerLayer ?? this.defaultLayer).PushObject(obj); };
     for (const definition of block.batches) {
-      const polygons = clipChain(tables, name, definition.key.layerName), holes = maskChain(tables, name);
+      const polygons = clipChain(tables, name, definition.key.layerName), holes = maskChain(tables, name, definition.key.layerName);
       for (const obj of definition.CreateObjects(instance)) {
         if (polygons.length || holes.length) {
           const key = obj.material.uuid + "|" + name + "|" + (definition.key.layerName ?? "");
