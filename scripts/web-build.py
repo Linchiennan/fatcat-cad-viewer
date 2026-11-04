@@ -33,6 +33,7 @@ steps = [
     ('patch-cjk-fonts', node('scripts/patch-cjk-fonts.mjs')),
     ('patch-engineering', node('scripts/patch-engineering.mjs')),
     ('patch-mtext-height', node('scripts/patch-mtext-height.mjs')),
+    ('patch-mtext-cjkwrap', node('scripts/patch-mtext-cjkwrap.mjs')),
     # App and build-config sources only; test files are type-checked by `tsc -b` / vitest, not by the build.
     ('tsc', node('node_modules/typescript/bin/tsc', '-b', 'tsconfig.app.json', 'tsconfig.node.json')),
     ('vite', node('node_modules/vite/bin/vite.js', 'build', '--outDir', 'dist-web', '--emptyOutDir')),
