@@ -146,3 +146,32 @@ describe("clip outlines over the point limit", () => {
     expect(fitClip(jagged)).toBeNull();
   });
 });
+
+describe("wipeouts over INSERTs (澄品 B2~4F 臨時水電: a column symbol's fans showed through the notes' wipeouts)", () => {
+  it("gives an overlapping earlier INSERT the wipeout as a hole in its block's coordinates", async () => {
+    const { applyWipeouts } = await import("./wipeout");
+    const blocks: Any = { B: { name: "B", position: { x: 1, y: 0 }, entities: [line(0, 0, 10, 0), line(0, 0, 0, 4)] }, F: { name: "F", position: { x: 0, y: 0 }, entities: [line(0, 0, 1, 1)] } };
+    // B turned 90° and doubled at (100, 0): block (1,0)-(11,0) lies on x = 100, y 0..20
+    const near = { type: "INSERT", handle: "10", name: "B", layer: "0", cadSpace: "Model", position: { x: 100, y: 0 }, rotation: 90, xScale: 2, yScale: 2 };
+    const far = { type: "INSERT", handle: "11", name: "F", layer: "0", cadSpace: "Model", position: { x: 500, y: 500 } };
+    const wipe = { type: "WIPEOUT", handle: "20", layer: "0", cadSpace: "Model", polygon: [{ x: 95, y: 8 }, { x: 105, y: 8 }, { x: 105, y: 12 }, { x: 95, y: 12 }] };
+    const order = (e: Any) => parseInt(e.handle, 16);
+    const out = applyWipeouts([near, far, wipe], order, false, new Map(), blocks);
+    expect(out.find((e) => e.handle === "10").cadWipeoutMasks).toHaveLength(1);
+    expect(out.find((e) => e.handle === "11").cadWipeoutMasks).toBeUndefined();
+    const doc: Any = { ...layers, blocks, entities: out };
+    const prepared = prepareXclips(doc);
+    const hole = prepared.masks.get(XCLIP_BLOCK_PREFIX + "10")![0];
+    // world (95..105, 8..12) → block: x = 1 + (y-0)/2 = 5..7, y = -(x-100)/2 = -2.5..2.5
+    const xs = hole.map((p) => p.x), ys = hole.map((p) => p.y);
+    expect(Math.min(...xs)).toBeCloseTo(5, 9); expect(Math.max(...xs)).toBeCloseTo(7, 9);
+    expect(Math.min(...ys)).toBeCloseTo(-2.5, 9); expect(Math.max(...ys)).toBeCloseTo(2.5, 9);
+  });
+
+  it("discards fragments inside a hole and keeps clip tests for the rest", () => {
+    const shaders = (DxfViewer.prototype as Any)._GenerateShaders(1, false);
+    const base = new RawShaderMaterial({ uniforms: { color: { value: null } }, vertexShader: shaders.vertex, fragmentShader: shaders.fragment, glslVersion: GLSL3 });
+    const m = clipMaterial(base, [[{ x: 0, y: 0 }, { x: 9, y: 0 }, { x: 9, y: 9 }]], [[{ x: 1, y: 1 }, { x: 2, y: 1 }, { x: 2, y: 2 }]]);
+    expect(m.fragmentShader).toContain("!fatcatInside0(fatcatLocal) || fatcatInside1(fatcatLocal)");
+  });
+});

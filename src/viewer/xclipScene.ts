@@ -45,13 +45,15 @@ export function fitClip(polygon: DrawingPoint[]): DrawingPoint[] | null {
 
 /** Clip tables attached to the serialized scene. Points are in the root block's coordinates. */
 export type XclipTables = {
-  top: Record<string, { points: DrawingPoint[]; offset: DrawingPoint }>;
+  top: Record<string, { points: DrawingPoint[]; offset: DrawingPoint; masks?: DrawingPoint[][] }>;
   nested: Record<string, { parent?: number; points: DrawingPoint[]; offset: DrawingPoint; root: string }>;
 };
 
 export type XclipPreparation = {
   /** Block copy name → clip polygon (block coordinates). */
   top: Map<string, DrawingPoint[]>;
+  /** Block copy name → wipeout polygons over it (block coordinates): drawn as holes, like an inverted clip. */
+  masks: Map<string, DrawingPoint[][]>;
   /** Blocks whose content holds clipped INSERTs: never flattened. */
   keep: Set<string>;
   warnings: string[];
@@ -73,7 +75,7 @@ export const xclipBaseLayer = (layer: string) => layer.replace(/^__fatcat_xc\d+_
  * that hold nested clips. Mutates the parsed document.
  */
 export function prepareXclips(dxf: Any): XclipPreparation {
-  const out: XclipPreparation = { top: new Map(), keep: new Set(), warnings: [] };
+  const out: XclipPreparation = { top: new Map(), masks: new Map(), keep: new Set(), warnings: [] };
   const blocks: Record<string, Any> = dxf.blocks ?? {};
   const memo = new Map<string, boolean>();
   const holdsClip = (name: string, stack: string[]): boolean => {
@@ -88,17 +90,35 @@ export function prepareXclips(dxf: Any): XclipPreparation {
     if (e.type !== "INSERT" || !blocks[e.name]) continue;
     const clip = parseDxfXclip(e);
     if (holdsClip(e.name, [])) out.keep.add(e.name);
-    if (!clip) continue;
-    const raw = expandClipRectangle(clip), polygon = fitClip(raw);
-    if (!polygon) { out.warnings.push(xclipTooLargeWarning(e.name, raw.length)); continue; }
+    const masks = wipeoutMasks(e, blocks[e.name]);
+    if (!clip && !masks.length) continue;
+    let polygon: DrawingPoint[] = [];
+    if (clip) {
+      const raw = expandClipRectangle(clip), fitted = fitClip(raw);
+      if (!fitted) { out.warnings.push(xclipTooLargeWarning(e.name, raw.length)); if (!masks.length) continue; }
+      else polygon = fitted;
+    }
     const alias = XCLIP_BLOCK_PREFIX + (e.handle ? String(e.handle) : "n" + serial++);
-    blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name, entities: insideClip(blocks[e.name].entities ?? [], polygon) };
+    blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name, entities: polygon.length ? insideClip(blocks[e.name].entities ?? [], polygon) : blocks[e.name].entities };
     if (out.keep.has(e.name)) out.keep.add(alias);
     e.name = alias;
     out.top.set(alias, polygon);
+    if (masks.length) out.masks.set(alias, masks);
   }
   dxf.blocks = blocks;
   return out;
+}
+
+/** Wipeout polygons an INSERT carries (world, from applyWipeouts) in its block's coordinates. */
+function wipeoutMasks(e: Any, block: Any): DrawingPoint[][] {
+  if (!Array.isArray(e.cadWipeoutMasks) || !e.cadWipeoutMasks.length) return [];
+  const sx = e.xScale ?? 1, sy = e.yScale ?? 1;
+  if (!sx || !sy) return [];
+  const r = -(e.rotation ?? 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), at = e.position ?? { x: 0, y: 0 }, base = block?.position ?? { x: 0, y: 0 };
+  return e.cadWipeoutMasks.map((poly: DrawingPoint[]) => poly.map((p) => {
+    const x = p.x - at.x, y = p.y - at.y;
+    return { x: base.x + (x * c - y * s) / sx, y: base.y + (x * s + y * c) / sy };
+  })).filter((p: DrawingPoint[]) => p.length >= 3 && p.length <= XCLIP_POINT_LIMIT);
 }
 
 /** Rough extents of an entity, or null when it cannot be told cheaply (kept). */
@@ -205,7 +225,7 @@ export function installXclipScene(sceneClass: Any): void {
     if (!state || (!state.top.size && !state.nested.size)) return scene;
     const offsetOf = (name: string) => { const o = this.blocks.get(name)?.offset; return o ? { x: o.x, y: o.y } : null; };
     const tables: XclipTables = { top: {}, nested: {} };
-    for (const [alias, points] of state.top) { const offset = offsetOf(alias); if (offset) tables.top[alias] = { points, offset }; }
+    for (const [alias, points] of state.top) { const offset = offsetOf(alias), masks = state.masks.get(alias); if (offset) tables.top[alias] = { points, offset, ...(masks ? { masks } : {}) }; }
     for (const [tag, n] of state.nested) { const offset = offsetOf(n.root); if (offset) tables.nested[tag] = { ...n, offset }; }
     scene.fatcatClips = tables;
     return scene;
@@ -229,6 +249,12 @@ export function clipChain(tables: XclipTables, block: string, layer: string | nu
   return [...out, ...chain.reverse()].filter((p) => p.length >= 3 && p.length <= XCLIP_POINT_LIMIT);
 }
 
+/** Wipeout holes for one block copy (block-local: minus the block offset). */
+export function maskChain(tables: XclipTables, block: string): DrawingPoint[][] {
+  const top = tables.top[block];
+  return (top?.masks ?? []).map((poly) => poly.map((q) => ({ x: q.x - top!.offset.x, y: q.y - top!.offset.y })));
+}
+
 /** Even-odd point-in-polygon, the same test the fragment shader makes. */
 export function insidePolygon(p: DrawingPoint, polygon: readonly DrawingPoint[]): boolean {
   let hit = false;
@@ -241,13 +267,14 @@ export function insidePolygon(p: DrawingPoint, polygon: readonly DrawingPoint[])
 
 const VERTEX_MAIN = "void main() {", VERTEX_POS = "vec4 pos = vec4(position, 0.0, 1.0);", FRAGMENT_MAIN = "void main() {";
 
-/** Copy of a dxf-viewer material that discards fragments outside every polygon (one uniform set per level). */
-export function clipMaterial(base: RawShaderMaterial, polygons: DrawingPoint[][]): RawShaderMaterial {
+/** Copy of a dxf-viewer material that discards fragments outside every polygon (one uniform set per level) and inside
+ * any wipeout hole. */
+export function clipMaterial(base: RawShaderMaterial, polygons: DrawingPoint[][], holes: DrawingPoint[][] = []): RawShaderMaterial {
   if (!base.vertexShader.includes(VERTEX_POS) || !base.vertexShader.includes(VERTEX_MAIN) || !base.fragmentShader.includes(FRAGMENT_MAIN))
     throw new Error("XCLIP shader version mismatch");
   const material = base.clone();
   const decls: string[] = [], tests: string[] = [];
-  polygons.forEach((poly, k) => {
+  [...polygons, ...holes].forEach((poly, k) => {
     const n = poly.length, slots = Math.ceil(n / 2);
     const packed = Array.from({ length: slots }, (_, i) => new Vector4(poly[2 * i].x, poly[2 * i].y, poly[2 * i + 1]?.x ?? 0, poly[2 * i + 1]?.y ?? 0));
     material.uniforms[`fatcatClip${k}`] = { value: packed };
@@ -262,7 +289,7 @@ bool fatcatInside${k}(vec2 p) {
   }
   return hit;
 }`);
-    tests.push(`!fatcatInside${k}(fatcatLocal)`);
+    tests.push(k < polygons.length ? `!fatcatInside${k}(fatcatLocal)` : `fatcatInside${k}(fatcatLocal)`);
   });
   material.vertexShader = base.vertexShader
     .replace(VERTEX_MAIN, "out vec2 fatcatLocal;\n" + VERTEX_MAIN)
@@ -292,13 +319,13 @@ export function installXclipViewer(viewerClass: Any): void {
     const cache: Map<string, Material> = (this.fatcatClipMaterials ??= new Map());
     const add = (obj: Any) => { this.scene.add(obj); (obj._dxfViewerLayer ?? this.defaultLayer).PushObject(obj); };
     for (const definition of block.batches) {
-      const polygons = clipChain(tables, name, definition.key.layerName);
+      const polygons = clipChain(tables, name, definition.key.layerName), holes = maskChain(tables, name);
       for (const obj of definition.CreateObjects(instance)) {
-        if (polygons.length) {
+        if (polygons.length || holes.length) {
           const key = obj.material.uuid + "|" + name + "|" + (definition.key.layerName ?? "");
           let material = cache.get(key);
           if (!material) {
-            try { material = clipMaterial(obj.material, polygons); cache.set(key, material); } catch { material = undefined; }
+            try { material = clipMaterial(obj.material, polygons, holes); cache.set(key, material); } catch { material = undefined; }
           }
           if (material) obj.material = material;
         }

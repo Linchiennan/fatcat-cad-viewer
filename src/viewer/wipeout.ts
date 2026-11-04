@@ -93,8 +93,49 @@ function points(e: Any): P[] | null {
   return null;
 }
 
-/** Cut earlier lines/polylines under each wipeout in one ordered entity list; returns the new list. */
-export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFrame: boolean, skipped: Map<string, number>): Any[] {
+/** Wipeout masks one INSERT may carry: each is a shader loop over its points, and phones allow few uniforms. */
+export const WIPEOUT_MASK_LIMIT = 24;
+
+type Box = { minX: number; minY: number; maxX: number; maxY: number };
+
+/** Corners of a block-coordinate box through an INSERT's transform (no arrays, no mirrored extrusion). */
+function insertCorners(e: Any, b: Box, base: P): P[] | null {
+  if ((e.extrusionDirection?.z ?? 1) < 0 || (e.columnCount ?? 1) > 1 || (e.rowCount ?? 1) > 1) return null;
+  const sx = e.xScale ?? 1, sy = e.yScale ?? 1, r = (e.rotation ?? 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), at = e.position ?? { x: 0, y: 0 };
+  return [[b.minX, b.minY], [b.maxX, b.minY], [b.maxX, b.maxY], [b.minX, b.maxY]].map(([x, y]) => {
+    const u = (x - base.x) * sx, v = (y - base.y) * sy;
+    return { x: at.x + u * c - v * s, y: at.y + u * s + v * c };
+  });
+}
+
+/** Rough extents of a block's content in its own coordinates (nested INSERTs through their transforms), memoised. */
+function blockBox(blocks: Record<string, Any>, name: string, memo: Map<string, Box | null>, depth = 0): Box | null {
+  if (memo.has(name)) return memo.get(name)!;
+  memo.set(name, null);
+  const all: P[] = [];
+  for (const e of blocks[name]?.entities ?? []) {
+    if (e.type === "INSERT") {
+      const inner = depth < 16 ? blockBox(blocks, e.name, memo, depth + 1) : null;
+      const corners = inner && insertCorners(e, inner, blocks[e.name]?.position ?? { x: 0, y: 0 });
+      if (corners) all.push(...corners);
+      continue;
+    }
+    const ps = curveRun(e) ?? points(e);
+    if (ps) all.push(...ps.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y)));
+  }
+  const out = all.length ? box(all) : null;
+  memo.set(name, out);
+  return out;
+}
+
+/**
+ * Cut earlier lines/polylines under each wipeout in one ordered entity list; returns the new list. With `blocks` (the
+ * top-level list), an earlier INSERT the wipeout overlaps gets the wipeout polygon in `cadWipeoutMasks` (world
+ * coordinates); xclipScene hides that part of its block like an inverted clip (澄品 B2~4F 臨時水電: the fans of a
+ * column symbol showed through the notes' wipeouts).
+ */
+export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFrame: boolean, skipped: Map<string, number>, blocks?: Record<string, Any>): Any[] {
+  const memo = new Map<string, Box | null>();
   const wipes = entities.filter((e) => e.type === "WIPEOUT" && Array.isArray(e.polygon) && e.polygon.length >= 3 && !e.hidden);
   if (!wipes.length) return entities.filter((e) => e.type !== "WIPEOUT");
   let list = entities.filter((e) => e.type !== "WIPEOUT");
@@ -102,6 +143,15 @@ export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFr
     const wb = box(w.polygon), wo = order(w), next: Any[] = [];
     for (const e of list) {
       if (order(e) >= wo || e.cadWipeoutPiece === wo || (e.cadSpace ?? "Model") !== (w.cadSpace ?? "Model")) { next.push(e); continue; }
+      if (e.type === "INSERT" && blocks) {
+        const inner = blockBox(blocks, e.name, memo), corners = inner && insertCorners(e, inner, blocks[e.name]?.position ?? { x: 0, y: 0 });
+        if (corners && overlaps(box(corners), wb)) {
+          if ((e.cadWipeoutMasks?.length ?? 0) < WIPEOUT_MASK_LIMIT) next.push({ ...e, cadWipeoutMasks: [...(e.cadWipeoutMasks ?? []), w.polygon.map((p: P) => ({ x: p.x, y: p.y }))] });
+          else { skipped.set("INSERT", (skipped.get("INSERT") ?? 0) + 1); next.push(e); }
+        } else if (!corners && points(e)?.some((p) => inside(p, w.polygon))) { skipped.set("INSERT", (skipped.get("INSERT") ?? 0) + 1); next.push(e); }
+        else next.push(e);
+        continue;
+      }
       const straight = e.type === "LINE" || (e.type === "LWPOLYLINE" && !e.vertices.some((v: Any) => v.bulge) && !e.width && !e.vertices.some((v: Any) => v.startWidth || v.endWidth));
       const run = straight ? null : curveRun(e);
       const ps = run ?? points(e);
