@@ -4,7 +4,7 @@ export type WidthMesh={vertices:P[];indices:number[]};
 /** Radial arc offsets and along-arc linear width. Polygonal display error <= 1 degree per chord.
  * Straight joins intersect actual (possibly tapered) offset edges. */
 export function widePolyline(vertices:V[],closed:boolean,width:number,pattern:number[]=[],scale=1):WidthMesh[]{
- const groups:{left:P[];right:P[];arc:boolean;sample:(t:number,side:number)=>P}[]=[],out:WidthMesh[]=[],joins:WidthMesh[]=[];
+ const groups:{left:P[];right:P[];arc:boolean;sample:(t:number,side:number)=>P;w0:number;w1:number}[]=[],out:WidthMesh[]=[],joins:WidthMesh[]=[];
  const pat=pattern.map(n=>n*scale),cycle=pat.reduce((s,v)=>s+Math.abs(v),0);let k=0,left=cycle?Math.abs(pat[0])||Math.max(cycle*.001,1e-7):Infinity;
  const active=cycle>1e-10;let total=0;
  for(let i=0;i<(closed?vertices.length:vertices.length-1);i++){
@@ -26,7 +26,7 @@ export function widePolyline(vertices:V[],closed:boolean,width:number,pattern:nu
   while(pos<len-1e-12){const step=Math.min(left,len-pos),t0=pos/len,t1=(pos+step)/len;
    if(!active||pat[k]>=0){const n=arc?Math.max(2,Math.ceil(Math.abs(theta)*(t1-t0)/(Math.PI/180)/2)*2):1;
     if((total+=n)>200000)throw Error('寬多段線細分超過安全上限');
-    const group={left:[] as P[],right:[] as P[],arc,sample};for(let j=0;j<=n;j++){const t=t0+(t1-t0)*j/n;group.left.push(sample(t,1));group.right.push(sample(t,-1));}groups.push(group);
+    const group={left:[] as P[],right:[] as P[],arc,sample,w0:wa+(wb-wa)*t0,w1:wa+(wb-wa)*t1};for(let j=0;j<=n;j++){const t=t0+(t1-t0)*j/n;group.left.push(sample(t,1));group.right.push(sample(t,-1));}groups.push(group);
    }
    pos+=step;if(active){left-=step;if(left<1e-10){k=(k+1)%pat.length;left=Math.abs(pat[k])||Math.max(cycle*.001,1e-7);}}
   }
@@ -35,6 +35,9 @@ export function widePolyline(vertices:V[],closed:boolean,width:number,pattern:nu
  const cross=(a:P,b:P)=>a.x*b.y-a.y*b.x;
  if(!active)for(let i=closed?0:1;i<groups.length;i++){
   const a=groups[(i+groups.length-1)%groups.length],b=groups[i];
+  // CAD butts segments whose widths jump at the vertex (an arrowhead 0→16 then 0): a join would pull the head's wide end
+  // onto the next segment's centre line and flatten the triangle (惠宇 003 制水閥箱 leader arrows).
+  if(Math.abs(a.w1-b.w0)>1e-9*Math.max(1,a.w1,b.w0))continue;
   for(const side of ['left','right'] as const){const p=a[side],q=b[side],A=p.at(-1)!,B=q[0];
    if(!a.arc&&!b.arc){const U={x:A.x-p.at(-2)!.x,y:A.y-p.at(-2)!.y},V={x:q[1].x-B.x,y:q[1].y-B.y},den=cross(U,V);
     // A miter point far beyond both segments (nearly parallel edges) is left for the bounded bevel below.
