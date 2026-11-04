@@ -1,5 +1,19 @@
 import {fontKey} from './shxText';
 type Any=any;
+// The standard ltypeshp shapes the stock complex line types use (FENCELINE1 → 133, FENCELINE2 → 132, TRACKS → 130,
+// ZIGZAG → 131), drawn at size 1. The shape-file style is often dropped on the way to DXF (惠宇敦南 12F水電施工圖:
+// 19 of 282 drawings with FENCELINE1 showed a plain dashed line), and the font file is not ours to ship.
+const circle=Array.from({length:37},(_,i)=>({x:1-Math.cos(i*Math.PI/18),y:Math.sin(i*Math.PI/18)}));
+export const LTYPESHP:Record<number,{x:number;y:number}[][]>={
+ 130:[[{x:0,y:1},{x:0,y:-1}]],
+ 131:[[{x:0,y:0},{x:1,y:1},{x:2,y:0}]],
+ 132:[[{x:0,y:0},{x:0,y:1},{x:2,y:1},{x:2,y:-1},{x:0,y:-1},{x:0,y:0}]],
+ 133:[circle],
+};
+const builtinShape=(style:Any,code:number,size:number)=>{
+ const paths=LTYPESHP[code];if(!paths||(style&&!/ltypeshp/i.test(style.font??'')))return null;
+ return {polylines:paths.map(p=>p.map(q=>({x:q.x*size,y:q.y*size})))};
+};
 /** Group 50 radians, offsets scale with LTSCALE not the glyph's S value. */
 export function* complexLinePrimitives(scene:Any,e:Any,prim:Any,ctx:Any):Generator<Any>{
  const lt=scene.cadLineTypes?.[e.lineType];if(!lt?.elements?.some((v:Any)=>v.flags&6))return;
@@ -17,7 +31,7 @@ export function* complexLinePrimitives(scene:Any,e:Any,prim:Any,ctx:Any):Generat
   if(el.flags&2){
    const text={...e,type:'TEXT',text:el.text??'',styleName:style?.styleName,textHeight:(style?.fixedTextHeight||1)*(el.scale??1)*scale,startPoint:origin,endPoint:undefined,halign:0,valign:0,rotation:rotation*180/Math.PI,lineType:'CONTINUOUS',xScale:style?.widthFactor??1,width:0};
    const before=scene.cadFontResults?.fallback??0;let emitted=false;for(const p of scene._DecomposeText(text,ctx)){emitted=true;yield p;}if(emitted){result.rendered++;if((scene.cadFontResults?.fallback??0)>before)result.missing.add(e.lineType);}else result.missing.add(e.lineType);
-  }else {const font=style&&scene.cadFonts?.get(fontKey(style.font??''));const nativeScale=font?.fontData.header.fontType==='shapes'&&!(0 in font.fontData.content.data)?1:font?.fontData.content.height;const shape=font?.getCharShape(el.shape,(el.scale??1)*scale*nativeScale);if(!shape){result.missing.add(e.lineType);continue;}
+  }else {const font=style&&scene.cadFonts?.get(fontKey(style.font??''));const nativeScale=font?.fontData.header.fontType==='shapes'&&!(0 in font.fontData.content.data)?1:font?.fontData.content.height;const shape=font?.getCharShape(el.shape,(el.scale??1)*scale*nativeScale)??builtinShape(style,el.shape,(el.scale??1)*scale);if(!shape){result.missing.add(e.lineType);continue;}
    const c=Math.cos(rotation),s=Math.sin(rotation);for(const path of shape.polylines){const vertices=path.map((p:Any)=>({x:origin.x+p.x*c-p.y*s,y:origin.y+p.x*s+p.y*c}));yield* scene._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,width:0,lineType:'CONTINUOUS',shape:false},ctx);}result.rendered++;
   }
  }}
