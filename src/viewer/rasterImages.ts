@@ -53,7 +53,11 @@ export function replaceRasterEntities(doc:Any):void{
 }
 export async function installRasters(viewer:Any,instances:RasterInstance[],warnings:string[]):Promise<{dispose:()=>void;showLayer:(name:string,visible:boolean)=>void;count:number}>{
  const meshes:Mesh[]=[];const origin=viewer.GetOrigin()??{x:0,y:0};
- for(const item of instances){const e=item.entity;try{
+ for(const item of instances){const e=item.entity;
+  // An image with neither a file nor an image definition (imageDef 0) has nothing CAD could show; there is no file to
+  // pick either (惠宇敦南 S-工程說明 icons on layer ___H_1 were listed as 「圖片 0：找不到附件」).
+  if(!e.imageData&&!e.imageError&&!e.cadOleImage&&!String(e.imagePath??'')&&(!e.imageDef||String(e.imageDef)==='0'))continue;
+  try{
   if(e.imageError)throw Error(e.imageError);
   if(!e.imageData)throw Error('找不到附件；請在外部參考選檔／資料夾並套用');
   if(Math.abs(e.u.z??0)>1e-8||Math.abs(e.v.z??0)>1e-8)throw Error('非XY平面影像尚未支援');
