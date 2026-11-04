@@ -1,7 +1,7 @@
 import {fontKey} from './shxText';
 type Any=any;
 // The standard ltypeshp shapes the stock complex line types use (FENCELINE1 → 133, FENCELINE2 → 132, TRACKS → 130,
-// ZIGZAG → 131), drawn at size 1. The shape-file style is often dropped on the way to DXF (惠宇敦南 12F水電施工圖:
+// ZIGZAG → 131, BATTING → 134), drawn at size 1. The shape-file style is often dropped on the way to DXF (惠宇敦南 12F水電施工圖:
 // 19 of 282 drawings with FENCELINE1 showed a plain dashed line), and the font file is not ours to ship.
 const circle=Array.from({length:37},(_,i)=>({x:1-Math.cos(i*Math.PI/18),y:Math.sin(i*Math.PI/18)}));
 export const LTYPESHP:Record<number,{x:number;y:number}[][]>={
@@ -9,6 +9,8 @@ export const LTYPESHP:Record<number,{x:number;y:number}[][]>={
  131:[[{x:0,y:0},{x:1,y:1},{x:2,y:0}]],
  132:[[{x:0,y:0},{x:0,y:1},{x:2,y:1},{x:2,y:-1},{x:0,y:-1},{x:0,y:0}]],
  133:[circle],
+ // BAT (BATTING insulation): a slanted foot each side of a half circle of radius 2 centred at (1,2)
+ 134:[[{x:0,y:0},...Array.from({length:19},(_,i)=>({x:1-2*Math.cos(i*Math.PI/18),y:2+2*Math.sin(i*Math.PI/18)})),{x:2,y:0}]],
 };
 const builtinShape=(style:Any,code:number,size:number)=>{
  const paths=LTYPESHP[code];if(!paths||(style&&!/ltypeshp/i.test(style.font??'')))return null;
