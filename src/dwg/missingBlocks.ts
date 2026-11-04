@@ -195,10 +195,11 @@ const CARET_ONLY_LINE = /\n\s*1\r?\n(?:\^[JMI])+\r?\n/;
 
 export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).length;
 
-/** True when a converted DXF looks like it carries mis-decoded text worth re-reading. */
+/** True when a converted DXF looks like it carries mis-decoded text worth re-reading. One garbled text is enough:
+ * 世舜 神岡 法規檢討 A1～A18 each had a single 「系統種類」+ Enter that came out as "tκ؃" and showed a missing glyph. */
 export function needsTextRecovery(dxf: string): boolean {
   const head = dxf.slice(0, 20000).split(/\r?\n/), i = head.findIndex((l) => l === "$DWGCODEPAGE");
-  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 3 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf));
+  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 1 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf));
 }
 
 /** Text of every text-bearing entity by handle, from the object reader. */

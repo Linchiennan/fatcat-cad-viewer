@@ -67,6 +67,10 @@ describe("text LibreDWG's DXF writer mis-decoded (15A 客變圖 R2004 Big5 MTEXT
     expect(needsTextRecovery(head("ANSI_950", "\U+03C6100 \U+58C1\U+78DA \U+03B1"))).toBe(false);
   });
 
+  it("re-reads a drawing with a single garbled text (世舜 神岡 法規檢討: 「系統種類」+ Enter came out as tκ؃)", () => {
+    expect(needsTextRecovery(head("ANSI_950", "  1\nt\\U+03BA\\U+0603 \n"))).toBe(true);
+  });
+
   it("replaces just the garbled entities with the reader's text", () => {
     const texts = readerTexts({ entities: [{ type: "MTEXT", handle: "34910D", text: "107.03.06. 五十七間堂  15A 戶變更內容如下:\n公浴" }, { type: "TEXT", handle: "A1", text: "正常" }] });
     expect(texts["34910D"]).toBe("107.03.06. 五十七間堂  15A 戶變更內容如下:\\P公浴"); // MTEXT paragraph code, not a bare P
