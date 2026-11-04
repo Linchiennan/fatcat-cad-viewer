@@ -11,7 +11,7 @@
   },
   "scripts": {
     "runtime": "node scripts/copy-runtime.mjs",
-    "patch": "node scripts/patch-cjk-fonts.mjs && node scripts/patch-engineering.mjs && node scripts/patch-mtext-height.mjs",
+    "patch": "node scripts/patch-cjk-fonts.mjs && node scripts/patch-engineering.mjs && node scripts/patch-mtext-height.mjs && node scripts/patch-mtext-cjkwrap.mjs",
     "prebuild": "npm run runtime && npm run patch",
     "dev": "npm run prebuild && vite",
     "build": "tsc -b && vite build",
