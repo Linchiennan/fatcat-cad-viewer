@@ -52,15 +52,20 @@ function dstyleOverrides(tags: readonly Tag[]): Map<number, string> {
   return out;
 }
 
-export function leaderEntities(tags: readonly Tag[], base: { handle: string; layer: string; style?: LeaderStyle; blockName?: (handle: string) => string | undefined; arrowFlagUnreliable?: boolean }): { entities: Any[]; notes: string[] } {
+export function leaderEntities(tags: readonly Tag[], base: { handle: string; layer: string; style?: LeaderStyle; blockName?: (handle: string) => string | undefined; hasBlock?: (name: string) => boolean; arrowFlagUnreliable?: boolean }): { entities: Any[]; notes: string[] } {
   const notes: string[] = [];
   const vertices: P[] = [];
-  let arrow = true, spline = false;
+  let arrow = true, spline = false, hook = false, hookSame = false;
+  const horizontal = { x: 1, y: 0 };
   for (let i = 0; i < tags.length; i++) {
     const [c, v] = tags[i];
     if (c === 1001) break; // xdata follows
     if (c === 71) arrow = v !== "0";
     else if (c === 72) spline = v === "1";
+    else if (c === 74) hookSame = v.trim() === "1";
+    else if (c === 75) hook = v.trim() === "1";
+    else if (c === 211) horizontal.x = Number(v);
+    else if (c === 221) horizontal.y = Number(v);
     else if (c === 10) vertices.push({ x: Number(v), y: Number(tags[i + 1]?.[0] === 20 ? tags[i + 1][1] : 0) });
   }
   if (vertices.length < 2 || vertices.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y))) return { entities: [], notes: [`舊式引線 ${base.handle} 頂點不足，未顯示`] };
@@ -70,6 +75,14 @@ export function leaderEntities(tags: readonly Tag[], base: { handle: string; lay
   const scale = rawScale > 0 ? rawScale : 1;
   const blockName = over.has(341) ? base.blockName?.(over.get(341)!) : base.style?.arrowBlock;
   const common = { layer: base.layer, lineType: "CONTINUOUS" };
+  // Hook line (75=1): CAD bends into the last point along the annotation's horizontal direction (211/221), one arrow size
+  // long; 74=0 means the hook comes from the opposite side. The bend itself is not stored (惠宇敦南 B4F-EE1: a leader to a
+  // text turned 90° drew straight instead of dropping the last 21 units vertically).
+  const hl = Math.hypot(horizontal.x, horizontal.y);
+  if (hook && !spline && hl > 0 && Number.isFinite(hl) && asz * scale > 0) {
+    const last = vertices[vertices.length - 1], s = (hookSame ? 1 : -1) * asz * scale / hl;
+    vertices.splice(vertices.length - 1, 0, { x: last.x + horizontal.x * s, y: last.y + horizontal.y * s });
+  }
   if (spline) notes.push(`舊式引線 ${base.handle} 為曲線引線，以直線近似`);
   // LibreDWG reads 71=0 for leaders ZWCAD shows with arrows in R2018 files; follow the CAD default and say so.
   if (!arrow && base.arrowFlagUnreliable) { arrow = true; notes.push("此版本 DWG 的引線箭頭開關解析不可靠，已依 CAD 預設畫出，請與 CAD 核對"); }
@@ -80,8 +93,15 @@ export function leaderEntities(tags: readonly Tag[], base: { handle: string; lay
   if (arrow && first < 2 * asz * scale) arrow = false;
   if (arrow) {
     const { kind, known } = arrowKind(blockName);
-    if (!known) notes.push(`舊式引線 ${base.handle} 箭頭樣式 ${blockName} 以實心箭頭近似`);
-    entities.push(...arrowheadEntities(kind, vertices[0], vertices[1], asz * scale, common, `${base.handle}:arrow`));
+    if (!known && blockName && base.hasBlock?.(blockName)) {
+      // A user arrow block is drawn like CAD does: inserted at the tip, scaled by the arrow size, its +X along the
+      // leader towards the tip (天正 taddot = a small open circle with a line through it; 惠宇敦南 B4F-EE1 drew a filled wedge).
+      const size = asz * scale, angle = Math.atan2(vertices[0].y - vertices[1].y, vertices[0].x - vertices[1].x);
+      entities.push({ ...common, type: "INSERT", handle: `${base.handle}:arrow`, name: blockName, position: { ...vertices[0], z: 0 }, xScale: size, yScale: size, zScale: size, rotation: angle * 180 / Math.PI });
+    } else {
+      if (!known) notes.push(`舊式引線 ${base.handle} 箭頭樣式 ${blockName} 以實心箭頭近似`);
+      entities.push(...arrowheadEntities(kind, vertices[0], vertices[1], asz * scale, common, `${base.handle}:arrow`));
+    }
   }
   return { entities, notes };
 }

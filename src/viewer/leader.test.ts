@@ -58,6 +58,27 @@ describe("legacy LEADER display", () => {
     expect(custom.notes.join()).toContain("以實心箭頭近似");
   });
 
+  it("bends into the last point along the hook line (惠宇敦南 B4F-EE1: 75=1, 74=0, horizontal 0,-1, arrow 3×7)", () => {
+    const hooked: [number, string][] = [
+      [5, "4B930"], [8, "DIM"], [3, "standard"], [71, "1"], [73, "0"], [72, "0"], [74, "0"], [75, "1"], [76, "2"],
+      [10, "-59715.87"], [20, "-27074.53"], [30, "0"], [10, "-59673.31"], [20, "-27122.49"], [30, "0"], [211, "0"], [221, "-1"], [231, "0"],
+      [1001, "ACAD"], [1000, "DSTYLE"], [1002, "{"], [1070, "40"], [1040, "7"], [1070, "41"], [1040, "3"], [1002, "}"],
+    ];
+    const line = leaderEntities(hooked, { handle: "4B930", layer: "DIM" }).entities[0];
+    expect(line.vertices).toHaveLength(3);
+    expect(line.vertices[1].x).toBeCloseTo(-59673.31, 6);
+    expect(line.vertices[1].y).toBeCloseTo(-27122.49 + 21, 6);
+    expect(leaderEntities(tags(), { handle: "1CAE9", layer: "A-NOTE" }).entities[0].vertices).toHaveLength(2);
+  });
+
+  it("inserts a user arrow block at the tip when the drawing defines it (惠宇敦南 B4F-EE1 天正 taddot)", () => {
+    const made = leaderEntities(tags([[1070, "341"], [1005, "AB"], [1070, "41"], [1040, "3"], [1070, "40"], [1040, "7"]]), { handle: "D", layer: "DIM", blockName: () => "taddot", hasBlock: (n) => n === "taddot" });
+    expect(made.notes.join()).not.toContain("以實心箭頭近似");
+    const arrow = made.entities.find((e) => e.type === "INSERT");
+    expect(arrow).toMatchObject({ name: "taddot", layer: "DIM", xScale: 21, yScale: 21 });
+    expect(arrow.position).toMatchObject(made.entities[0].vertices[0]);
+  });
+
   it("replaces the unsupported entity using the DIMSTYLE table and block records", () => {
     const dxf = ["0", "SECTION", "2", "TABLES", "0", "BLOCK_RECORD", "5", "AB", "2", "_DOT", "0", "DIMSTYLE", "2", "taddd", "41", "0.05", "40", "150", "341", "AB",
       "0", "ENDSEC", "0", "SECTION", "2", "ENTITIES", "0", "LEADER", ...tags().slice(0, 22).flatMap(([c, v]) => [String(c), v]), "0", "ENDSEC", "0", "EOF"].join("\n");

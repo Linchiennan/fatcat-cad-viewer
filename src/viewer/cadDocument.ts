@@ -132,7 +132,7 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
    (doc.cadDiagnostics??=[]).push(...made.notes);continue;
   }
   if(r.type==='LEADER'){
-   const made=leaderEntities(r.tags,{handle,layer:text(r,8,'0'),style:dimStyles.get(text(r,3)),blockName:h=>blockNames.get(h),arrowFlagUnreliable:newDwg});
+   const made=leaderEntities(r.tags,{handle,layer:text(r,8,'0'),style:dimStyles.get(text(r,3)),blockName:h=>blockNames.get(h),hasBlock:n=>!!doc.blocks?.[n],arrowFlagUnreliable:newDwg});
    for(const m of made.entities){m.cadSpace=space;m.inPaperSpace=space!=='Model';if(num(r,60)===1)m.hidden=true;(r.block&&doc.blocks?.[r.block]?doc.blocks[r.block].entities:(doc.entities??=[])).push(m);}
    (doc.cadDiagnostics??=[]).push(...made.notes);continue;
   }
