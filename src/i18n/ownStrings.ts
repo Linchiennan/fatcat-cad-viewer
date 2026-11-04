@@ -64,6 +64,7 @@ export const OWN_STRINGS = {
   "error.markLabel": { zh: "錯誤", en: "Error" },
   "error.diagLabel": { zh: "DWG 診斷", en: "DWG diagnostics" },
   "home.legalLabel": { zh: "法律告知", en: "Legal notices" },
+  "home.updated": { zh: "更新日期 {日期}", en: "Updated {日期}" },
   "home.featuresLabel": { zh: "特色", en: "Features" },
   // 介面立體樣式切換（用戶 2026-10-28：首頁「繁中｜EN」左邊）
   "uiStyle.label": { zh: "介面樣式", en: "Interface style" },

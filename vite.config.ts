@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 export default defineConfig({
   base: process.env.VITE_FATCAT_WEB === "1" ? "/fatcat-cad-viewer/" : "./",
   plugins: [react()],
+  // The date shown on the home screen (用戶 2026-11-04: every release says when it was updated), Taiwan time.
+  define: { __FATCAT_BUILD_DATE__: JSON.stringify(new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Taipei" }).format(new Date())) },
   resolve: {
     alias: [
       // @mlightcad/libredwg-web's wrapper imports its own wasm loader; the DWG worker loads the runtime from

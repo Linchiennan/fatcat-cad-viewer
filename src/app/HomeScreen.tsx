@@ -79,6 +79,7 @@ export function HomeScreen({ onLibrary, onLegal }: { onLibrary(): void; onLegal?
           </nav>
           <p className="home-version">
             <span>{versionLine(t, native)}</span>
+            <span>{t("home.updated", { "日期": __FATCAT_BUILD_DATE__ })}</span>
             <span>{t("home.build", { "識別碼": BUILD_ID })}</span>
             <span>{t("legal.copyright")}</span>
           </p>
