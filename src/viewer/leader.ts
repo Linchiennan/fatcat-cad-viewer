@@ -39,6 +39,25 @@ export function arrowheadEntities(kind: ArrowKind, tip: P, from: P, size: number
   return ring.map((p, i) => ({ ...common, type: "SOLID", handle: `${handle}.${i}`, points: [z(t), z(p), z(ring[(i + 1) % 12]), z(ring[(i + 1) % 12])] }));
 }
 
+/** Centripetal Catmull-Rom through the points, 16 steps a span (ends extended by reflection). */
+function catmullRom(ps: P[]): P[] {
+  const pts = [{ x: 2 * ps[0].x - ps[1].x, y: 2 * ps[0].y - ps[1].y }, ...ps, { x: 2 * ps.at(-1)!.x - ps.at(-2)!.x, y: 2 * ps.at(-1)!.y - ps.at(-2)!.y }];
+  const out: P[] = [ps[0]];
+  for (let i = 1; i + 2 < pts.length; i++) {
+    const [p0, p1, p2, p3] = [pts[i - 1], pts[i], pts[i + 1], pts[i + 2]];
+    const t = (a: P, b: P) => Math.max(Math.sqrt(Math.hypot(b.x - a.x, b.y - a.y)), 1e-9);
+    const t1 = t(p0, p1), t2 = t1 + t(p1, p2), t3 = t2 + t(p2, p3);
+    for (let k = 1; k <= 16; k++) {
+      const u = t1 + (t2 - t1) * k / 16;
+      const lerp = (a: P, b: P, ta: number, tb: number) => ({ x: ((tb - u) * a.x + (u - ta) * b.x) / (tb - ta), y: ((tb - u) * a.y + (u - ta) * b.y) / (tb - ta) });
+      const a1 = lerp(p0, p1, 0, t1), a2 = lerp(p1, p2, t1, t2), a3 = lerp(p2, p3, t2, t3);
+      const b1 = lerp(a1, a2, 0, t2), b2 = lerp(a2, a3, t1, t3);
+      out.push(k === 16 ? p2 : lerp(b1, b2, t1, t2));
+    }
+  }
+  return out;
+}
+
 /** DSTYLE xdata override pairs: 1070 dim-var code followed by its value. */
 function dstyleOverrides(tags: readonly Tag[]): Map<number, string> {
   const out = new Map<number, string>();
@@ -83,10 +102,13 @@ export function leaderEntities(tags: readonly Tag[], base: { handle: string; lay
     const last = vertices[vertices.length - 1], s = (hookSame ? 1 : -1) * asz * scale / hl;
     vertices.splice(vertices.length - 1, 0, { x: last.x + horizontal.x * s, y: last.y + horizontal.y * s });
   }
-  if (spline) notes.push(`舊式引線 ${base.handle} 為曲線引線，以直線近似`);
+  if (spline) notes.push(`舊式引線 ${base.handle} 為曲線引線，以通過各點的平滑曲線近似`);
   // LibreDWG reads 71=0 for leaders ZWCAD shows with arrows in R2018 files; follow the CAD default and say so.
   if (!arrow && base.arrowFlagUnreliable) { arrow = true; notes.push("此版本 DWG 的引線箭頭開關解析不可靠，已依 CAD 預設畫出，請與 CAD 核對"); }
-  const entities: Any[] = [{ ...common, type: "LWPOLYLINE", handle: `${base.handle}:leader`, shape: false, vertices }];
+  // A spline leader (72=1) runs smoothly through its vertices; a centripetal Catmull-Rom through them is close to
+  // CAD's fit (喬瓏 鑫元鴻 天花板套圖-廠房-2F drew it as straight segments). The arrow keeps the first segment's direction.
+  const path = spline && vertices.length > 2 ? catmullRom(vertices) : vertices;
+  const entities: Any[] = [{ ...common, type: "LWPOLYLINE", handle: `${base.handle}:leader`, shape: false, vertices: path }];
   // CAD leaves the arrowhead off when the first segment is shorter than twice its size (W05 地下室水箱給水: DIMASZ 40 on
   // a 16.8 long segment drew a huge filled wedge over the note; ZWCAD draws none).
   const first = Math.hypot(vertices[1].x - vertices[0].x, vertices[1].y - vertices[0].y);

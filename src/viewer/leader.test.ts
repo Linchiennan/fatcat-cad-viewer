@@ -88,3 +88,15 @@ describe("legacy LEADER display", () => {
     expect(doc.cadUnsupported.LEADER).toBeUndefined();
   });
 });
+
+describe("spline leaders (喬瓏 鑫元鴻 天花板套圖-廠房-2F)", () => {
+  it("run smoothly through every vertex instead of straight segments", () => {
+    const pts: [number, string][] = [[10, "0"], [20, "0"], [30, "0"], [10, "10"], [20, "10"], [30, "0"], [10, "20"], [20, "0"], [30, "0"]];
+    const t: [number, string][] = [[5, "S"], [8, "0"], [71, "0"], [72, "1"], [76, "3"], ...pts];
+    const line = leaderEntities(t, { handle: "S", layer: "0" }).entities[0];
+    expect(line.vertices.length).toBeGreaterThan(20);
+    for (const p of [{ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 20, y: 0 }]) expect(line.vertices.some((q: any) => Math.hypot(q.x - p.x, q.y - p.y) < 1e-9)).toBe(true);
+    // the first span bows off its chord (y = x) like a curve does
+    expect(Math.max(...line.vertices.filter((q: any) => q.x > 0 && q.x < 10).map((q: any) => Math.abs(q.y - q.x)))).toBeGreaterThan(0.5);
+  });
+});
