@@ -5,7 +5,7 @@ import type { DwgErrorCode } from "../types/errors";
 import type { SavedView } from "../viewer/savedView";
 import { detectDxfEncoding } from "../viewer/dxfEncoding";
 import { joinSplitChunks } from "./utf8Chunks";
-import { headerArrowSize, missingBlockNames, needsTextRecovery, readerTexts, rebuildBlocks } from "./missingBlocks";
+import { headerArrowSize, missingBlockNames, missingLineTypeNames, needsTextRecovery, readerLineTypes, readerTexts, rebuildBlocks } from "./missingBlocks";
 import { restoreLayerStates, type LayerState } from "./layerStates";
 import { annotateDxfXclips } from "./xclipMetadata";
 import { classifyEngineError, FATAL_READ_ERRORS, isDgnLinestyleClass, looksLikeMemory } from "./dwgDiagnostics";
@@ -138,8 +138,8 @@ export function readDwgMetadata(module: Any, path: string): Metadata {
 export async function readFallback(dxf: Uint8Array, encoding: string, dwg: Uint8Array, createEngine: EngineFactory): Promise<string | null> {
   let text: string;
   try { text = new TextDecoder(encoding).decode(dxf); } catch { return null; }
-  const names = missingBlockNames(text), needText = needsTextRecovery(text);
-  if (!names.length && !needText) return null;
+  const names = missingBlockNames(text), needText = needsTextRecovery(text), lineTypes = missingLineTypeNames(text);
+  if (!names.length && !needText && !lineTypes.length) return null;
   const empty = (error: string) => JSON.stringify({ blocks: {}, skipped: {}, error });
   try {
     const module = await createEngine({ print: () => {}, printErr: () => {} });
@@ -151,6 +151,7 @@ export async function readFallback(dxf: Uint8Array, encoding: string, dwg: Uint8
       const rebuilt = rebuildBlocks(db, names, headerArrowSize(text));
       const out: Any = { blocks: rebuilt.blocks, skipped: rebuilt.skipped };
       if (needText) out.texts = readerTexts(db);
+      if (lineTypes.length) out.lineTypes = readerLineTypes(db, lineTypes);
       return JSON.stringify(out);
     } finally {
       try { lib.dwg_free(data); } catch { /* ends with the worker */ }

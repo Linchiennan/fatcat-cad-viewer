@@ -12,6 +12,7 @@ export type FallbackData = {
   blocks: Record<string, unknown>;
   skipped: Record<string, number>;
   texts?: Record<string, string>;
+  lineTypes?: Record<string, unknown>;
   error?: string;
 };
 
@@ -78,7 +79,7 @@ function parseFallback(json: string | null): FallbackData | null {
   if (!json) return null;
   try {
     const data = JSON.parse(json);
-    return data && typeof data === "object" ? { blocks: data.blocks ?? {}, skipped: data.skipped ?? {}, ...(data.texts ? { texts: data.texts } : {}), ...(data.error ? { error: String(data.error) } : {}) } : null;
+    return data && typeof data === "object" ? { blocks: data.blocks ?? {}, skipped: data.skipped ?? {}, ...(data.texts ? { texts: data.texts } : {}), ...(data.lineTypes ? { lineTypes: data.lineTypes } : {}), ...(data.error ? { error: String(data.error) } : {}) } : null;
   } catch { return null; }
 }
 

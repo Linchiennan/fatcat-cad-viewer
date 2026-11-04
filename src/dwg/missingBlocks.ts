@@ -43,6 +43,42 @@ export function missingBlockNames(dxf: string): string[] {
   return [...wanted].filter((n) => n && !defined.has(n) && !/^\*(model|paper)_space/i.test(n));
 }
 
+/**
+ * Line types layers or entities name (group 6) that the DXF's LTYPE table lacks. The writer can leave some out
+ * (惠宇敦南 B1F牆面施工圖: CENTERX2 and EB_DASHDOT, 2 of 1435, so their layers drew solid).
+ */
+export function missingLineTypeNames(dxf: string): string[] {
+  const lines = dxf.split(/\r?\n/), wanted = new Set<string>(), defined = new Set<string>();
+  let section = "", table = "", record = "";
+  for (let i = 0; i + 1 < lines.length; i += 2) {
+    const code = lines[i].trim(), value = lines[i + 1];
+    if (code === "0") {
+      if (value === "SECTION") section = lines[i + 3] ?? "";
+      else if (value === "TABLE") table = lines[i + 3] ?? "";
+      record = value;
+      continue;
+    }
+    if (section === "TABLES" && table === "LTYPE" && record === "LTYPE" && code === "2") defined.add(value.toUpperCase());
+    else if (code === "6" && ((section === "TABLES" && record === "LAYER") || section === "ENTITIES" || section === "BLOCKS")) wanted.add(value);
+  }
+  return [...new Set([...wanted].filter((n) => n && !/^(BYLAYER|BYBLOCK|CONTINUOUS)$/i.test(n) && !defined.has(n.toUpperCase())))];
+}
+
+/** The reader's definitions of the named line types, in the dxf-viewer parser's shape (pattern, elements). */
+export function readerLineTypes(db: Any, names: readonly string[]): Record<string, Any> {
+  const want = new Map(names.map((n) => [n.toUpperCase(), n]));
+  const out: Record<string, Any> = {};
+  for (const lt of db?.tables?.LTYPE?.entries ?? []) {
+    const name = want.get(String(lt.name ?? "").toUpperCase());
+    if (!name || !Array.isArray(lt.pattern)) continue;
+    const elements = lt.pattern.map((p: Any) => ({ length: Number(p.elementLength) || 0, flags: Number(p.elementTypeFlag) || 0,
+      ...(p.elementTypeFlag ? { shape: p.shapeNumber, scale: p.scale, rotation: p.rotation, x: p.offsetX, y: p.offsetY, text: p.text } : {}) }));
+    out[name] = { name, description: lt.description ?? "", pattern: elements.map((e: Any) => e.length), patternLength: Number(lt.totalPatternLength) || elements.reduce((s: number, e: Any) => s + Math.abs(e.length), 0),
+      ...(elements.some((e: Any) => e.flags & 6) ? { elements, complex: true } : {}) };
+  }
+  return out;
+}
+
 function common(e: Any): Any {
   const out: Any = { type: e.type, handle: e.handle, layer: e.layer || "0", colorIndex: e.colorIndex ?? 256 };
   if (e.lineType) out.lineType = e.lineType;

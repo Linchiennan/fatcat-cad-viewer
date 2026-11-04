@@ -155,3 +155,18 @@ describe("blocks missing from the table altogether (建照 A2)", () => {
     expect(missingBlockNames(text).sort()).toEqual(["*U137", "A-UNIT-TF_B"]);
   });
 });
+
+import { missingLineTypeNames, readerLineTypes } from "./missingBlocks";
+describe("line types the DXF writer left out (惠宇敦南 B1F牆面施工圖: CENTERX2, EB_DASHDOT)", () => {
+  const dxf = ["0", "SECTION", "2", "TABLES", "0", "TABLE", "2", "LTYPE", "0", "LTYPE", "2", "DASHED", "70", "0", "0", "ENDTAB",
+    "0", "TABLE", "2", "LAYER", "0", "LAYER", "2", "41-穿樑", "6", "CENTERX2", "0", "LAYER", "2", "A", "6", "dashed", "0", "ENDTAB", "0", "ENDSEC",
+    "0", "SECTION", "2", "ENTITIES", "0", "LINE", "8", "A", "6", "EB_DASHDOT", "0", "LINE", "8", "A", "6", "ByLayer", "0", "ENDSEC", "0", "EOF"].join("\n");
+  it("finds names layers and entities use but the LTYPE table lacks", () => {
+    expect(missingLineTypeNames(dxf).sort()).toEqual(["CENTERX2", "EB_DASHDOT"]);
+  });
+  it("takes their pattern from the object reader", () => {
+    const db = { tables: { LTYPE: { entries: [{ name: "CENTERX2", description: "Center (2x)", totalPatternLength: 101.6, pattern: [
+      { elementLength: 63.5, elementTypeFlag: 0 }, { elementLength: -12.7, elementTypeFlag: 0 }, { elementLength: 12.7, elementTypeFlag: 0 }, { elementLength: -12.7, elementTypeFlag: 0 }] }] } } };
+    expect(readerLineTypes(db, ["CENTERX2", "EB_DASHDOT"])).toEqual({ CENTERX2: { name: "CENTERX2", description: "Center (2x)", pattern: [63.5, -12.7, 12.7, -12.7], patternLength: 101.6 } });
+  });
+});
