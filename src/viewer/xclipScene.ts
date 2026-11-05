@@ -10,6 +10,8 @@ type Any = any;
 
 /** Name prefix of the per-INSERT block copies. */
 export const XCLIP_BLOCK_PREFIX = "__fatcat_xclip_";
+/** Infix of trimmed copies of blocks nested in a clipped copy (insideClip). */
+export const XCLIP_TRIM_SUFFIX = "__fatcat_trim_";
 /** Prefix of synthetic layers: prefix + tag + "__" + original layer. */
 export const XCLIP_LAYER_PREFIX = "__fatcat_xc";
 /** Largest clip polygon drawn (T14 6-6); larger ones are skipped with a warning (待決 A-3). */
@@ -99,7 +101,7 @@ export function prepareXclips(dxf: Any): XclipPreparation {
       else polygon = fitted;
     }
     const alias = XCLIP_BLOCK_PREFIX + (e.handle ? String(e.handle) : "n" + serial++);
-    blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name, entities: polygon.length ? insideClip(blocks[e.name].entities ?? [], polygon) : blocks[e.name].entities };
+    blocks[alias] = { ...blocks[e.name], name: alias, cadName: blocks[e.name].cadName ?? blocks[e.name].name, entities: polygon.length ? insideClip(blocks[e.name].entities ?? [], polygon, blocks) : blocks[e.name].entities };
     if (out.keep.has(e.name)) out.keep.add(alias);
     e.name = alias;
     out.top.set(alias, polygon);
@@ -143,6 +145,33 @@ function roughBox(e: Any): [number, number, number, number] | null {
       const h = e.textHeight ?? e.height ?? 0, n = String(e.text ?? "").length;
       return h > 0 ? pts([e.startPoint ?? e.position], h * (n + 2) * Math.max(1, Math.abs(e.xScale ?? 1)) + (e.width ?? 0)) : null;
     }
+    case "SOLID": case "TRACE": case "3DFACE": return pts(e.points ?? e.vertices);
+    case "POINT": return pts([e.position]);
+    case "ELLIPSE": { const m = e.majorAxisEndPoint; return m ? pts([e.center], Math.hypot(m.x, m.y)) : null; }
+    case "SPLINE": return pts(e.controlPoints?.length ? e.controlPoints : e.fitPoints);
+    case "HATCH": {
+      // boundary loops: polylines (bulges padded by their chord), lines, arcs and ellipse arcs by their full circle
+      const at: Any[] = [];
+      let pad = 0;
+      for (const loop of e.boundaryLoops ?? []) {
+        if (loop.polyline?.vertices) {
+          const v = loop.polyline.vertices;
+          at.push(...v);
+          if (v.some((q: Any) => q.bulge)) for (let i = 0; i < v.length; i++) { const q = v[(i + 1) % v.length]; pad = Math.max(pad, Math.hypot(q.x - v[i].x, q.y - v[i].y)); }
+          continue;
+        }
+        for (const edge of loop.edges ?? []) {
+          if (edge.type === 1) at.push(edge.start, edge.end);
+          else if (edge.type === 2) { at.push(edge.start); pad = Math.max(pad, edge.radius ?? Infinity); }
+          else if (edge.type === 3) { at.push(edge.start); pad = Math.max(pad, Math.hypot(edge.end?.x ?? Infinity, edge.end?.y ?? 0)); }
+          else if (edge.controlPoints?.length) at.push(...edge.controlPoints);
+          else return null;
+        }
+      }
+      const box = pts(at, pad);
+      // a mirrored hatch (extrusion -Z) is drawn with x negated
+      return box && (e.extrusionDirection?.z ?? 1) < 0 ? [-box[2], box[1], -box[0], box[3]] : box;
+    }
     default: return null;
   }
 }
@@ -151,14 +180,85 @@ function roughBox(e: Any): [number, number, number, number] | null {
  * Content of a clipped block copy: entities lying wholly outside the clip are left out. Every clipped INSERT gets its
  * own copy of the geometry, so a layout of many viewports held the whole model once per viewport (惠宇敦南 RF電氣1:
  * 33 viewports, over 1 GB); each now holds about what it shows. Anything whose extents are not cheap to tell stays.
+ * With `blocks`, a nested INSERT is looked into as well: it is left out when its block lies outside, and a large
+ * block gets its own trimmed copy (上晴 公設B區-2 算圖: block "1F" holds the whole plan as one nested INSERT and is
+ * clipped 115 times; every copy drew all 104 thousand entities, 260 million vertices, out of memory).
  */
-export function insideClip(entities: Any[], polygon: DrawingPoint[]): Any[] {
-  if (entities.length < 500 || polygon.length < 3) return entities;
+export function insideClip(entities: Any[], polygon: DrawingPoint[], blocks?: Record<string, Any>): Any[] {
+  if (polygon.length < 3) return entities;
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (const p of polygon) { a = Math.min(a, p.x); b = Math.min(b, p.y); c = Math.max(c, p.x); d = Math.max(d, p.y); }
   const m = Math.max(c - a, d - b) * 0.01;
-  a -= m; b -= m; c += m; d += m;
-  return entities.filter((e) => { const r = roughBox(e); return !r || !(r[2] < a || r[0] > c || r[3] < b || r[1] > d); });
+  return trimToBox(entities, [a - m, b - m, c + m, d + m], blocks, { extents: new Map() }, 0);
+}
+
+type Rect = [number, number, number, number];
+type TrimState = { extents: Map<string, Rect | null> };
+// Trimmed copies are named across calls: each clipped INSERT trims its own copies of the same blocks.
+let trimSerial = 0;
+const TRIM_MIN = 500, TRIM_DEPTH = 6;
+const outside = (r: Rect, box: Rect) => r[2] < box[0] || r[0] > box[2] || r[3] < box[1] || r[1] > box[3];
+
+/** INSERT placement as functions to and from its block's coordinates; null for arrays, mirrors and zero scales. */
+function insertMap(e: Any, block: Any): { out: (p: DrawingPoint) => DrawingPoint; into: (p: DrawingPoint) => DrawingPoint } | null {
+  const sx = e.xScale ?? 1, sy = e.yScale ?? 1;
+  if (!sx || !sy || (e.extrusionDirection?.z ?? 1) < 0 || (e.columnCount ?? 1) > 1 || (e.rowCount ?? 1) > 1) return null;
+  const r = (e.rotation ?? 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r), at = e.position ?? { x: 0, y: 0 }, base = block?.position ?? { x: 0, y: 0 };
+  return {
+    out: (p) => { const u = (p.x - base.x) * sx, v = (p.y - base.y) * sy; return { x: at.x + u * c - v * s, y: at.y + u * s + v * c }; },
+    into: (p) => { const x = p.x - at.x, y = p.y - at.y; return { x: base.x + (x * c + y * s) / sx, y: base.y + (-x * s + y * c) / sy }; },
+  };
+}
+const mapRect = (r: Rect, f: (p: DrawingPoint) => DrawingPoint): Rect => {
+  const q = [f({ x: r[0], y: r[1] }), f({ x: r[2], y: r[1] }), f({ x: r[2], y: r[3] }), f({ x: r[0], y: r[3] })];
+  return [Math.min(...q.map((p) => p.x)), Math.min(...q.map((p) => p.y)), Math.max(...q.map((p) => p.x)), Math.max(...q.map((p) => p.y))];
+};
+
+/** Extents of a block's content in its own coordinates, or null when any part's extents are unknown. */
+function blockExtents(blocks: Record<string, Any>, name: string, state: TrimState, depth = 0): Rect | null {
+  if (state.extents.has(name)) return state.extents.get(name)!;
+  state.extents.set(name, null);
+  let box: Rect | null = null;
+  for (const e of blocks[name]?.entities ?? []) {
+    let r: Rect | null;
+    if (e.type === "INSERT") {
+      const inner = depth < 16 && blocks[e.name] ? blockExtents(blocks, e.name, state, depth + 1) : null, map = inner && insertMap(e, blocks[e.name]);
+      r = map ? mapRect(inner!, map.out) : null;
+    } else if (e.type === "ATTDEF") continue;
+    else r = roughBox(e);
+    if (!r) return null; // stays null in the memo
+    box = box ? [Math.min(box[0], r[0]), Math.min(box[1], r[1]), Math.max(box[2], r[2]), Math.max(box[3], r[3])] : r;
+  }
+  state.extents.set(name, box);
+  return box;
+}
+
+function trimToBox(entities: Any[], box: Rect, blocks: Record<string, Any> | undefined, state: TrimState, depth: number): Any[] {
+  const nested = !!blocks && depth < TRIM_DEPTH && entities.some((e) => e.type === "INSERT");
+  if (entities.length < TRIM_MIN && !nested) return entities;
+  let changed = false;
+  const out: Any[] = [];
+  for (const e of entities) {
+    if (e.type === "INSERT" && blocks) {
+      const block = blocks[e.name], map = block && insertMap(e, block);
+      if (!map) { out.push(e); continue; }
+      const inner = blockExtents(blocks, e.name, state);
+      if (inner && outside(mapRect(inner, map.out), box)) { changed = true; continue; }
+      if (depth + 1 >= TRIM_DEPTH) { out.push(e); continue; }
+      const content = block.entities ?? [], trimmed = trimToBox(content, mapRect(box, map.into), blocks, state, depth + 1);
+      if (trimmed === content) { out.push(e); continue; }
+      const alias = `${e.name}${XCLIP_TRIM_SUFFIX}${trimSerial++}`;
+      blocks[alias] = { ...block, name: alias, cadName: block.cadName ?? block.name, entities: trimmed };
+      out.push({ ...e, name: alias });
+      changed = true;
+      continue;
+    }
+    if (entities.length < TRIM_MIN) { out.push(e); continue; }
+    const r = roughBox(e);
+    if (r && outside(r, box)) { changed = true; continue; }
+    out.push(e);
+  }
+  return changed ? out : entities;
 }
 
 type SceneState = XclipPreparation & { next: number; nested: Map<number, { parent?: number; points: DrawingPoint[]; root: string; holes?: DrawingPoint[][] }> };

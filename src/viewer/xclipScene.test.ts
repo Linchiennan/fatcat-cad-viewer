@@ -194,3 +194,21 @@ describe("wipeouts inside blocks (惠宇敦南 A06-09: 29 INSERTs under wipeouts
     expect(nested.some((n) => n.root === "P" && n.holes?.[0]?.length === 4)).toBe(true);
   });
 });
+
+// 上晴 公設B區-2 算圖：圖塊「1F」只含一個巢狀 INSERT（整層平面），被裁切插入 115 次，每份都畫整層，記憶體不足
+describe("clipped copies look into nested blocks", () => {
+  it("keeps a trimmed copy of a large nested block and leaves out nested blocks outside the clip", async () => {
+    const { insideClip, XCLIP_TRIM_SUFFIX } = await import("./xclipScene");
+    const plan = [...Array.from({ length: 600 }, (_, i) => line(1000 + i, 1000, 1001 + i, 1001)), line(1, 1, 2, 2),
+      { type: "HATCH", boundaryLoops: [{ type: 2, polyline: { vertices: [{ x: 5000, y: 5000 }, { x: 5001, y: 5000 }, { x: 5001, y: 5001 }] } }] }];
+    const blocks: Record<string, any> = { PLAN: { name: "PLAN", position: { x: 0, y: 0 }, entities: plan }, FAR: { name: "FAR", position: { x: 0, y: 0 }, entities: [line(0, 0, 1, 1)] } };
+    // the plan placed at +10,+10 at scale 2: its content starts at 12,12, so a clip at 0..4 shows neither block
+    const nested = { type: "INSERT", name: "PLAN", position: { x: 10, y: 10 }, xScale: 2, yScale: 2 }, far = { type: "INSERT", name: "FAR", position: { x: 900, y: 900 } };
+    expect(insideClip([nested, far], [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }], blocks)).toEqual([]);
+    // a clip at 10..16 is plan 0..3: a trimmed copy with the one line there
+    const near = insideClip([nested], [{ x: 10, y: 10 }, { x: 16, y: 10 }, { x: 16, y: 16 }, { x: 10, y: 16 }], blocks);
+    expect(near[0].name).toContain(XCLIP_TRIM_SUFFIX);
+    expect(blocks[near[0].name].entities).toEqual([line(1, 1, 2, 2)]); // the hatch far off and the 600 lines are left out
+    expect(blocks.PLAN.entities).toHaveLength(602); // the shared block is untouched
+  });
+});
