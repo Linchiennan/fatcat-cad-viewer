@@ -47,7 +47,11 @@ export function segmentOutside(a: P, b: P, poly: P[]): [P, P][] {
   return out;
 }
 
-const box = (ps: P[]) => ps.reduce((m, p) => ({ minX: Math.min(m.minX, p.x), minY: Math.min(m.minY, p.y), maxX: Math.max(m.maxX, p.x), maxY: Math.max(m.maxY, p.y) }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+function box(ps: P[]): Box {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of ps) { if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y; }
+  return { minX, minY, maxX, maxY };
+}
 const overlaps = (a: Any, b: Any) => a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
 
 /** Points along an arc from angle a0 counter-clockwise by sweep, at most 2° apart. */
@@ -139,23 +143,41 @@ export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFr
   const wipes = entities.filter((e) => e.type === "WIPEOUT" && Array.isArray(e.polygon) && e.polygon.length >= 3 && !e.hidden);
   if (!wipes.length) return entities.filter((e) => e.type !== "WIPEOUT");
   let list = entities.filter((e) => e.type !== "WIPEOUT");
+  // Each entity's points and box are worked out once, not again for every wipeout (公設平面分區圖 1F: thousands of
+  // entities times hundreds of wipeouts took 1.7 s of the open).
+  type Geometry = { straight: boolean; run: P[] | null; ps: P[] | null; box: Box | null; corners?: P[] | null };
+  const geometry = new WeakMap<Any, Geometry>();
+  const geometryOf = (e: Any): Geometry => {
+    let g = geometry.get(e);
+    if (g) return g;
+    if (e.type === "INSERT" && blocks) {
+      const inner = blockBox(blocks, e.name, memo), corners = inner && insertCorners(e, inner, blocks[e.name]?.position ?? { x: 0, y: 0 });
+      g = { straight: false, run: null, ps: null, corners, box: corners ? box(corners) : null };
+    } else {
+      const straight = e.type === "LINE" || (e.type === "LWPOLYLINE" && !e.vertices.some((v: Any) => v.bulge) && !e.width && !e.vertices.some((v: Any) => v.startWidth || v.endWidth));
+      const run = straight ? null : curveRun(e), ps = run ?? points(e);
+      g = { straight, run, ps, box: ps ? box(ps) : null };
+    }
+    geometry.set(e, g);
+    return g;
+  };
+  const orders = new WeakMap<Any, number>();
+  const orderOf = (e: Any) => { let o = orders.get(e); if (o === undefined) orders.set(e, o = order(e)); return o; };
   for (const w of [...wipes].sort((m, n) => order(m) - order(n))) {
     const wb = box(w.polygon), wo = order(w), next: Any[] = [];
     for (const e of list) {
-      if (order(e) >= wo || e.cadWipeoutPiece === wo || (e.cadSpace ?? "Model") !== (w.cadSpace ?? "Model")) { next.push(e); continue; }
+      if (orderOf(e) >= wo || e.cadWipeoutPiece === wo || (e.cadSpace ?? "Model") !== (w.cadSpace ?? "Model")) { next.push(e); continue; }
       if (e.type === "INSERT" && blocks) {
-        const inner = blockBox(blocks, e.name, memo), corners = inner && insertCorners(e, inner, blocks[e.name]?.position ?? { x: 0, y: 0 });
-        if (corners && overlaps(box(corners), wb)) {
+        const g = geometryOf(e), corners = g.corners;
+        if (corners && overlaps(g.box, wb)) {
           if ((e.cadWipeoutMasks?.length ?? 0) < WIPEOUT_MASK_LIMIT) next.push({ ...e, cadWipeoutMasks: [...(e.cadWipeoutMasks ?? []), w.polygon.map((p: P) => ({ x: p.x, y: p.y }))] });
           else { skipped.set("INSERT", (skipped.get("INSERT") ?? 0) + 1); next.push(e); }
         } else if (!corners && points(e)?.some((p) => inside(p, w.polygon))) { skipped.set("INSERT", (skipped.get("INSERT") ?? 0) + 1); next.push(e); }
         else next.push(e);
         continue;
       }
-      const straight = e.type === "LINE" || (e.type === "LWPOLYLINE" && !e.vertices.some((v: Any) => v.bulge) && !e.width && !e.vertices.some((v: Any) => v.startWidth || v.endWidth));
-      const run = straight ? null : curveRun(e);
-      const ps = run ?? points(e);
-      if (!ps || !overlaps(box(ps), wb)) { next.push(e); continue; }
+      const { straight, run, ps, box: eb } = geometryOf(e);
+      if (!ps || !overlaps(eb, wb)) { next.push(e); continue; }
       if (!straight && !run) {
         if (ps.some((p) => inside(p, w.polygon)) || e.type !== "LWPOLYLINE") skipped.set(e.type, (skipped.get(e.type) ?? 0) + 1);
         next.push(e); continue;

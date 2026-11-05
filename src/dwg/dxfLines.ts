@@ -34,7 +34,9 @@ export function lineRanges(bytes: Uint8Array): Array<[number, number]> {
 /** Latin-1 view of a byte range (1 char per byte, so offsets stay valid). */
 export function latin1(bytes: Uint8Array, start: number, end: number): string {
   let s = "";
-  for (let i = start; i < end; i += 8192) s += String.fromCharCode(...bytes.subarray(i, Math.min(end, i + 8192)));
+  // Most values are a few bytes and a whole file has millions: a plain loop, no spread (5× slower; 公設平面分區圖 1F).
+  if (end - start <= 32) { for (let i = start; i < end; i++) s += String.fromCharCode(bytes[i]); return s; }
+  for (let i = start; i < end; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(end, i + 8192)) as unknown as number[]);
   return s;
 }
 

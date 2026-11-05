@@ -81,13 +81,17 @@ function decodeUnicodeCodes(text: string): string {
  * to one the same table already has keeps its codes, and so does every mention of it: blocks the reader rebuilt come
  * in already decoded (上晴 B區 0818: ten blocks were overwritten, 92 texts and 153 inserts gone). Returns how many changed.
  */
+// Vertices and other points hold only numbers: skipping them keeps the two walks off the bulk of a drawing
+// (公設平面分區圖 1F: 0.6 s walking coordinates).
+const isPoint = (node: Any) => typeof node.x === "number" && typeof node.y === "number" && node.type === undefined && node.text === undefined;
+
 export function decodeMifNames(doc: Any): number {
   let changed = 0;
   const encoding = mifEncodingOf(doc);
   const decode = (s: string) => decodeUnicodeCodes(s.includes("\\M+") ? decodeMifText(dropReadPastTail(s), encoding) : s);
   const keep = new Set<string>();
   const scan = (node: Any, seen: Set<object>): void => {
-    if (!node || typeof node !== "object" || seen.has(node) || ArrayBuffer.isView(node)) return;
+    if (!node || typeof node !== "object" || isPoint(node) || seen.has(node) || ArrayBuffer.isView(node)) return;
     seen.add(node);
     const keys = Array.isArray(node) ? [] : Object.keys(node);
     const taken = new Set(keys.filter((k) => !coded(k)));
@@ -103,7 +107,7 @@ export function decodeMifNames(doc: Any): number {
       if (next !== node) changed++;
       return next;
     }
-    if (!node || typeof node !== "object" || seen.has(node) || ArrayBuffer.isView(node)) return node;
+    if (!node || typeof node !== "object" || isPoint(node) || seen.has(node) || ArrayBuffer.isView(node)) return node;
     seen.add(node);
     if (Array.isArray(node)) { for (let i = 0; i < node.length; i++) node[i] = walk(node[i]); return node; }
     let rekey = false;
