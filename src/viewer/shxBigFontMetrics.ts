@@ -48,8 +48,8 @@ const LATIN_ADVANCE: Record<string, number[]> = {"a1.shx":[562,531,531,531,531,5
 
 // Common Taiwan TrueType fonts that are not on a phone: ASCII 32-126 advances in thousandths of the text height, and the
 // full-width pitch. CAD sizes a TrueType text by its own scale (DFKai-SB 1.414, Microsoft JhengHei 1.322 em per text
-// height, PMingLiU 1.488, measured against ZWCAD boxes of 1905, 33 and 387 texts; MingLiU shares PMingLiU's file and
-// glyph heights, so it takes the same scale), so 標楷體's fixed half-width Latin advances 0.707 text
+// height, PMingLiU and MingLiU 1.488, measured against ZWCAD boxes of 1905, 33 and 387 drawing texts and of test texts
+// in each font, 010-BUG檢查/工具/_ttf_scale_probe.py), so 標楷體's fixed half-width Latin advances 0.707 text
 // heights where the bundled Liberation Sans gave about 1.0: 惠宇敦南 1F-EE1「GP&GML」ran into「ATS&EMP」. Advance
 // widths only, taken from the Windows font files; no font data ships with the app.
 const TTF_METRICS: Record<string, { cjk: number; latin: number[] }> = {
