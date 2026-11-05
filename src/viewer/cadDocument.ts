@@ -87,6 +87,9 @@ export function selectCadSpace(source:Any,name:string):Any {
   // INSERT (惠宇敦南 RF電氣1: 33 viewports each held a copy of the 12-thousand-entity model, 2 GB, the page froze).
   const frozenKey=[...frozen].sort().join('\n');let block=viewportBlocks.get(frozenKey);
   if(!block){block='__FATCAT_VIEWPORT_'+v.handle;doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:model.filter((e:Any)=>!frozen.has(e.layer))};viewportBlocks.set(frozenKey,block);}
+  // CAD draws a viewport's frame on the viewport's layer (RF電氣1 配置2: ZWCAD's 32 framed views, the App's bare ones);
+  // an object-clipped viewport's frame is its boundary entity, already in paper space.
+  if(!boundary&&!v.hidden){const w=v.width/2,h=v.height/2,p=v.position;doc.entities.push({type:'LWPOLYLINE',handle:'viewport-frame-'+v.handle,layer:v.layer,shape:true,vertices:[{x:p.x-w,y:p.y-h},{x:p.x+w,y:p.y-h},{x:p.x+w,y:p.y+h},{x:p.x-w,y:p.y+h}]});}
   doc.entities.push({type:'INSERT',name:block,handle:'viewport-'+v.handle,layer:v.layer,position:offset,xScale:scale,yScale:scale,zScale:1,rotation:-v.twist,xdata:{FATCAT_XCLIP:{values:[{code:1000,value:clip.map(p=>p.x+','+p.y).join(';')}]}}});
  }
  fillFields();

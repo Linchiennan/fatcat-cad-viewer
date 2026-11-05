@@ -52,6 +52,17 @@ describe("object-clipped layout viewports", () => {
     expect(paper.blocks[insert.name].entities.map((e: any) => e.handle)).toEqual(["M2"]);
   });
 
+  it("draws a rectangular viewport's frame on its layer, as CAD does (RF電氣1 配置2)", () => {
+    const paper = selectCadSpace({ entities: [{ type: "LINE", handle: "M", layer: "0", cadSpace: "Model" },
+      viewport({ flags: 0, clipHandle: "0", layer: "VPORT" })], blocks: {}, tables: {} }, "P");
+    const frame = paper.entities.find((e: any) => e.handle === "viewport-frame-VP");
+    expect(frame).toMatchObject({ type: "LWPOLYLINE", layer: "VPORT", shape: true });
+    expect(frame.vertices).toEqual([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }]);
+    // an object-clipped viewport's frame is its own boundary entity
+    const clipped = selectCadSpace({ entities: [square, viewport()], blocks: {}, tables: {} }, "P");
+    expect(clipped.entities.some((e: any) => e.handle === "viewport-frame-VP")).toBe(false);
+  });
+
   it("still explains a viewport whose boundary object is missing", () => {
     const paper = selectCadSpace({ entities: [viewport({ clipHandle: "GONE" })], blocks: {}, tables: {} }, "P");
     expect(paper.entities.some((e: any) => e.type === "INSERT")).toBe(false);
