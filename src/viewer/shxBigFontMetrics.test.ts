@@ -122,6 +122,7 @@ describe("TrueType fonts not on the phone (惠宇敦南 1F-EE1 標楷體「GP&GM
     expect(width).toBeCloseTo(63.646, 1);
     expect(fittedShape("設", glyph(), m).advance).toBe(1.414);
     expect(fallbackMetrics({ font: "msjh.ttc" })?.latin!["A".charCodeAt(0) - 32]).toBe(916);
+    expect(fallbackMetrics({ font: "kaiu_0.ttf" })?.key).toBe("kaiu"); // a renamed copy (排水竣工圖-1)
   });
 
   it("narrows a letter wider than its fixed-width cell instead of letting it run into the next", () => {

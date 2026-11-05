@@ -61,7 +61,8 @@ export type FallbackMetrics = { key: string; cjk: number | null; latin: number[]
 /** Widths to imitate when a style's SHX or TrueType font falls back to the bundled outline font, or null. */
 export function fallbackMetrics(style: { font?: string; bigFont?: string }): FallbackMetrics | null {
   if (/\.(ttf|ttc|otf)$/i.test(style.font ?? "")) {
-    const key = fontKey(style.font!).replace(/\.(ttf|ttc|otf)$/, ""), m = TTF_METRICS[key];
+    // "kaiu_0.ttf" is a renamed copy of kaiu.ttf (惠宇敦南 排水竣工圖-1: ZWCAD's boxes match kaiu's to 0.1).
+    const key = fontKey(style.font!).replace(/\.(ttf|ttc|otf)$/, "").replace(/_\d+$/, ""), m = TTF_METRICS[key];
     return m ? { key, cjk: m.cjk, latin: m.latin, fit: null, squeeze: true } : null;
   }
   const font = style.font ? fontKey(style.font) : "", name = font && (font.endsWith(".shx") ? font : font + ".shx");
