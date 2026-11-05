@@ -45,3 +45,10 @@ it('all nine attachment points translate, without changing geometry',()=>{
  expect(list.every(g=>g.length===list[0].length)).toBe(true);
  expect(list[2][0][0].x).toBeLessThan(list[0][0][0].x);expect(list[6][0][0].y).toBeGreaterThan(list[0][0][0].y);
 });
+it('\\A alignment keeps SHX layout while a line is one height (惠宇敦南 19F撒水 dimension "\\A1;16")',()=>{
+ const plain=shxMtextGeometry({text:'AA',height:25,attachmentPoint:5,position:{x:0,y:0}},font)!;
+ expect(shxMtextGeometry({text:'\\A1;AA',height:25,attachmentPoint:5,position:{x:0,y:0}},font)).toEqual(plain);
+ // middle attachment: the characters straddle the insertion point
+ const ys=plain.flat().map(p=>p.y);expect(Math.min(...ys)).toBeCloseTo(-12.5,6);expect(Math.max(...ys)).toBeCloseTo(12.5,6);
+ for(const text of ['\\A1;A{\\H2x;A}','\\A5;A','\\A1A'])expect(shxMtextGeometry({text,height:10},font)).toBeNull();
+});

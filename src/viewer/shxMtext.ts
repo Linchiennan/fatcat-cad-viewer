@@ -7,7 +7,7 @@ export function shxMtextGeometry(e:any,font:ShxFont,big?:ShxFont):P[][]|null {
  const base=e.height??e.textHeight??1;if(!(base>0))return null;
  type Style={height:number;width:number;oblique:number;under:boolean;over:boolean};
  let s:Style={height:base,width:1,oblique:0,under:false,over:false};const stack:Style[]=[];
- const lines:{paths:P[][];width:number;height:number}[]=[];let paths:P[][]=[],x=0,maxHeight=base;
+ const lines:{paths:P[][];width:number;height:number}[]=[];let paths:P[][]=[],x=0,maxHeight=base,mixedAlign=false;const heights=new Set<number>();
  const flush=()=>{lines.push({paths,width:x,height:maxHeight});paths=[];x=0;maxHeight=base;};
  const add=(text:string):boolean=>{
   const strokes=shxTextGeometry({text,textHeight:s.height,xScale:s.width,obliqueAngle:s.oblique,startPoint:{x,y:0}},font,big);if(strokes===null)return false;
@@ -15,7 +15,7 @@ export function shxMtextGeometry(e:any,font:ShxFont,big?:ShxFont):P[][]|null {
   let advance=0;
   for(const ch of text){if(!font.hasChar(ch.codePointAt(0)!))return false;const m=font.fontData.content,g=font.getCharShape(ch.codePointAt(0)!,s.height*m.height/(m.baseUp||m.height));if(!g)return false;advance+=(g.lastPoint?.x??0)*s.width;}
   paths.push(...strokes);if(s.under)paths.push([{x,y:-s.height*.2},{x:x+advance,y:-s.height*.2}]);if(s.over)paths.push([{x,y:s.height*1.2},{x:x+advance,y:s.height*1.2}]);
-  x+=advance;maxHeight=Math.max(maxHeight,s.height);return true;
+  x+=advance;maxHeight=Math.max(maxHeight,s.height);heights.add(s.height);return true;
  };
  for(let i=0;i<source.length;){const c=source[i++];
   if(c==='{'){stack.push({...s});continue;}if(c==='}'){if(!stack.length)return null;s=stack.pop()!;continue;}
@@ -23,6 +23,10 @@ export function shxMtextGeometry(e:any,font:ShxFont,big?:ShxFont):P[][]|null {
   const cmd=source[i++];if(cmd==='P'){flush();continue;}
   if(cmd==='L'||cmd==='l'){s.under=cmd==='L';continue;}if(cmd==='O'||cmd==='o'){s.over=cmd==='O';continue;}
   if(cmd==='~'){if(!add(' '))return null;continue;}
+  // \A0; \A1; \A2;: characters of a line on its bottom, middle or top. Every character of a line shares one baseline
+  // here, which is what CAD shows while they are one height (惠宇敦南 19F撒水: dimension text "\A1;16" fell back to the
+  // outline font, drawn bold and 8.6 units high).
+  if(cmd==='A'){const end=source.indexOf(';',i);if(end<0||!/^[012]$/.test(source.slice(i,end)))return null;i=end+1;mixedAlign=true;continue;}
   if(cmd==='H'||cmd==='W'||cmd==='Q'){
    const end=source.indexOf(';',i);if(end<0)return null;const value=source.slice(i,end),n=Number(value.replace(/x$/i,''));i=end+1;
    if(!Number.isFinite(n))return null;
@@ -34,6 +38,8 @@ export function shxMtextGeometry(e:any,font:ShxFont,big?:ShxFont):P[][]|null {
   return null;
  }
  if(stack.length)return null;flush();
+ // \A only moves characters of differing heights: those are left to the general renderer
+ if(mixedAlign&&heights.size>1)return null;
  // Avoid claiming automatic word-wrap parity: hand layout only when the declared box fits.
  const width=Math.max(...lines.map(l=>l.width));if(e.width>0&&width>e.width+1e-8)return null;
  const factor=e.lineSpacingFactor??e.lineSpacing??1;if(!(factor>0&&factor<=4))return null;
