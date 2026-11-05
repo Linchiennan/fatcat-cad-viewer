@@ -9,12 +9,22 @@ const END = 0xfffffffe, FREE = 0xffffffff;
 
 export type OleImage = { bytes: Uint8Array; mime: "image/bmp" | "image/png" | "image/jpeg" | "image/wmf" };
 
+// Nibble value per character code, 255 for anything that is not a hex digit.
+const NIBBLE = new Uint8Array(65536).fill(255);
+for (let i = 0; i < 10; i++) NIBBLE[48 + i] = i;
+for (let i = 0; i < 6; i++) NIBBLE[65 + i] = NIBBLE[97 + i] = 10 + i;
+
+/** A table lookup per character: parseInt per byte took most of the open time on phones (惠宇 A06, 18 MB of OLE hex). */
 export function hexToBytes(chunks: readonly string[]): Uint8Array {
   const total = chunks.reduce((n, c) => n + (c.length >> 1), 0);
   if (total > MAX_OLE_BYTES) throw Error("內嵌物件超過64MB安全上限");
   const out = new Uint8Array(total);
   let k = 0;
-  for (const chunk of chunks) for (let i = 0; i + 1 < chunk.length; i += 2) out[k++] = parseInt(chunk.substr(i, 2), 16);
+  for (const chunk of chunks) for (let i = 0; i + 1 < chunk.length; i += 2) {
+    const hi = NIBBLE[chunk.charCodeAt(i)], lo = NIBBLE[chunk.charCodeAt(i + 1)];
+    // as parseInt did: a leading digit alone ("7z" → 7), and 0 (NaN in a byte) when the first is not a digit
+    out[k++] = hi === 255 ? 0 : lo === 255 ? hi : (hi << 4) | lo;
+  }
   return out;
 }
 

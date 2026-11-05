@@ -100,6 +100,13 @@ describe("embedded OLE pictures", () => {
     expect(Array.from(hexToBytes(["00ff", "7A"]))).toEqual([0, 255, 0x7a]);
   });
 
+  it("reads every pair as parseInt did, stray characters included", () => {
+    const chunk = "0123456789abcdefABCDEF7zz7G1éa";
+    const expected = [];
+    for (let i = 0; i + 1 < chunk.length; i += 2) expected.push(parseInt(chunk.substr(i, 2), 16) & 255);
+    expect(Array.from(hexToBytes([chunk]))).toEqual(expected);
+  });
+
   it("turns an OLE2FRAME record into an embedded IMAGE placeholder with its frame corners", () => {
     const dxf = ["0", "SECTION", "2", "ENTITIES", "0", "OLE2FRAME", "5", "AB1", "8", "照片", "100", "AcDbOle2Frame",
       "10", "10", "20", "50", "30", "0", "11", "30", "21", "40", "31", "0", "310", "00FF", "310", "7A", "0", "ENDSEC", "0", "EOF"].join("\n");
