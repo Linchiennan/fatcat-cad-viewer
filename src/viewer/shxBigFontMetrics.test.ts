@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector2 } from "three";
-import { bigFontFile, bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape, trueTypeFace } from "./shxBigFontMetrics";
+import { bigFontFile, bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape, slantedMetrics, trueTypeFace } from "./shxBigFontMetrics";
 
 // Bundled outline glyph stand-in: a full-width square 1.389 text heights wide.
 const glyph = () => ({
@@ -164,6 +164,25 @@ describe("TrueType faces named in the STYLE (山曦60A防火捲門套圖 @PMingL
     expect(s.vertices![1].x).toBeCloseTo(cx + cy, 9);
     expect(s.vertices![1].y).toBeCloseTo(cy + 1.3 - cx, 9);
     expect(fittedShape("A", glyph(), m).vertices![1].x).toBe(1.3);
+  });
+});
+
+describe("oblique styles drawn in a fallback font (山曦60A防火捲門套圖 18°)", () => {
+  it("slants each glyph about its baseline origin, right for a positive angle", () => {
+    const m = slantedMetrics(null, 45)!, s = fittedShape("A", glyph(), m);
+    expect(s.vertices![2].x).toBeCloseTo(1.3 + 1, 9); // (1.3, 1) moves right by its height
+    expect(s.vertices![0].x).toBeCloseTo(0.1, 9); // baseline points stay
+    expect(slantedMetrics(null, 0)).toBeNull();
+    expect(slantedMetrics(null, 90)).toBeNull();
+    expect(slantedMetrics(fallbackMetrics({ font: "kaiu.ttf" }), 15)!.key).not.toBe(fallbackMetrics({ font: "kaiu.ttf" })!.key);
+  });
+
+  it("slants an upright character of a vertical face in its own frame, before the quarter turn", () => {
+    const m = slantedMetrics(fallbackMetrics({ font: "@華康儷細黑.ttf" }), 45)!;
+    const plain = fittedShape("山", glyph(), fallbackMetrics({ font: "@華康儷細黑.ttf" })!), s = fittedShape("山", glyph(), m);
+    // (1.3, 1) shifts by −1 in x before turning, which the turn makes −1 in y
+    expect(s.vertices![2].y).toBeCloseTo(plain.vertices![2].y - 1, 9);
+    expect(s.vertices![2].x).toBeCloseTo(plain.vertices![2].x, 9);
   });
 });
 

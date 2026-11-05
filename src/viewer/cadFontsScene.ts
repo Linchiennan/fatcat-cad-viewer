@@ -1,6 +1,6 @@
 import {listCadFonts} from './cadFonts';
 import {shxMtextGeometry} from './shxMtext';
-import {fallbackMetrics,fittedShape,trueTypeFace,verticalMtextEntities,verticalPitch,verticalTextEntities} from './shxBigFontMetrics';
+import {fallbackMetrics,fittedShape,slantedMetrics,trueTypeFace,verticalMtextEntities,verticalPitch,verticalTextEntities} from './shxBigFontMetrics';
 import {plainCadText} from './textSearch';
 import {ShxFont,fontKey,shxTextGeometry} from './shxText';
 import {parse} from 'opentype.js';
@@ -50,7 +50,7 @@ export function installCadFontScene(ctor:Any):void {
    const outline=this.cadOutlineFonts?.get(fontKey(style.font??''));
    if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* generationMirror(effective,original.call(this,effective,ctx));this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
    if(font){const lines=shxTextGeometry(effective,font,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
-   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withShxRenderer(this,style,()=>withBigFontPitch(this.textRenderer,style,()=>generationMirror(effective,original.call(this,effective,ctx))));
+   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withShxRenderer(this,style,()=>withBigFontPitch(this.textRenderer,style,()=>generationMirror(effective,original.call(this,effective,ctx)),effective.obliqueAngle));
   };
  }
  const mtext=p._DecomposeMText;p._DecomposeMText=function*(e:Any,ctx:Any){
@@ -91,7 +91,7 @@ function* withShxRenderer(scene:Any,style:Any,run:()=>Generator<Any>):Generator<
  const previous=scene.textRenderer;scene.textRenderer=light;
  try{yield* run();}finally{scene.textRenderer=previous;}
 }
-function* withBigFontPitch(renderer:Any,style:Any,run:()=>Generator<Any>):Generator<Any>{
- const previous=renderer.fatcatPitch;renderer.fatcatPitch=fallbackMetrics(style);
+function* withBigFontPitch(renderer:Any,style:Any,run:()=>Generator<Any>,oblique=Number(style?.obliqueAngle)||0):Generator<Any>{
+ const previous=renderer.fatcatPitch;renderer.fatcatPitch=slantedMetrics(fallbackMetrics(style),oblique);
  try{yield* run();}finally{renderer.fatcatPitch=previous;}
 }

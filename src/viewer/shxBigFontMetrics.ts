@@ -59,7 +59,14 @@ const TTF_METRICS: Record<string, { cjk: number; latin: number[] }> = {
   "msjh": { cjk: 1.322, latin: [330,402,550,844,766,1164,1138,323,424,424,591,975,305,571,305,551,766,766,766,766,766,766,766,766,766,766,305,305,975,975,975,640,1363,916,812,883,998,720,694,977,1008,376,501,822,668,1276,1064,1076,795,1076,849,756,742,978,882,1327,837,784,811,424,536,424,975,593,378,724,836,658,838,745,440,838,805,343,342,704,343,1225,804,834,836,838,492,603,480,804,678,1024,647,686,643,424,333,424,975] },
 };
 
-export type FallbackMetrics = { key: string; cjk: number | null; latin: number[] | null; fit?: [number, number] | null; squeeze?: boolean; vertical?: boolean };
+export type FallbackMetrics = { key: string; cjk: number | null; latin: number[] | null; fit?: [number, number] | null; squeeze?: boolean; vertical?: boolean; oblique?: number };
+
+/** The fallback metrics of a style with the text's oblique angle (degrees) folded in; null when nothing changes. */
+export function slantedMetrics(m: FallbackMetrics | null, obliqueDegrees: number): FallbackMetrics | null {
+  const tan = Math.tan((obliqueDegrees || 0) * Math.PI / 180);
+  if (!tan || !Number.isFinite(tan) || Math.abs(obliqueDegrees) >= 85) return m;
+  return { ...(m ?? { key: "", cjk: null, latin: null }), oblique: tan, key: (m?.key ?? "") + "|q" + obliqueDegrees };
+}
 
 // A STYLE may name a TrueType face instead of a file ("PMingLiU", "@PMingLiU"); without an extension the App took it
 // for an SHX font.
@@ -99,9 +106,35 @@ export function fallbackMetrics(style: { font?: string; bigFont?: string; cadFac
 
 /** The glyph a fallback character should use: CJK narrowed to the big font pitch, Latin re-spaced. */
 export function fittedShape<T extends Shape>(char: string, shape: T, m: FallbackMetrics): T {
+  // An upright character of a vertical face slants in its own frame (the cell before the quarter turn), top to the
+  // left as ZWCAD draws 山曦's 18° style on a text turned 270°: x −= y·tan.
+  if (m.vertical && m.oblique && FULL_WIDTH.test(char)) return fittedShapeUpright(char, shape, m, m.oblique);
+  const fitted = fittedShapeUpright(char, shape, m);
+  return m.oblique ? obliqued(fitted, m.oblique) : fitted;
+}
+
+function sheared<T extends Shape>(shape: T, tan: number): T {
+  const vertices = shape.vertices?.map((v) => { const c = v.clone(); c.x -= c.y * tan; return c; }) ?? null;
+  const b = shape.bounds, xs = b && [b.xMin - b.yMin * tan, b.xMin - b.yMax * tan, b.xMax - b.yMin * tan, b.xMax - b.yMax * tan];
+  const bounds = b && xs && { ...b, xMin: Math.min(...xs), xMax: Math.max(...xs) };
+  return Object.assign(Object.create(Object.getPrototypeOf(shape)), shape, { bounds, vertices });
+}
+
+/**
+ * The glyph slanted by the text's oblique angle (tan given), each character about its own baseline origin as CAD
+ * slants it. Only the SHX path slanted before; a fallback font drew 15° styles upright (山曦60A防火捲門套圖 STYLE 18°).
+ */
+export function obliqued<T extends Shape>(shape: T, tan: number): T {
+  const vertices = shape.vertices?.map((v) => { const c = v.clone(); c.x += c.y * tan; return c; }) ?? null;
+  const b = shape.bounds, xs = b && [b.xMin + b.yMin * tan, b.xMin + b.yMax * tan, b.xMax + b.yMin * tan, b.xMax + b.yMax * tan];
+  const bounds = b && xs && { ...b, xMin: Math.min(...xs), xMax: Math.max(...xs) };
+  return Object.assign(Object.create(Object.getPrototypeOf(shape)), shape, { bounds, vertices });
+}
+
+function fittedShapeUpright<T extends Shape>(char: string, shape: T, m: FallbackMetrics, verticalShear = 0): T {
   if (FULL_WIDTH.test(char) && (m.cjk !== null || m.vertical)) {
     const pitched = m.cjk !== null ? pitchedShape(char, shape, m.cjk, m.fit ?? undefined) : shape;
-    return m.vertical ? quarterTurned(pitched) : pitched;
+    return m.vertical ? quarterTurned(verticalShear ? sheared(pitched, verticalShear) : pitched) : pitched;
   }
   const code = char.length === 1 ? char.charCodeAt(0) : 0;
   if (!m.latin || code < 32 || code > 126) return shape;
