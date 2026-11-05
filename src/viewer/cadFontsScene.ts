@@ -58,7 +58,7 @@ export function installCadFontScene(ctor:Any):void {
   // Vertical style and direction "top to bottom" (3) or "by style" (5): upright characters in columns, as single-line text.
   const vertical=e.drawingDirection===1?null:verticalPitch(style);
   if(vertical){for(const c of verticalMtextEntities(e,vertical,plainCadText))yield* p._DecomposeText.call(this,{...c,cadVerticalChar:true},ctx);return;}
-  e=withStyleWidth(e,style);
+  e=withStyleWidth(unwrappedNarrow(e,style),style);
   const shx=this.cadFonts?.get(fontKey(style.font??'')),big=this.cadFonts?.get(fontKey(style.bigFont??''));
   if(shx){const lines=shxMtextGeometry(e,shx,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
   if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* mtext.call(this,e,ctx);this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
@@ -73,6 +73,15 @@ export function installCadFontScene(ctor:Any):void {
 export function withStyleWidth(e:Any,style:Any):Any{
  const w=Number(style?.widthFactor);
  return Number.isFinite(w)&&w>0&&w<=100&&Math.abs(w-1)>1e-9?{...e,text:`\\W${w};${e.text??''}`}:e;
+}
+/**
+ * An MTEXT box no wider than a tenth of its text height does not wrap in ZWCAD (measured at heights 1, 10 and 100:
+ * width 1.0 at height 10 stays on one line, 1.2 breaks every character). 惠宇敦南 標準層管道間 MLEADER「樓板預埋保麗龍」
+ * has width 0.6 at height 10 and was drawn one character per line.
+ */
+export function unwrappedNarrow(e:Any,style:Any):Any{
+ const h=Number(e.height)||Number(style?.fixedTextHeight)||0;
+ return e.width>0&&h>0&&e.width<=0.1*h+1e-9?{...e,width:0}:e;
 }
 /** A style drawn from SHX shapes (no font file, a .shx file or a name without extension), not an outline font. */
 export function isShxStyle(style:Any):boolean{const font=String(style?.font??'').trim();return !/\.(ttf|ttc|otf)$/i.test(font);}
