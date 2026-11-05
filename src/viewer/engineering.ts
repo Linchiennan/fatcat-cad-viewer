@@ -317,6 +317,9 @@ export function installEngineeringScene(ctor:Any):void {
     for(const mesh of meshes){if(e.extrusionDirection?.z<0)mesh.vertices=mesh.vertices.map(v=>({x:-v.x,y:v.y}));yield Object.assign(Object.create(Object.getPrototypeOf(first)),first,{type:3,...mesh});}return;
    }
    for(const prim of orig.call(this,e,ctx)){
+   // CAD draws a zero-length LINE as a dot: exploded DOTS hatches are made of them (惠宇敦南 6F撒水 *X79, the black
+   // half of the sprinkler symbol, was empty). The segment itself covers no pixel.
+   if(method==='_DecomposeLine'&&prim.type===1&&prim.vertices?.length===2&&prim.vertices[0].x===prim.vertices[1].x&&prim.vertices[0].y===prim.vertices[1].y){yield Object.assign(Object.create(Object.getPrototypeOf(prim)),prim,{type:0,vertices:[prim.vertices[0]],indices:undefined,shape:false});continue;}
    if(prim.type!==1&&prim.type!==2){yield prim;continue;}
    yield* complexLinePrimitives(this,e,prim,ctx);
    const pattern=this.cadLineTypes[e.lineType]?.pattern??[];
