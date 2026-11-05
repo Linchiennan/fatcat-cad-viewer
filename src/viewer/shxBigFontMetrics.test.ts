@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Vector2 } from "three";
-import { bigFontFile, bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape } from "./shxBigFontMetrics";
+import { bigFontFile, bigFontFit, bigFontPitch, fallbackMetrics, fittedShape, pitchedShape, trueTypeFace } from "./shxBigFontMetrics";
 
 // Bundled outline glyph stand-in: a full-width square 1.389 text heights wide.
 const glyph = () => ({
@@ -139,6 +139,31 @@ describe("TrueType fonts not on the phone (惠宇敦南 1F-EE1 標楷體「GP&GM
     expect(s.vertices![1].y).toBe(1); // height kept
     const i = { ...glyph(), advance: 0.3, bounds: { xMin: 0.1, xMax: 0.2, yMin: 0, yMax: 1 }, vertices: [new Vector2(0.1, 0), new Vector2(0.2, 1)] };
     expect(fittedShape("i", i, m).vertices![0].x).toBeCloseTo(0.1 + (0.707 - 0.3) / 2, 9); // narrow letters only move
+  });
+});
+
+describe("TrueType faces named in the STYLE (山曦60A防火捲門套圖 @PMingLiU, 106D201D @華康儷細黑.ttf)", () => {
+  it("tells TrueType faces from SHX fonts, with or without a file extension", () => {
+    expect(trueTypeFace("@PMingLiU")).toEqual({ key: "pmingliu", vertical: true });
+    expect(trueTypeFace("@DFKai-SB")).toEqual({ key: "kaiu", vertical: true });
+    expect(trueTypeFace("PMingLiU")).toEqual({ key: "pmingliu", vertical: false });
+    expect(trueTypeFace("@華康儷細黑.ttf")?.vertical).toBe(true);
+    expect(trueTypeFace("kaiu_0.ttf")?.key).toBe("kaiu");
+    expect(trueTypeFace("romans")).toBeNull();
+    expect(trueTypeFace("")).toBeNull();
+    // the ACAD xdata face wins over the font file field
+    expect(fallbackMetrics({ font: "kaiu.ttf", cadFace: "@DFKai-SB" })?.vertical).toBe(true);
+    expect(fallbackMetrics({ font: "", cadFace: "@PMingLiU" })?.cjk).toBe(1.488);
+  });
+
+  it("turns a vertical face's Chinese glyph a quarter counter-clockwise in its cell, Latin stays", () => {
+    const m = fallbackMetrics({ font: "@華康儷細黑.ttf" })!;
+    const s = fittedShape("山", glyph(), m), cx = 1.389 / 2, cy = (-0.111 + 1.167) / 2;
+    expect(s.advance).toBe(1.389);
+    // (1.3, 0) turns to (cx - (0 - cy), cy + (1.3 - cx))
+    expect(s.vertices![1].x).toBeCloseTo(cx + cy, 9);
+    expect(s.vertices![1].y).toBeCloseTo(cy + 1.3 - cx, 9);
+    expect(fittedShape("A", glyph(), m).vertices![1].x).toBe(1.3);
   });
 });
 

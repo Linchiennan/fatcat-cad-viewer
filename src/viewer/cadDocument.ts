@@ -117,6 +117,9 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  const blockNames=new Map<string,string>(rows.filter(r=>r.type==='BLOCK_RECORD').map(r=>[text(r,5),text(r,2)]));
  const dimStyles=new Map<string,LeaderStyle>(rows.filter(r=>r.type==='DIMSTYLE').map(r=>[text(r,2),{asz:r.tags.some(t=>t[0]===41)?num(r,41):undefined,scale:r.tags.some(t=>t[0]===40)?num(r,40):undefined,arrowBlock:blockNames.get(text(r,341))}]));
  const styleNames=new Map<string,string>(Object.values(doc.tables?.style?.styles??{}).filter((st:Any)=>st?.handle).map((st:Any)=>[String(st.handle),st.styleName??st.name]));
+ // A TrueType STYLE keeps its face name in ACAD xdata ("@PMingLiU", "@DFKai-SB"), which can say more than the font file
+ // field (empty, or kaiu.ttf for the vertical @DFKai-SB face): shxBigFontMetrics.trueTypeFace reads it as cadFace.
+ for(const st of Object.values(doc.tables?.style?.styles??{}) as Any[]){const r=st?.handle&&recordsByHandle.get(String(st.handle));if(!r)continue;const i=r.tags.findIndex(([c,v]:[number,string])=>c===1001&&v==='ACAD');const face=i>=0&&r.tags[i+1]?.[0]===1000?String(r.tags[i+1][1]).trim():'';if(face)st.cadFace=face;}
  const queues=new Map<string,Any[]>(),indices=new Map<string,number>();for(const [block,entities] of [['',doc.entities??[]],...Object.entries(doc.blocks??{}).map(([name,b]:[string,Any])=>[name,b.entities??[]])] as [string,Any[]][]){for(const e of entities){const key=block+'|'+e.type;if(!queues.has(key))queues.set(key,[]);queues.get(key)!.push(e);}}
  for(const r of rows){if(!['ENTITIES','BLOCKS'].includes(r.section)||['BLOCK','ENDBLK','SECTION','ENDSEC','SEQEND','VERTEX'].includes(r.type))continue;
   const handle=text(r,5),owner=ownerOf(r);let space=text(r,410)||ownerSpace.get(owner)||(num(r,67)?'圖紙（未命名）':'Model');

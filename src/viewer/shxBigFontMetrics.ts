@@ -59,14 +59,36 @@ const TTF_METRICS: Record<string, { cjk: number; latin: number[] }> = {
   "msjh": { cjk: 1.322, latin: [330,402,550,844,766,1164,1138,323,424,424,591,975,305,571,305,551,766,766,766,766,766,766,766,766,766,766,305,305,975,975,975,640,1363,916,812,883,998,720,694,977,1008,376,501,822,668,1276,1064,1076,795,1076,849,756,742,978,882,1327,837,784,811,424,536,424,975,593,378,724,836,658,838,745,440,838,805,343,342,704,343,1225,804,834,836,838,492,603,480,804,678,1024,647,686,643,424,333,424,975] },
 };
 
-export type FallbackMetrics = { key: string; cjk: number | null; latin: number[] | null; fit?: [number, number] | null; squeeze?: boolean };
+export type FallbackMetrics = { key: string; cjk: number | null; latin: number[] | null; fit?: [number, number] | null; squeeze?: boolean; vertical?: boolean };
+
+// A STYLE may name a TrueType face instead of a file ("PMingLiU", "@PMingLiU"); without an extension the App took it
+// for an SHX font.
+const TTF_FAMILIES: Record<string, string> = {
+  "pmingliu": "pmingliu", "新細明體": "pmingliu", "mingliu": "mingliu", "細明體": "mingliu",
+  "kaiu": "kaiu", "dfkai-sb": "kaiu", "標楷體": "kaiu", "msjh": "msjh", "microsoft jhenghei": "msjh", "微軟正黑體": "msjh",
+};
+
+/**
+ * The TrueType face a STYLE font names, or null for SHX. "@" faces are Windows' vertical fonts: CAD turns each
+ * full-width character a quarter turn so a text rotated 270° reads top to bottom with upright characters (惠宇敦南
+ * 山曦60A防火捲門套圖「山曦」@PMingLiU).
+ */
+export function trueTypeFace(font: string | undefined): { key: string; vertical: boolean } | null {
+  const raw = (font ?? "").trim();
+  if (!raw) return null;
+  const vertical = raw.startsWith("@"), name = fontKey(raw.replace(/^@/, ""));
+  // "kaiu_0.ttf" is a renamed copy of kaiu.ttf (惠宇敦南 排水竣工圖-1: ZWCAD's boxes match kaiu's to 0.1).
+  const base = name.replace(/\.(ttf|ttc|otf)$/, "").replace(/_\d+$/, "");
+  return vertical || /\.(ttf|ttc|otf)$/.test(name) || TTF_FAMILIES[base] ? { key: TTF_FAMILIES[base] ?? base, vertical } : null;
+}
 
 /** Widths to imitate when a style's SHX or TrueType font falls back to the bundled outline font, or null. */
-export function fallbackMetrics(style: { font?: string; bigFont?: string }): FallbackMetrics | null {
-  if (/\.(ttf|ttc|otf)$/i.test(style.font ?? "")) {
-    // "kaiu_0.ttf" is a renamed copy of kaiu.ttf (惠宇敦南 排水竣工圖-1: ZWCAD's boxes match kaiu's to 0.1).
-    const key = fontKey(style.font!).replace(/\.(ttf|ttc|otf)$/, "").replace(/_\d+$/, ""), m = TTF_METRICS[key];
-    return m ? { key, cjk: m.cjk, latin: m.latin, fit: null, squeeze: true } : null;
+export function fallbackMetrics(style: { font?: string; bigFont?: string; cadFace?: string }): FallbackMetrics | null {
+  const ttf = trueTypeFace(style.cadFace || style.font);
+  if (ttf) {
+    const m = TTF_METRICS[ttf.key];
+    if (!m && !ttf.vertical) return null;
+    return { key: (ttf.vertical ? "@" : "") + ttf.key, cjk: m?.cjk ?? null, latin: m?.latin ?? null, fit: null, squeeze: true, vertical: ttf.vertical };
   }
   const font = style.font ? fontKey(style.font) : "", name = font && (font.endsWith(".shx") ? font : font + ".shx");
   const cjk = style.bigFont ? bigFontPitch(style.bigFont) : null;
@@ -77,7 +99,10 @@ export function fallbackMetrics(style: { font?: string; bigFont?: string }): Fal
 
 /** The glyph a fallback character should use: CJK narrowed to the big font pitch, Latin re-spaced. */
 export function fittedShape<T extends Shape>(char: string, shape: T, m: FallbackMetrics): T {
-  if (m.cjk !== null && FULL_WIDTH.test(char)) return pitchedShape(char, shape, m.cjk, m.fit ?? undefined);
+  if (FULL_WIDTH.test(char) && (m.cjk !== null || m.vertical)) {
+    const pitched = m.cjk !== null ? pitchedShape(char, shape, m.cjk, m.fit ?? undefined) : shape;
+    return m.vertical ? quarterTurned(pitched) : pitched;
+  }
   const code = char.length === 1 ? char.charCodeAt(0) : 0;
   if (!m.latin || code < 32 || code > 126) return shape;
   const advance = m.latin[code - 32] / 1000;
@@ -90,6 +115,16 @@ export function fittedShape<T extends Shape>(char: string, shape: T, m: Fallback
 }
 
 type Shape = { advance: number; bounds?: { xMin: number; xMax: number; yMin: number; yMax: number }; vertices: { x: number; y: number; clone(): any }[] | null; indices?: number[]; GetVertices(position: { x: number; y: number }, size: number): any[] };
+
+/** A full-width glyph turned a quarter counter-clockwise about the middle of its cell, keeping its advance. */
+export function quarterTurned<T extends Shape>(shape: T): T {
+  const cx = shape.advance / 2, cy = (OUTLINE_CJK_Y[0] + OUTLINE_CJK_Y[1]) / 2;
+  const turn = (x: number, y: number) => ({ x: cx - (y - cy), y: cy + (x - cx) });
+  const vertices = shape.vertices?.map((v) => { const c = v.clone(), t = turn(v.x, v.y); c.x = t.x; c.y = t.y; return c; }) ?? null;
+  const b = shape.bounds, corners = b && [turn(b.xMin, b.yMin), turn(b.xMax, b.yMax)];
+  const bounds = corners && { xMin: Math.min(corners[0].x, corners[1].x), xMax: Math.max(corners[0].x, corners[1].x), yMin: Math.min(corners[0].y, corners[1].y), yMax: Math.max(corners[0].y, corners[1].y) };
+  return Object.assign(Object.create(Object.getPrototypeOf(shape)), shape, { bounds, vertices });
+}
 
 /** The same glyph narrowed so a full-width character advances by `pitch` text heights, and moved by `fit` (scale, lift)
  * to stand where the big font draws it: the outline font's Chinese stood up to 1.4 text heights where CHINA draws 0.92

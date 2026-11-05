@@ -1,6 +1,6 @@
 import {listCadFonts} from './cadFonts';
 import {shxMtextGeometry} from './shxMtext';
-import {fallbackMetrics,fittedShape,verticalMtextEntities,verticalPitch,verticalTextEntities} from './shxBigFontMetrics';
+import {fallbackMetrics,fittedShape,trueTypeFace,verticalMtextEntities,verticalPitch,verticalTextEntities} from './shxBigFontMetrics';
 import {plainCadText} from './textSearch';
 import {ShxFont,fontKey,shxTextGeometry} from './shxText';
 import {parse} from 'opentype.js';
@@ -84,7 +84,7 @@ export function unwrappedNarrow(e:Any,style:Any):Any{
  return e.width>0&&h>0&&e.width<=0.1*h+1e-9?{...e,width:0}:e;
 }
 /** A style drawn from SHX shapes (no font file, a .shx file or a name without extension), not an outline font. */
-export function isShxStyle(style:Any):boolean{const font=String(style?.font??'').trim();return !/\.(ttf|ttc|otf)$/i.test(font);}
+export function isShxStyle(style:Any):boolean{return !trueTypeFace(String(style?.cadFace||style?.font||''));}
 /** Runs SHX-style text with the light-weight renderer when it was loaded. */
 function* withShxRenderer(scene:Any,style:Any,run:()=>Generator<Any>):Generator<Any>{
  const light=scene.cadShxRenderer;if(!light||!isShxStyle(style)){yield* run();return;}
