@@ -85,7 +85,9 @@ core = ['./', './index.html', './usage.html', './WEB_PRIVACY.md', './manifest.we
 core += files_under('assets') + files_under('icons')
 runtime = files_under('runtime') + files_under('fonts') + files_under('demo')
 sw = (w / 'web/sw.template.js').read_text(encoding='utf8')
-sw = sw.replace('__BUILD_ID__', build).replace('__PRECACHE__', json.dumps(core, ensure_ascii=False)).replace('__RUNTIME_PRECACHE__', json.dumps(runtime, ensure_ascii=False))
+# Content hash per runtime file: the offline cache keeps a font or engine across versions until its bytes change.
+runtime_hashes = {p: hashlib.sha256((out / p[2:]).read_bytes()).hexdigest()[:16] for p in runtime}
+sw = sw.replace('__BUILD_ID__', build).replace('__PRECACHE__', json.dumps(core, ensure_ascii=False)).replace('__RUNTIME_PRECACHE__', json.dumps(runtime, ensure_ascii=False)).replace('__RUNTIME_HASHES__', json.dumps(runtime_hashes, ensure_ascii=False))
 (out / 'sw.js').write_text(sw, encoding='utf8')
 
 # Self-check: no drawings or credentials shipped, every cached entry exists, runtime and fonts are in the cache.
@@ -101,7 +103,7 @@ mf = json.loads((out / 'manifest.webmanifest').read_text(encoding='utf8'))
 for icon in mf['icons']:
     assert (out / icon['src']).is_file(), icon
 text = (out / 'sw.js').read_text(encoding='utf8')
-assert '__BUILD_ID__' not in text and '__PRECACHE__' not in text and '__RUNTIME_PRECACHE__' not in text
+assert '__BUILD_ID__' not in text and '__PRECACHE__' not in text and '__RUNTIME_PRECACHE__' not in text and '__RUNTIME_HASHES__' not in text
 size = lambda urls: sum((out / u[2:]).stat().st_size for u in urls if u != './')
 summary = {'build': build, 'files': len(files), 'totalBytes': sum(p.stat().st_size for p in files),
            'coreEntries': len(core), 'coreBytes': size(core), 'runtimeEntries': len(runtime), 'runtimeBytes': size(runtime)}
