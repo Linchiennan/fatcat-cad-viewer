@@ -1,5 +1,7 @@
 import { BufferAttribute, BufferGeometry, InstancedBufferGeometry, LineSegments, Mesh, RawShaderMaterial, Vector2 } from 'three';
 import type { DxfViewer } from 'dxf-viewer';
+/** The six corners of a segment's two triangles: [at the end point, side]. */
+const STROKE_CORNERS:[boolean,number][]=[[false,-1],[true,-1],[true,1],[false,-1],[true,1],[false,1]];
 /** Screen-space triangle strokes: WebGL implementations may only support line width 1.
  * Keep original CAD geometry/pattern and apply hundredths-mm lineweight at 96 CSS dpi.
  * Clipping shaders and instance transforms remain intact. */
@@ -9,17 +11,21 @@ export function installScreenStrokes(viewer:DxfViewer):()=>void {
  for(const object of [...scene.children]) {
   if(!(object instanceof LineSegments))continue;
   const source=object.geometry,position=source.getAttribute('position'),index=source.index;
-  const count=index?.count??position.count, points:number[]=[], directions:number[]=[], sides:number[]=[];
+  // Filled straight into typed arrays: number[] (8 bytes a value, grown by doubling) plus the copy needed several
+  // times the memory (上晴 公設B區-2 算圖: "Array buffer allocation failed" here).
+  const count=index?.count??position.count, segments=count>>1;
+  const points=new Float32Array(segments*12), directions=new Float32Array(segments*12), sides=new Float32Array(segments*6);
+  let n=0;
   for(let i=0;i+1<count;i+=2){const a=index?index.getX(i):i,b=index?index.getX(i+1):i+1;
-   const dx=position.getX(b)-position.getX(a),dy=position.getY(b)-position.getY(a);if(!dx&&!dy)continue;
-   for(const [id,side] of [[a,-1],[b,-1],[b,1],[a,-1],[b,1],[a,1]]) {points.push(position.getX(id),position.getY(id));directions.push(dx,dy);sides.push(side);}
+   const ax=position.getX(a),ay=position.getY(a),bx=position.getX(b),by=position.getY(b),dx=bx-ax,dy=by-ay;if(!dx&&!dy)continue;
+   for(const [end,side] of STROKE_CORNERS){points[n*2]=end?bx:ax;points[n*2+1]=end?by:ay;directions[n*2]=dx;directions[n*2+1]=dy;sides[n]=side;n++;}
   }
   const geometry=source instanceof InstancedBufferGeometry?new InstancedBufferGeometry():new BufferGeometry();
   if(geometry instanceof InstancedBufferGeometry&&source instanceof InstancedBufferGeometry)geometry.instanceCount=source.instanceCount;
   for(const [key,value] of Object.entries(source.attributes))if(key!=='position')geometry.setAttribute(key,value as BufferAttribute);
-  geometry.setAttribute('position',new BufferAttribute(new Float32Array(points),2));
-  geometry.setAttribute('cadDirection',new BufferAttribute(new Float32Array(directions),2));
-  geometry.setAttribute('cadSide',new BufferAttribute(new Float32Array(sides),1));
+  geometry.setAttribute('position',new BufferAttribute(points.subarray(0,n*2),2));
+  geometry.setAttribute('cadDirection',new BufferAttribute(directions.subarray(0,n*2),2));
+  geometry.setAttribute('cadSide',new BufferAttribute(sides.subarray(0,n),1));
   const material=(object.material as RawShaderMaterial).clone();materials.push(material);
   const instanced=material.vertexShader.includes('in vec3 instanceTransform0;');
   material.uniforms.cadViewport={value:new Vector2()};
