@@ -63,6 +63,14 @@ describe("object-clipped layout viewports", () => {
     expect(clipped.entities.some((e: any) => e.handle === "viewport-frame-VP")).toBe(false);
   });
 
+  it("keeps model dashes their paper length under PSLTSCALE (RF電氣1 配置2: four times too long at 4.05 paper per model)", () => {
+    const doc = (ps?: number) => ({ header: ps === undefined ? {} : { $PSLTSCALE: ps }, entities: [{ type: "LINE", handle: "M", layer: "0", cadSpace: "Model", lineTypeScale: 2 },
+      viewport({ flags: 0, clipHandle: "0", height: 10, viewHeight: 2.5 })], blocks: {}, tables: {} });
+    const shown = (d: any) => { const p = selectCadSpace(d, "P"), i = p.entities.find((e: any) => e.type === "INSERT"); return p.blocks[i.name].entities[0]; };
+    expect(shown(doc()).lineTypeScale).toBeCloseTo(0.5, 9); // scale 4: 2 / 4
+    expect(shown(doc(0)).lineTypeScale).toBe(2); // PSLTSCALE 0 leaves model dashes alone
+  });
+
   it("still explains a viewport whose boundary object is missing", () => {
     const paper = selectCadSpace({ entities: [viewport({ clipHandle: "GONE" })], blocks: {}, tables: {} }, "P");
     expect(paper.entities.some((e: any) => e.type === "INSERT")).toBe(false);

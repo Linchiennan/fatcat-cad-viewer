@@ -85,8 +85,12 @@ export function selectCadSpace(source:Any,name:string):Any {
   const frozen=new Set(Object.entries(doc.tables?.layer?.layers??{}).filter(([,l]:[string,Any])=>(v.frozen??[]).includes(l.handle)).map(([n])=>n));
   // Viewports freezing the same layers show the same model: one block for them all, each placed and clipped by its own
   // INSERT (惠宇敦南 RF電氣1: 33 viewports each held a copy of the 12-thousand-entity model, 2 GB, the page froze).
-  const frozenKey=[...frozen].sort().join('\n');let block=viewportBlocks.get(frozenKey);
-  if(!block){block='__FATCAT_VIEWPORT_'+v.handle;doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:model.filter((e:Any)=>!frozen.has(e.layer))};viewportBlocks.set(frozenKey,block);}
+  // PSLTSCALE (default 1) keeps dashes their paper length in every viewport: model line types shrink by the viewport
+  // scale (惠宇敦南 RF電氣1 配置2, LTSCALE 150 at 4.05 paper per model: dashes ran four times ZWCAD's). Line types inside
+  // blocks keep the block's shared definition.
+  const paperDashes=(doc.header?.$PSLTSCALE??1)!==0&&Math.abs(scale-1)>1e-9;
+  const frozenKey=[...frozen].sort().join('\n')+(paperDashes?'\n@'+scale:'');let block=viewportBlocks.get(frozenKey);
+  if(!block){block='__FATCAT_VIEWPORT_'+v.handle;const shown=model.filter((e:Any)=>!frozen.has(e.layer));doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:paperDashes?shown.map((e:Any)=>({...e,lineTypeScale:(e.lineTypeScale??1)/scale})):shown};viewportBlocks.set(frozenKey,block);}
   // CAD draws a viewport's frame on the viewport's layer (RF電氣1 配置2: ZWCAD's 32 framed views, the App's bare ones);
   // an object-clipped viewport's frame is its boundary entity, already in paper space.
   if(!boundary&&!v.hidden){const w=v.width/2,h=v.height/2,p=v.position;doc.entities.push({type:'LWPOLYLINE',handle:'viewport-frame-'+v.handle,layer:v.layer,shape:true,vertices:[{x:p.x-w,y:p.y-h},{x:p.x+w,y:p.y-h},{x:p.x+w,y:p.y+h},{x:p.x-w,y:p.y+h}]});}
