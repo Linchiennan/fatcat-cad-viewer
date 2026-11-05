@@ -58,11 +58,21 @@ export function installCadFontScene(ctor:Any):void {
   // Vertical style and direction "top to bottom" (3) or "by style" (5): upright characters in columns, as single-line text.
   const vertical=e.drawingDirection===1?null:verticalPitch(style);
   if(vertical){for(const c of verticalMtextEntities(e,vertical,plainCadText))yield* p._DecomposeText.call(this,{...c,cadVerticalChar:true},ctx);return;}
+  e=withStyleWidth(e,style);
   const shx=this.cadFonts?.get(fontKey(style.font??'')),big=this.cadFonts?.get(fontKey(style.bigFont??''));
   if(shx){const lines=shxMtextGeometry(e,shx,big);if(lines){this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;for(const vertices of lines)if(vertices.length>1)yield* this._DecomposePolyline({...e,type:'LWPOLYLINE',vertices,lineType:'CONTINUOUS',width:0,shape:false},ctx);return;}}
   if(outline&&[...String(e.text??'')].every(ch=>ch.charCodeAt(0)<32||outline.font.charToGlyphIndex(ch)>0)){const previous=this.textRenderer;this.textRenderer=outline.renderer;try{yield* mtext.call(this,e,ctx);this.cadFontResults.rendered++;this.cadFontResults.routes[fontKey(style.font??'')]=(this.cadFontResults.routes[fontKey(style.font??'')]??0)+1;}finally{this.textRenderer=previous;}return;}
   if(this.cadFontResults)this.cadFontResults.fallback++;yield* withShxRenderer(this,style,()=>withBigFontPitch(this.textRenderer,style,()=>mtext.call(this,e,ctx)));
  };
+}
+/**
+ * MTEXT starts at its STYLE's width factor (TEXT does not: it stores its own 41). Every layout path reads an inline
+ * \W, so the style width goes in front as one; a \W in the text still overrides it. 惠宇敦南 9F 水電 dimension text on
+ * LSP (width 0.4) was drawn full width and the numbers ran into each other.
+ */
+export function withStyleWidth(e:Any,style:Any):Any{
+ const w=Number(style?.widthFactor);
+ return Number.isFinite(w)&&w>0&&w<=100&&Math.abs(w-1)>1e-9?{...e,text:`\\W${w};${e.text??''}`}:e;
 }
 /** A style drawn from SHX shapes (no font file, a .shx file or a name without extension), not an outline font. */
 export function isShxStyle(style:Any):boolean{const font=String(style?.font??'').trim();return !/\.(ttf|ttc|otf)$/i.test(font);}
