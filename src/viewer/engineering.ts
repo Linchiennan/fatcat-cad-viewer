@@ -11,6 +11,7 @@ import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
 import type { CadLayerState } from "./layerStateTable";
 import { expandRegions } from "./acisRegion";
+import { projectObliquePlanes } from "./ocsPlane";
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
 export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean;/** an overlay inside a reference: not drawn in CAD either */notNeeded?:boolean;/** applied from a file of another name */mismatch?:string}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
 type Any = any;
@@ -145,6 +146,9 @@ export function prepareCad(dxf:Any):CadReport {
  // Regions with readable ACIS text (DWG 2004/2010) become the lines and arcs of their outline.
  dxf.entities=expandRegions(dxf.entities??[]);
  for(const block of Object.values(dxf.blocks??{}) as Any[])if(block.entities)block.entities=expandRegions(block.entities);
+ // Profiles drawn in upright or tilted planes are shown as CAD's plan view sees them.
+ dxf.entities=projectObliquePlanes(dxf.entities);
+ for(const block of Object.values(dxf.blocks??{}) as Any[])if(block.entities)block.entities=projectObliquePlanes(block.entities);
  const layers=dxf.tables?.layer?.layers??{};
  const report:CadReport={layers:Object.entries(layers).map(([name,l]:[string,Any])=>({name,color:l.trueColor??l.color??0xffffff,visible:l.visible!==false&&!l.frozen,originalVisible:l.visible!==false&&!l.frozen})),warnings:[],xrefs:[],entityCount:0,buildMs:0};
  const counts=new Map<string,number>(Object.entries(dxf.cadUnsupported??{}));
