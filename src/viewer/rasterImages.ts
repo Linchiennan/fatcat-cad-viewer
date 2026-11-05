@@ -17,10 +17,19 @@ export async function standaloneRaster(file:File):Promise<Any>{const data=await 
 export function rasterOutline(e:Any):Any {const w=e.imageSize.x,h=e.imageSize.y,p=e.position,u=e.u,v=e.v;return {type:'LWPOLYLINE',layer:e.layer,handle:e.handle,shape:true,vertices:[[0,0],[w,0],[w,h],[0,h]].map(([x,y])=>({x:p.x+x*u.x+y*v.x,y:p.y+x*u.y+y*v.y})),hidden:e.hidden};}
 export type RasterInstance={entity:Any;matrix:Matrix3;clips:Vector2[][];layer:string};
 export function collectRasters(doc:Any):RasterInstance[]{const result:RasterInstance[]=[];
+ // Only blocks that hold a picture somewhere inside are walked: every placement of every block was walked to its
+ // depth before, 5.5 s on 上晴 D區0418 for no picture at all.
+ const holds=new Map<string,boolean>();
+ const hasImage=(name:string,stack:string[]):boolean=>{
+  const known=holds.get(name);if(known!==undefined)return known;
+  if(stack.includes(name)||stack.length>=24)return false;
+  const found=(doc.blocks?.[name]?.entities??[]).some((e:Any)=>e.type==='IMAGE'||(e.type==='INSERT'&&hasImage(e.name,[...stack,name])));
+  holds.set(name,found);return found;
+ };
  function visit(entities:Any[],matrix:Matrix3,clips:Vector2[][],stack:string[],layer='0'){
   for(const e of entities){if(e.hidden)continue;const l=e.layer&&e.layer!=='0'?e.layer:layer;
    if(e.type==='IMAGE'){if((e.display??1)&1)result.push({entity:e,matrix,clips,layer:l});continue;}
-   if(e.type!=='INSERT'||stack.includes(e.name)||stack.length>=24)continue;const b=doc.blocks?.[e.name];if(!b)continue;
+   if(e.type!=='INSERT'||stack.includes(e.name)||stack.length>=24)continue;const b=doc.blocks?.[e.name];if(!b||!hasImage(e.name,[]))continue;
    const a=(e.rotation??0)*Math.PI/180,c=Math.cos(a),s=Math.sin(a),sx=e.xScale??1,sy=e.yScale??1,p=e.position??{x:0,y:0},o=b.position??{x:0,y:0};
    const t=new Matrix3().set(c*sx,-s*sy,p.x-c*sx*o.x+s*sy*o.y,s*sx,c*sy,p.y-s*sx*o.x-c*sy*o.y,0,0,1);const m=matrix.clone().multiply(t),clip=parseDxfXclip(e);let next=clips;
    if(clip){const poly=clip.length===2?[clip[0],{x:clip[1].x,y:clip[0].y},clip[1],{x:clip[0].x,y:clip[1].y}]:clip;next=[...clips,poly.map(p=>new Vector2(p.x,p.y).applyMatrix3(m))];}

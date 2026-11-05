@@ -11,3 +11,11 @@ it('keeps paper membership even when valid DXF entities omit handles',async()=>{
 const dxf=(pairs:unknown[])=>pairs.join('\n')+'\n';
 export const fixture=dxf([0,'SECTION',2,'ENTITIES',0,'LINE',5,'A',8,'0',10,0,20,0,11,100,21,0,0,'LINE',5,'B',8,'0',67,1,410,'圖紙甲',10,0,20,10,11,20,21,10,0,'LINE',5,'C',8,'0',67,1,410,'圖紙乙',10,0,20,20,11,30,21,20,0,'IMAGE',5,'D',8,'0',10,10,20,20,11,0,21,2,12,-3,22,0,13,4,23,2,340,'DEF',70,9,280,1,71,1,14,-.5,24,-.5,14,1.5,24,1.5,0,'VIEWPORT',5,'V',8,'0',67,1,410,'圖紙甲',69,2,68,1,10,50,20,50,40,40,41,20,12,50,22,0,16,0,26,0,36,1,45,10,51,0,0,'ENDSEC',0,'SECTION',2,'OBJECTS',0,'IMAGEDEF',5,'DEF',1,'images/test.png',10,4,20,2,0,'LAYOUT',5,'L1',100,'AcDbLayout',1,'圖紙甲',71,1,0,'LAYOUT',5,'L2',100,'AcDbLayout',1,'圖紙乙',71,2,0,'ENDSEC',0,'EOF']);
 it('keeps IMAGE transform/reference and real layout membership instead of dropping them',async()=>{const doc=await parseCadFile(new File([fixture],'test.dxf'));expect(doc.entities.find((e:any)=>e.type==='IMAGE')?.imagePath).toBe('images/test.png');expect(doc.cadLayouts.map((l:any)=>l.name)).toEqual(['Model','圖紙甲','圖紙乙']);expect(doc.entities.find((e:any)=>e.handle==='B')?.cadSpace).toBe('圖紙甲');expect(doc.entities.find((e:any)=>e.type==='VIEWPORT')?.viewHeight).toBe(10);});
+it('finds pictures two blocks down and skips blocks that hold none (上晴 D區0418: 5.5 s walking blocks without pictures)',()=>{
+ const image={type:'IMAGE',handle:'I',layer:'0',display:1};
+ const doc={entities:[{type:'INSERT',name:'OUTER',position:{x:5,y:0}},{type:'INSERT',name:'PLAIN'},{type:'INSERT',name:'PLAIN'}],
+  blocks:{OUTER:{position:{x:0,y:0},entities:[{type:'INSERT',name:'INNER',position:{x:0,y:7}}]},INNER:{position:{x:0,y:0},entities:[image]},PLAIN:{position:{x:0,y:0},entities:[{type:'LINE'},{type:'INSERT',name:'PLAIN2'}]},PLAIN2:{entities:[{type:'LINE'}]}}};
+ const found=collectRasters(doc);
+ expect(found.map(r=>r.entity)).toEqual([image]);
+ expect([found[0].matrix.elements[6],found[0].matrix.elements[7]]).toEqual([5,7]);
+});
