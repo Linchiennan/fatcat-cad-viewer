@@ -74,13 +74,15 @@ export function selectCadSpace(source:Any,name:string):Any {
   const visit=(name:string):string=>{
    const known=copies.get(name);if(known!==undefined)return known;
    const b=doc.blocks?.[name];copies.set(name,name);if(!b?.entities)return name;
-   const kept=strip(b.entities);if(kept===b.entities)return name;
+   const kept=strip(b.entities,true);if(kept===b.entities)return name;
    const copy=name+suffix;doc.blocks[copy]={...b,name:copy,entities:kept};copies.set(name,copy);return copy;
   };
-  const strip=(list:Any[]):Any[]=>{
+  // Inside a block, layer 0 is the INSERT's layer: a viewport freezing "0" hides only top-level layer-0 entities
+  // (鑫元鴻 給水-RF: its viewport freezes 0, and the water tanks' panels and valves vanished with it).
+  const strip=(list:Any[],nested=false):Any[]=>{
    let changed=false;const out:Any[]=[];
    for(const e of list){
-    if(frozen.has(e.layer)){changed=true;continue;}
+    if(frozen.has(e.layer)&&!(nested&&String(e.layer??'0')==='0')){changed=true;continue;}
     if(e.type==='INSERT'&&e.name&&doc.blocks?.[e.name]){const n=visit(e.name);if(n!==e.name){changed=true;out.push({...e,name:n});continue;}}
     out.push(e);
    }

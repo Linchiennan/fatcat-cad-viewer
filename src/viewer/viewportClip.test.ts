@@ -83,6 +83,17 @@ describe("object-clipped layout viewports", () => {
     expect(p.y).toBeCloseTo(1146.75, 6);
   });
 
+  it("keeps layer-0 entities inside blocks when a viewport freezes 0: they take the INSERT's layer (鑫元鴻 給水-RF)", () => {
+    const doc = { entities: [{ type: "LINE", handle: "top0", layer: "0", cadSpace: "Model" }, { type: "INSERT", handle: "T", name: "TANK", layer: "W", cadSpace: "Model" },
+      viewport({ flags: 0, clipHandle: "0", frozen: ["Z"] })],
+      blocks: { TANK: { name: "TANK", entities: [{ type: "LINE", handle: "panel", layer: "0" }] } },
+      tables: { layer: { layers: { "0": { name: "0", handle: "Z" }, W: { name: "W", handle: "WW" } } } } };
+    const paper = selectCadSpace(doc, "P"), insert = paper.entities.find((e: any) => e.type === "INSERT");
+    const shown = paper.blocks[insert.name].entities;
+    expect(shown.map((e: any) => e.handle)).toEqual(["T"]); // the top-level layer-0 line is frozen
+    expect(shown[0].name).toBe("TANK"); // the tank's own layer-0 panels stay, so the shared block is used
+  });
+
   it("draws a rectangular viewport's frame on its layer, as CAD does (RF電氣1 配置2)", () => {
     const paper = selectCadSpace({ entities: [{ type: "LINE", handle: "M", layer: "0", cadSpace: "Model" },
       viewport({ flags: 0, clipHandle: "0", layer: "VPORT" })], blocks: {}, tables: {} }, "P");
