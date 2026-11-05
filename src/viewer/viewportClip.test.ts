@@ -69,6 +69,20 @@ describe("object-clipped layout viewports", () => {
     expect(paper.blocks.XR.entities).toHaveLength(4); // the model's own copy is untouched
   });
 
+  it("turns a twisted viewport's view the CAD way round (昭盛 2F發電機室放樣圖, twist 35.46°: showed nothing)", () => {
+    const twist = 35.46131082601662, target = { x: 4708.000815042527, y: 6584.133767955912, z: 0 }, center = { x: -31.4715315940125, y: -4640.396836584055, z: 0 };
+    const paper = selectCadSpace({ entities: [{ type: "LINE", handle: "M", layer: "0", cadSpace: "Model" },
+      viewport({ flags: 0, clipHandle: "0", width: 1911.75, height: 1409.77, viewHeight: 1409.77, position: { x: -4906.03, y: 1146.75, z: 0 }, viewCenter: center, target, twist })], blocks: {}, tables: {} }, "P");
+    const insert = paper.entities.find((e: any) => e.type === "INSERT");
+    expect(insert.rotation).toBeCloseTo(twist, 9);
+    // the model point CAD shows at the viewport's centre (ZWCAD: the drawing's content around x 1500-2000, y 2650-2820)
+    const a = twist * Math.PI / 180, m = { x: target.x + Math.cos(a) * center.x + Math.sin(a) * center.y, y: target.y - Math.sin(a) * center.x + Math.cos(a) * center.y };
+    expect(m.x).toBeCloseTo(1990.2, 1);
+    const p = { x: insert.position.x + Math.cos(a) * m.x - Math.sin(a) * m.y, y: insert.position.y + Math.sin(a) * m.x + Math.cos(a) * m.y };
+    expect(p.x).toBeCloseTo(-4906.03, 6);
+    expect(p.y).toBeCloseTo(1146.75, 6);
+  });
+
   it("draws a rectangular viewport's frame on its layer, as CAD does (RF電氣1 配置2)", () => {
     const paper = selectCadSpace({ entities: [{ type: "LINE", handle: "M", layer: "0", cadSpace: "Model" },
       viewport({ flags: 0, clipHandle: "0", layer: "VPORT" })], blocks: {}, tables: {} }, "P");

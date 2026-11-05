@@ -99,7 +99,9 @@ export function selectCadSpace(source:Any,name:string):Any {
   }
   if((v.flags&1)||Math.abs(v.direction?.x??0)>1e-9||Math.abs(v.direction?.y??0)>1e-9||(v.direction?.z??1)<=0){warn('透視／非俯視投影尚未支援');continue;}
   if(!(v.width>0&&v.height>0&&v.viewHeight>0)){warn('比例或尺寸無效');continue;}
-  const scale=v.height/v.viewHeight,a=-v.twist*Math.PI/180,c=Math.cos(a),s=Math.sin(a),target=v.target??{x:0,y:0},center=v.viewCenter;
+  // The view twist turns model into view coordinates by +twist (昭盛 2F發電機室放樣圖, twist 35.46°: with the sign the
+  // other way the view centre landed 5,400 units off the model and the viewport showed nothing).
+  const scale=v.height/v.viewHeight,a=v.twist*Math.PI/180,c=Math.cos(a),s=Math.sin(a),target=v.target??{x:0,y:0},center=v.viewCenter;
   // DCS center is already in the twisted view coordinate system.
 
   const offset={x:v.position.x-scale*(c*target.x-s*target.y+center.x),y:v.position.y-scale*(s*target.x+c*target.y+center.y),z:0};
@@ -117,7 +119,7 @@ export function selectCadSpace(source:Any,name:string):Any {
   // CAD draws a viewport's frame on the viewport's layer (RF電氣1 配置2: ZWCAD's 32 framed views, the App's bare ones);
   // an object-clipped viewport's frame is its boundary entity, already in paper space.
   if(!boundary&&!v.hidden){const w=v.width/2,h=v.height/2,p=v.position;doc.entities.push({type:'LWPOLYLINE',handle:'viewport-frame-'+v.handle,layer:v.layer,shape:true,vertices:[{x:p.x-w,y:p.y-h},{x:p.x+w,y:p.y-h},{x:p.x+w,y:p.y+h},{x:p.x-w,y:p.y+h}]});}
-  doc.entities.push({type:'INSERT',name:block,handle:'viewport-'+v.handle,layer:v.layer,position:offset,xScale:scale,yScale:scale,zScale:1,rotation:-v.twist,xdata:{FATCAT_XCLIP:{values:[{code:1000,value:clip.map(p=>p.x+','+p.y).join(';')}]}}});
+  doc.entities.push({type:'INSERT',name:block,handle:'viewport-'+v.handle,layer:v.layer,position:offset,xScale:scale,yScale:scale,zScale:1,rotation:v.twist,xdata:{FATCAT_XCLIP:{values:[{code:1000,value:clip.map(p=>p.x+','+p.y).join(';')}]}}});
  }
  fillFields();
  return doc;
