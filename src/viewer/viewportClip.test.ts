@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clipBoundary, selectCadSpace } from "./cadDocument";
+import { clipBoundary, preserveCadMetadata, selectCadSpace } from "./cadDocument";
 import { parseDxfXclip } from "../dwg/xclipMetadata";
 
 const viewport = (extra: Record<string, unknown> = {}) => ({
@@ -38,6 +38,18 @@ describe("object-clipped layout viewports", () => {
     expect(paper.blocks[insert.name].entities.map((e: any) => e.handle)).toEqual(["M"]);
     expect(parseDxfXclip(insert)).toEqual([{ x: -5, y: -5 }, { x: -1, y: -5 }, { x: -1, y: -1 }, { x: -5, y: -1 }]);
     expect(paper.cadDiagnostics).toEqual([]);
+  });
+
+  it("freezes the layers a viewport names by handle (惠宇敦南 RF電氣1 配置2: every viewport drew every floor)", () => {
+    const layerTable = ["0", "SECTION", "2", "TABLES", "0", "TABLE", "2", "LAYER",
+      "0", "LAYER", "5", "2A", "2", "ROW-R2F", "70", "0", "62", "7", "0", "LAYER", "5", "2B", "2", "ROW-R3F", "70", "0", "62", "7",
+      "0", "ENDTAB", "0", "ENDSEC", "0", "EOF"].join("\n");
+    const doc = preserveCadMetadata({ entities: [
+      { type: "LINE", handle: "M2", layer: "ROW-R2F", cadSpace: "Model" }, { type: "LINE", handle: "M3", layer: "ROW-R3F", cadSpace: "Model" },
+      square, viewport({ frozen: ["2B"] })], blocks: {}, tables: { layer: { layers: { "ROW-R2F": { name: "ROW-R2F" }, "ROW-R3F": { name: "ROW-R3F" } } } } }, layerTable);
+    expect(doc.tables.layer.layers["ROW-R3F"].handle).toBe("2B");
+    const paper = selectCadSpace(doc, "P"), insert = paper.entities.find((e: any) => e.type === "INSERT");
+    expect(paper.blocks[insert.name].entities.map((e: any) => e.handle)).toEqual(["M2"]);
   });
 
   it("still explains a viewport whose boundary object is missing", () => {

@@ -117,6 +117,9 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  const blockNames=new Map<string,string>(rows.filter(r=>r.type==='BLOCK_RECORD').map(r=>[text(r,5),text(r,2)]));
  const dimStyles=new Map<string,LeaderStyle>(rows.filter(r=>r.type==='DIMSTYLE').map(r=>[text(r,2),{asz:r.tags.some(t=>t[0]===41)?num(r,41):undefined,scale:r.tags.some(t=>t[0]===40)?num(r,40):undefined,arrowBlock:blockNames.get(text(r,341))}]));
  const styleNames=new Map<string,string>(Object.values(doc.tables?.style?.styles??{}).filter((st:Any)=>st?.handle).map((st:Any)=>[String(st.handle),st.styleName??st.name]));
+ // The layer table parser keeps no handles, and a VIEWPORT names the layers it freezes by handle (331): without them no
+ // viewport ever froze a layer (惠宇敦南 RF電氣1 配置2: 33 viewports, each showing other floors, all drew every layer).
+ for(const r of rows)if(r.type==='LAYER'){const l=doc.tables?.layer?.layers?.[text(r,2)];if(l&&!l.handle&&text(r,5))l.handle=text(r,5);}
  // A TrueType STYLE keeps its face name in ACAD xdata ("@PMingLiU", "@DFKai-SB"), which can say more than the font file
  // field (empty, or kaiu.ttf for the vertical @DFKai-SB face): shxBigFontMetrics.trueTypeFace reads it as cadFace.
  for(const st of Object.values(doc.tables?.style?.styles??{}) as Any[]){const r=st?.handle&&recordsByHandle.get(String(st.handle));if(!r)continue;const i=r.tags.findIndex(([c,v]:[number,string])=>c===1001&&v==='ACAD');const face=i>=0&&r.tags[i+1]?.[0]===1000?String(r.tags[i+1][1]).trim():'';if(face)st.cadFace=face;}
