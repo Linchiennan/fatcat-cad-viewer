@@ -48,11 +48,14 @@ const LATIN_ADVANCE: Record<string, number[]> = {"a1.shx":[562,531,531,531,531,5
 
 // Common Taiwan TrueType fonts that are not on a phone: ASCII 32-126 advances in thousandths of the text height, and the
 // full-width pitch. CAD sizes a TrueType text by its own scale (DFKai-SB 1.414, Microsoft JhengHei 1.322 em per text
-// height, measured against ZWCAD boxes of 1905 and 33 texts), so 標楷體's fixed half-width Latin advances 0.707 text
+// height, PMingLiU 1.488, measured against ZWCAD boxes of 1905, 33 and 387 texts; MingLiU shares PMingLiU's file and
+// glyph heights, so it takes the same scale), so 標楷體's fixed half-width Latin advances 0.707 text
 // heights where the bundled Liberation Sans gave about 1.0: 惠宇敦南 1F-EE1「GP&GML」ran into「ATS&EMP」. Advance
 // widths only, taken from the Windows font files; no font data ships with the app.
 const TTF_METRICS: Record<string, { cjk: number; latin: number[] }> = {
   "kaiu": { cjk: 1.414, latin: Array(95).fill(707) },
+  "mingliu": { cjk: 1.488, latin: Array(95).fill(744) },
+  "pmingliu": { cjk: 1.488, latin: [387,466,570,699,699,1164,1088,251,466,466,699,789,350,466,350,388,699,699,699,699,699,699,699,699,699,699,388,388,789,789,789,620,1287,1008,933,933,1008,854,777,1008,1008,466,543,1008,854,1242,1008,1008,777,1008,933,777,854,1008,1008,1319,1008,1008,854,466,388,466,657,699,466,620,699,620,699,620,466,699,699,388,388,699,388,1088,699,699,699,699,466,543,388,699,699,1008,699,699,620,671,280,671,756] },
   "msjh": { cjk: 1.322, latin: [330,402,550,844,766,1164,1138,323,424,424,591,975,305,571,305,551,766,766,766,766,766,766,766,766,766,766,305,305,975,975,975,640,1363,916,812,883,998,720,694,977,1008,376,501,822,668,1276,1064,1076,795,1076,849,756,742,978,882,1327,837,784,811,424,536,424,975,593,378,724,836,658,838,745,440,838,805,343,342,704,343,1225,804,834,836,838,492,603,480,804,678,1024,647,686,643,424,333,424,975] },
 };
 

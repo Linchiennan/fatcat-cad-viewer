@@ -123,6 +123,10 @@ describe("TrueType fonts not on the phone (惠宇敦南 1F-EE1 標楷體「GP&GM
     expect(fittedShape("設", glyph(), m).advance).toBe(1.414);
     expect(fallbackMetrics({ font: "msjh.ttc" })?.latin!["A".charCodeAt(0) - 32]).toBe(916);
     expect(fallbackMetrics({ font: "kaiu_0.ttf" })?.key).toBe("kaiu"); // a renamed copy (排水竣工圖-1)
+    // 新細明體「H:70CM」at height 40 (鑫元鴻 給水-1F): ZWCAD box 198.837 long.
+    const p = fallbackMetrics({ font: "PMingLiU.ttf" })!;
+    expect([..."H:70CM"].reduce((n, c) => n + p.latin![c.charCodeAt(0) - 32] / 1000, 0) * 40).toBeCloseTo(198.837, 0);
+    expect(p.cjk).toBe(1.488);
   });
 
   it("narrows a letter wider than its fixed-width cell instead of letting it run into the next", () => {
