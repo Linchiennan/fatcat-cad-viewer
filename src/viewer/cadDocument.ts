@@ -175,6 +175,7 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  // Draw order: SORTENTSTABLE sort handle, else the entity's own handle (generated parts share their source's).
  const sortKeys=new Map<string,number>();for(const r of rows.filter(r=>r.type==='SORTENTSTABLE')){let ent='';for(const [c,v] of r.tags){if(c===331)ent=v;else if(c===5&&ent){sortKeys.set(ent,parseInt(v,16));ent='';}}}
  const order=(e:Any)=>sortKeys.get(String(e.handle))??(parseInt(String(e.handle??'0'),16)||0);
+ for(const e of doc.entities??[])if(e&&sortKeys.has(String(e.handle)))e.cadDrawOrder=order(e); // drawOrder.ts; others use their handle
  const vars=rows.find(r=>r.type==='WIPEOUTVARIABLES'),showFrame=vars?num(vars,70,1)!==0:true,skipped=new Map<string,number>();
  if([...(doc.entities??[]),...Object.values(doc.blocks??{}).flatMap((b:Any)=>b.entities??[])].some((e:Any)=>e.type==='WIPEOUT')){
   doc.entities=applyWipeouts(doc.entities??[],order,showFrame,skipped,doc.blocks??{});

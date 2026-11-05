@@ -4,6 +4,7 @@ import {complexLinePrimitives} from './complexLineType';
 import {Entity} from 'dxf-viewer/src/DxfScene.js';
 import {dimensionBlockOffset} from './dimensionBlock';
 import {installEntityBoxes} from './entityBoxes';
+import {installDrawOrder} from './drawOrder';
 import {installFitSplines} from './fitSpline';
 import {attdefAsText} from './attdefTag';
 import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
@@ -230,6 +231,7 @@ export function prepareCad(dxf:Any):CadReport {
 export function installEngineeringScene(ctor:Any):void {
  const p=ctor.prototype,original=p.Build;
  installEntityBoxes(p);
+ installDrawOrder(p);
  installFitSplines(p);
  // A spline whose knot vector does not fit its control points (seen in hatch boundaries of PARK 1F
  // 水電施工圖) used to abort the whole drawing. Retry with standard knots, else follow the control polygon.
