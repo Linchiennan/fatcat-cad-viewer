@@ -26,6 +26,8 @@ export type FatcatDebug = {
   /** layers of the drawn sheet with their on/off as the drawing opened (xref layers included) */
   layers(): unknown[] | null;
   entityBoxes(): Record<string, [number, number, number, number]> | null;
+  /** hatches drawn as their boundary only because the pattern was too dense ("handle|pattern|scale") */
+  denseHatches(): string[] | null;
   /** PNG data URL of a drawing region as the export draws it (image comparison with a ZWCAD plot of the same region). */
   regionPng(minX: number, minY: number, maxX: number, maxY: number, widthPx: number, heightPx: number): Promise<string | null>;
 };
@@ -60,6 +62,7 @@ export function makeDebugApi(): FatcatDebug {
     xrefs: () => ((current?.report() as { xrefs?: unknown[] } | null)?.xrefs) ?? null,
     layers: () => ((current?.report() as { layers?: unknown[] } | null)?.layers) ?? null,
     entityBoxes: () => ((current?.report() as { entityBoxes?: Record<string, [number, number, number, number]> } | null)?.entityBoxes) ?? null,
+    denseHatches: () => ((current?.report() as { denseHatches?: string[] } | null)?.denseHatches) ?? null,
     regionPng: async (minX, minY, maxX, maxY, widthPx, heightPx) => {
       const e = current;
       if (!e?.renderRegion) return null;

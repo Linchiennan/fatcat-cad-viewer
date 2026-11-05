@@ -245,9 +245,11 @@ export function installEngineeringScene(ctor:Any):void {
  p._GetLineType=(e:Any)=>1000+Math.max(0,e.cadLineweight??0);
  // A pattern far too fine for its area (上晴 B區-2: AR-CONC at scale 0.1, about 400,000 to 840,000 segments per hatch,
  // repeated through nested xref and clipped blocks to over 100 million) kept the drawing worker past the load timeout.
- // A hatch past DENSE_HATCH_SEGMENTS is drawn as its boundary only, and once the drawing has spent HATCH_BUDGET
- // segments on patterns, any hatch past SMALL_HATCH_SEGMENTS is too. Copies of a block hold copies of a hatch with
- // the same handle, so once one is drawn as its boundary the others go straight to that.
+ // A hatch past DENSE_HATCH_SEGMENTS is drawn solid in its colour with its boundary: that dense, CAD's strokes merge
+ // into a solid area too (ZWCAD test drawing, AR-CONC × 0.05 and DOTS × 0.3; 用戶 2026-11-05 chose solid over an
+ // outline or a tint). Once the drawing has spent HATCH_BUDGET segments on patterns, a hatch past
+ // SMALL_HATCH_SEGMENTS is drawn as its boundary only: its pattern is not that dense, it is only one too many.
+ // Copies of a block hold copies of a hatch with the same handle, so they go straight to the first copy's choice.
  // A dimension's *D block goes at its group-12 point, as CAD places it (see dimensionBlock.ts).
  const decomposeDimension=p._DecomposeDimension;
  p._DecomposeDimension=function*(e:Any,ctx:Any){
@@ -257,17 +259,20 @@ export function installEngineeringScene(ctor:Any):void {
  };
  const decomposeHatch=p._DecomposeHatch;
  p._DecomposeHatch=function*(e:Any,ctx:Any){
-  const outlined:Set<string>=this.cadDenseHatches??=new Set();
+  const decided:Map<string,boolean>=this.cadDenseHatches??=new Map(); // key → drawn solid (true) or outline only
   const key=e.handle?`${e.handle}|${e.patternName}|${e.patternScale}`:null;
-  if(!key||!outlined.has(key)){
+  let solid=key?decided.get(key):undefined;
+  if(solid===undefined){
    const limit=(this.cadHatchSegments??0)<HATCH_BUDGET?DENSE_HATCH_SEGMENTS:SMALL_HATCH_SEGMENTS;
    const out:Any[]=[];let over=false;
    for(const x of decomposeHatch.call(this,e,ctx)){out.push(x);if(out.length>limit){over=true;break;}}
    if(!over){this.cadHatchSegments=(this.cadHatchSegments??0)+out.length;yield* out;return;}
-   if(key)outlined.add(key);
+   solid=limit===DENSE_HATCH_SEGMENTS;
+   if(key)decided.set(key,solid);
   }
-  this.cadDenseHatchCount=(this.cadDenseHatchCount??0)+1;
+  if(solid)this.cadSolidDenseHatchCount=(this.cadSolidDenseHatchCount??0)+1;else this.cadDenseHatchCount=(this.cadDenseHatchCount??0)+1;
   const transform=this._GetEntityExtrusionTransform(e),layer=this._GetEntityLayer(e,ctx),color=this._GetEntityColor(e,ctx);
+  if(solid)yield* decomposeHatch.call(this,{...e,isSolid:true},ctx);
   for(const loop of this._GetHatchBoundaryLoops(e)){
    const v=(loop.vertices??[]).map((q:Any)=>transform?q.clone().applyMatrix3(transform):q);
    if(v.length<2)continue;
@@ -292,8 +297,8 @@ export function installEngineeringScene(ctor:Any):void {
    }
   }
  };
- p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;this.cadDenseHatchCount=0;this.cadDenseHatches=new Set();this.cadHatchSegments=0;this.cadBoxes=dxf.cadEntityBoxes?{}:null;await original.call(this,dxf,fonts);if(this.cadDenseHatchCount)report.warnings.push(`剖面線 ${this.cadDenseHatchCount} 個的圖樣過密或超過整張圖的繪製量，只畫外框`);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
- report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;if(this.cadBoxes){(report as Any).entityBoxes=this.cadBoxes;this.cadBoxes=null;}dxf.cadReport=report;};
+ p.Build=async function(dxf:Any,fonts:Any){const start=performance.now();const report=prepareCad(dxf);this.cadLineTypes=dxf.tables?.lineType?.lineTypes??{};this.cadComplexResults={rendered:0,missing:new Set(),used:new Set()};this.cadScale=Math.abs(dxf.header?.$LTSCALE??1);this.cadBadSplines=0;this.cadDenseHatchCount=0;this.cadSolidDenseHatchCount=0;this.cadDenseHatches=new Map();this.cadHatchSegments=0;this.cadBoxes=dxf.cadEntityBoxes?{}:null;await original.call(this,dxf,fonts);if(this.cadSolidDenseHatchCount)report.warnings.push(`剖面線 ${this.cadSolidDenseHatchCount} 個的圖樣過密，以實心色塊繪製`);if(this.cadDenseHatchCount)report.warnings.push(`剖面線 ${this.cadDenseHatchCount} 個超過整張圖的繪製量，只畫外框`);if(this.cadBadSplines)report.warnings.push(`雲形線 ${this.cadBadSplines} 條的節點資料不完整，已改用近似形狀繪製`);if(this.cadFontResults?.rendered>0&&!this.cadFontResults.fallback)report.warnings=report.warnings.filter(w=>!w.startsWith('字型以內附'));// Only a complex line type that is drawn somewhere and still missing its text or shapes is a gap.
+ report.warnings=report.warnings.filter(w=>{const m=/^複合線型 (.+) 的文字／形狀尚未繪製/.exec(w);return !m||(this.cadComplexResults.used.has(m[1])&&this.cadComplexResults.missing.has(m[1]));});if(this.hasMissingChars)report.warnings.push('部分文字缺字，請勿視為完整圖面');for(const w of this.cadSceneWarnings??[])if(!report.warnings.includes(w))report.warnings.push(w);report.buildMs=performance.now()-start;(report as Any).fontDiagnostics=this.cadFontDiagnostics??null;if(this.cadBoxes){(report as Any).entityBoxes=this.cadBoxes;(report as Any).denseHatches=[...(this.cadDenseHatches?.keys()??[])];this.cadBoxes=null;}dxf.cadReport=report;};
  // Load hidden layers; saved ON/OFF is applied to actual GPU layer objects after loading.
  p._FilterEntity=function(e:Any){return !e.hidden&&e.type!=='REGION'&&(!this.options.suppressPaperSpace||!e.inPaperSpace);};
  /** The line itself, in its line type: dashes as segments, dots as points. */
