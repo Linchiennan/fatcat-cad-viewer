@@ -65,6 +65,29 @@ export function selectCadSpace(source:Any,name:string):Any {
  // Paper coordinates are measured in paper units, not the model's INSUNITS.
  doc.header={...doc.header,$INSUNITS:0};
  const viewportBlocks=new Map<string,string>();
+ // A viewport's frozen layers hide nested entities too: an xref's content sits in its block under "xref|layer" names
+ // (鑫元鴻 空調-2F: the 18 frozen 排水-2F／施工套圖-2F layers still drew their notes and dimensions). Blocks holding a
+ // frozen layer get a copy without it for this viewport's set; the others stay shared.
+ const withoutFrozen=(entities:Any[],frozen:Set<string>,suffix:string):Any[]=>{
+  if(!frozen.size)return entities;
+  const copies=new Map<string,string>();
+  const visit=(name:string):string=>{
+   const known=copies.get(name);if(known!==undefined)return known;
+   const b=doc.blocks?.[name];copies.set(name,name);if(!b?.entities)return name;
+   const kept=strip(b.entities);if(kept===b.entities)return name;
+   const copy=name+suffix;doc.blocks[copy]={...b,name:copy,entities:kept};copies.set(name,copy);return copy;
+  };
+  const strip=(list:Any[]):Any[]=>{
+   let changed=false;const out:Any[]=[];
+   for(const e of list){
+    if(frozen.has(e.layer)){changed=true;continue;}
+    if(e.type==='INSERT'&&e.name&&doc.blocks?.[e.name]){const n=visit(e.name);if(n!==e.name){changed=true;out.push({...e,name:n});continue;}}
+    out.push(e);
+   }
+   return changed?out:list;
+  };
+  return strip(entities);
+ };
  for(const v of selected.filter((e:Any)=>e.type==='VIEWPORT'&&!(e.flags&131072)&&((e.id>1&&e.status!==0)||(e.id===0&&e.cadPaperViewportIndex>0)))){
   const warn=(why:string)=>doc.cadDiagnostics.push(`配置 ${name} 視埠 ${v.handle} 未顯示：${why}`);
   // Object-clipped viewport: use the boundary entity (paper coordinates) as the clip polygon.
@@ -90,7 +113,7 @@ export function selectCadSpace(source:Any,name:string):Any {
   // blocks keep the block's shared definition.
   const paperDashes=(doc.header?.$PSLTSCALE??1)!==0&&Math.abs(scale-1)>1e-9;
   const frozenKey=[...frozen].sort().join('\n')+(paperDashes?'\n@'+scale:'');let block=viewportBlocks.get(frozenKey);
-  if(!block){block='__FATCAT_VIEWPORT_'+v.handle;const shown=model.filter((e:Any)=>!frozen.has(e.layer));doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:paperDashes?shown.map((e:Any)=>({...e,lineTypeScale:(e.lineTypeScale??1)/scale})):shown};viewportBlocks.set(frozenKey,block);}
+  if(!block){block='__FATCAT_VIEWPORT_'+v.handle;const shown=withoutFrozen(model,frozen,'__VPF_'+v.handle);doc.blocks[block]={name:block,position:{x:0,y:0,z:0},entities:paperDashes?shown.map((e:Any)=>({...e,lineTypeScale:(e.lineTypeScale??1)/scale})):shown};viewportBlocks.set(frozenKey,block);}
   // CAD draws a viewport's frame on the viewport's layer (RF電氣1 配置2: ZWCAD's 32 framed views, the App's bare ones);
   // an object-clipped viewport's frame is its boundary entity, already in paper space.
   if(!boundary&&!v.hidden){const w=v.width/2,h=v.height/2,p=v.position;doc.entities.push({type:'LWPOLYLINE',handle:'viewport-frame-'+v.handle,layer:v.layer,shape:true,vertices:[{x:p.x-w,y:p.y-h},{x:p.x+w,y:p.y-h},{x:p.x+w,y:p.y+h},{x:p.x-w,y:p.y+h}]});}

@@ -52,6 +52,23 @@ describe("object-clipped layout viewports", () => {
     expect(paper.blocks[insert.name].entities.map((e: any) => e.handle)).toEqual(["M2"]);
   });
 
+  it("freezes layers inside blocks and xrefs too, copying only the blocks that hold them (鑫元鴻 空調-2F)", () => {
+    const doc = { entities: [{ type: "INSERT", handle: "X", name: "XR", layer: "0", cadSpace: "Model" }, viewport({ flags: 0, clipHandle: "0", frozen: ["F1"] })],
+      blocks: {
+        XR: { name: "XR", entities: [{ type: "LINE", handle: "a", layer: "XR|TEXT" }, { type: "LINE", handle: "b", layer: "XR|WALL" }, { type: "INSERT", handle: "c", name: "SYM", layer: "XR|WALL" }, { type: "INSERT", handle: "d", name: "LOOP", layer: "XR|WALL" }] },
+        SYM: { name: "SYM", entities: [{ type: "LINE", handle: "s", layer: "XR|WALL" }] },
+        LOOP: { name: "LOOP", entities: [{ type: "INSERT", handle: "l", name: "LOOP", layer: "XR|TEXT" }] },
+      },
+      tables: { layer: { layers: { "XR|TEXT": { name: "XR|TEXT", handle: "F1" }, "XR|WALL": { name: "XR|WALL", handle: "F2" } } } } };
+    const paper = selectCadSpace(doc, "P"), insert = paper.entities.find((e: any) => e.type === "INSERT");
+    const xref = paper.blocks[paper.blocks[insert.name].entities[0].name];
+    expect(xref.name).not.toBe("XR");
+    expect(xref.entities.map((e: any) => e.handle)).toEqual(["b", "c", "d"]);
+    expect(xref.entities[1].name).toBe("SYM"); // nothing frozen inside: the shared block stays
+    expect(paper.blocks[xref.entities[2].name].entities).toEqual([]); // a self-insert is cut, not followed forever
+    expect(paper.blocks.XR.entities).toHaveLength(4); // the model's own copy is untouched
+  });
+
   it("draws a rectangular viewport's frame on its layer, as CAD does (RF電氣1 配置2)", () => {
     const paper = selectCadSpace({ entities: [{ type: "LINE", handle: "M", layer: "0", cadSpace: "Model" },
       viewport({ flags: 0, clipHandle: "0", layer: "VPORT" })], blocks: {}, tables: {} }, "P");
