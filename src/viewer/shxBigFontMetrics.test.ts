@@ -18,7 +18,7 @@ describe("SHX big font fallback pitch", () => {
 
   it("applies only to SHX styles that name a big font", () => {
     expect(fallbackMetrics({ font: "romans", bigFont: "genie" })?.cjk).toBe(1.25);
-    expect(fallbackMetrics({ font: "kaiu.ttf" })).toBeNull();
+    expect(fallbackMetrics({ font: "arial.ttf" })).toBeNull();
     expect(fallbackMetrics({ font: "romans.shx", bigFont: "" })?.cjk).toBeNull();
     expect(fallbackMetrics({ font: "", bigFont: "" })).toBeNull();
   });
@@ -111,6 +111,29 @@ describe("SHX Latin fallback width (鴻群 8.34m³、摩擦損失(h3)=)", () => 
   it("uses romans for an SHX font it has no table for, and leaves CJK-only styles' Latin alone", () => {
     expect(fallbackMetrics({ font: "cn1.shx" })?.latin).toEqual(fallbackMetrics({ font: "romans" })?.latin);
     expect(fittedShape("A", glyph(), { key: "", cjk: 1.25, latin: null }).advance).toBe(1.389);
+  });
+});
+
+describe("TrueType fonts not on the phone (惠宇敦南 1F-EE1 標楷體「GP&GML」ran into「ATS&EMP」)", () => {
+  it("lays 標楷體 out like ZWCAD: Latin 0.707 and Chinese 1.414 text heights a character", () => {
+    const m = fallbackMetrics({ font: "KAIU.TTF" })!;
+    // ZWCAD box of「GP&GML」at height 15, width factor 1: 63.646 long.
+    const width = [..."GP&GML"].reduce((n, c) => n + m.latin![c.charCodeAt(0) - 32] / 1000, 0) * 15;
+    expect(width).toBeCloseTo(63.646, 1);
+    expect(fittedShape("設", glyph(), m).advance).toBe(1.414);
+    expect(fallbackMetrics({ font: "msjh.ttc" })?.latin!["A".charCodeAt(0) - 32]).toBe(916);
+  });
+
+  it("narrows a letter wider than its fixed-width cell instead of letting it run into the next", () => {
+    const m = fallbackMetrics({ font: "kaiu.ttf" })!;
+    const W = { ...glyph(), advance: 1.311, bounds: { xMin: 0, xMax: 1.311, yMin: 0, yMax: 1 }, vertices: [new Vector2(0, 0), new Vector2(1.311, 1)] };
+    const s = fittedShape("W", W, m);
+    expect(s.advance).toBeCloseTo(0.707, 9);
+    expect(s.vertices![0].x).toBeCloseTo(0, 9);
+    expect(s.vertices![1].x).toBeCloseTo(0.707, 9);
+    expect(s.vertices![1].y).toBe(1); // height kept
+    const i = { ...glyph(), advance: 0.3, bounds: { xMin: 0.1, xMax: 0.2, yMin: 0, yMax: 1 }, vertices: [new Vector2(0.1, 0), new Vector2(0.2, 1)] };
+    expect(fittedShape("i", i, m).vertices![0].x).toBeCloseTo(0.1 + (0.707 - 0.3) / 2, 9); // narrow letters only move
   });
 });
 
