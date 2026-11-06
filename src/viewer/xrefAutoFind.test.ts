@@ -160,7 +160,8 @@ describe("xref paths read before drawing", () => {
   it("lists the paths of xref blocks only", async () => {
     expect(await xrefPathsInDxf(dxf(blocks()))).toEqual(["..\\圖框\\惠宇圖框.dwg", "C:\\x\\疊圖.dwg"]);
   });
-  it("leaves drawings with pictures to the search after drawing", async () => {
-    expect(await xrefPathsInDxf(dxf(blocks(["0", "SECTION", "2", "OBJECTS", "0", "IMAGEDEF", "1", "a.png", "0", "ENDSEC"])))).toBeNull();
+  it("adds picture files, read from OBJECTS", async () => {
+    expect(await xrefPathsInDxf(dxf(blocks(["0", "SECTION", "2", "OBJECTS", "0", "DICTIONARY", "1", "not.png", "0", "IMAGEDEF", "1", "相片\\a.png", "0", "ENDSEC"]))))
+      .toEqual(["..\\圖框\\惠宇圖框.dwg", "C:\\x\\疊圖.dwg", "相片\\a.png"]);
   });
 });

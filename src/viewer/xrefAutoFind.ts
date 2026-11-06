@@ -10,28 +10,29 @@ import { containsAscii, scanPairs } from "../dwg/dxfLines";
 import { detectDxfEncoding } from "./dxfEncoding";
 
 /**
- * Reference paths of a DXF's xref blocks, read from its BLOCKS section before the drawing is drawn; null when the
- * drawing also has pictures (IMAGEDEF), which the search after drawing finds together with them. Looking first
- * draws a drawing with xrefs once instead of twice (惠宇 A06: 12.8 s, then 18.8 s with its frame, on a slow phone).
+ * Paths of a DXF's external references and pictures (xref blocks in BLOCKS, IMAGEDEF in OBJECTS), read from the
+ * converted file before it is drawn. Looking first draws a drawing with xrefs once instead of twice (惠宇 A06:
+ * 12.8 s, then 18.8 s with its frame, on a slow phone). A drawing without pictures is read only up to its BLOCKS.
  */
-export async function xrefPathsInDxf(file: File): Promise<string[] | null> {
+export async function xrefPathsInDxf(file: File): Promise<string[]> {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (containsAscii(bytes, "IMAGEDEF")) return null;
+  const pictures = containsAscii(bytes, "IMAGEDEF");
   const decoder = new TextDecoder(detectDxfEncoding(bytes.subarray(0, 65536)));
   const paths: string[] = [];
-  let inBlocks = false, sectionName = false, record: { flags: number; path: string } | null = null;
-  const flush = () => { if (record && record.flags & 4 && record.path) paths.push(record.path); record = null; };
+  let section = "", sectionName = false, record: { image: boolean; flags: number; path: string } | null = null;
+  const flush = () => { if (record?.path && (record.image || record.flags & 4)) paths.push(record.path); record = null; };
   scanPairs(bytes, (p) => {
     if (p.code === 0) {
       flush();
       if (p.value === "SECTION") sectionName = true;
-      else if (inBlocks && p.value === "ENDSEC") return false;
-      else if (inBlocks && p.value === "BLOCK") record = { flags: 0, path: "" };
+      else if (p.value === "ENDSEC") { if (section === "BLOCKS" && !pictures) return false; section = ""; }
+      else if (section === "BLOCKS" && p.value === "BLOCK") record = { image: false, flags: 0, path: "" };
+      else if (section === "OBJECTS" && p.value === "IMAGEDEF") record = { image: true, flags: 0, path: "" };
       return;
     }
-    if (sectionName && p.code === 2) { inBlocks = p.value === "BLOCKS"; sectionName = false; return; }
+    if (sectionName && p.code === 2) { section = p.value; sectionName = false; return; }
     if (!record) return;
-    if (p.code === 70) record.flags = Number(p.value) || 0;
+    if (p.code === 70 && !record.image) record.flags = Number(p.value) || 0;
     else if (p.code === 1 && !record.path) record.path = decoder.decode(bytes.subarray(p.valueStart, p.valueEnd)).trim();
   }, (code) => code === 0 || code === 1 || code === 2 || code === 70);
   return [...new Set(paths)];
