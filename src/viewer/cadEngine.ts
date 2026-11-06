@@ -118,10 +118,23 @@ type Pointer = { x: number; y: number };
 type Tap = { id: number; x: number; y: number; time: number; touch: boolean };
 
 /** Text heights of a sheet for measurement labels (our measureResults.labelHeight). */
-function sheetLabelHeight(doc: Any): number | null {
+export function sheetLabelHeight(doc: Any): number | null {
   const heights: number[] = [], dims: number[] = [];
   const height = (e: Any) => Number(e.textHeight ?? e.height);
   const isText = (e: Any) => e.type === "TEXT" || e.type === "MTEXT";
+  if (doc.cadActiveSpace && doc.cadActiveSpace !== "Model") {
+    // A layout: heights as drawn on the sheet, through each INSERT's scale. The viewports' model text, taken at its
+    // model height, made labels tens of times too large (06-11F-給水放樣 配置: "16.4" over half the screen).
+    const visit = (entities: Any[], scale: number, depth: number) => {
+      for (const e of entities) {
+        if (isText(e)) heights.push(height(e) * scale);
+        else if (e.type === "DIMENSION" && e.block) { for (const d of doc.blocks?.[e.block]?.entities ?? []) if (isText(d)) dims.push(height(d) * scale); }
+        else if (e.type === "INSERT" && depth < 4 && doc.blocks?.[e.name]) visit(doc.blocks[e.name].entities ?? [], scale * Math.abs(Number(e.xScale) || 1), depth + 1);
+      }
+    };
+    visit(doc.entities ?? [], 1, 0);
+    return labelHeight(doc.header, heights, dims);
+  }
   for (const e of doc.entities ?? []) {
     if (isText(e)) heights.push(height(e));
     if (e.type === "DIMENSION" && e.block) for (const d of doc.blocks?.[e.block]?.entities ?? []) if (isText(d)) dims.push(height(d));
