@@ -17,7 +17,7 @@ import { LibraryScreen } from "../library/LibraryScreen";
 import { handleLibraryBack } from "../library/libraryView";
 import { incomingDrawingPlugin, readIncomingDrawingFile, type IncomingDrawing } from "../native/incomingDrawing";
 import { beginParse, completeParse, diagnosticPhase, failParse, recordDiagnostic, type ParseAudit } from "../viewer/parseAudit";
-import { autoAssembleXrefs } from "../viewer/xrefAutoFind";
+import { autoAssembleXrefs, xrefPathsInDxf } from "../viewer/xrefAutoFind";
 import { loadXrefMemory } from "../viewer/xrefMemory";
 import { loadDecimals, saveDecimals } from "../viewer/measureFormat";
 import { loadMarks, shareFileName, type MarkTool } from "../viewer/markup";
@@ -294,6 +294,20 @@ export function App() {
       }
       if (!ready) ready = format === "dwg" ? await convertDwgToDxf(file, controller.signal) : file;
       if (serial !== request.current) return;
+      // A library drawing whose xrefs can be found is drawn once with them, not drawn and then drawn again.
+      if (id && isCadFormat(format) && !hasXrefSession(file)) {
+        const paths = await xrefPathsInDxf(ready).catch(() => null);
+        if (serial !== request.current) return;
+        if (paths && (paths.length || Object.keys(loadXrefMemory(id)).length)) {
+          const found = await autoAssembleXrefs(file, paths, id).catch(() => null);
+          if (serial !== request.current) return;
+          if (found) {
+            setXrefSession(file, found.files, found.statuses, found.mapping, found.manual);
+            xrefsTried.current.add(file);
+            ready = found.file;
+          }
+        }
+      }
       // Over 128 MB of DXF an older phone may run out of memory: ask before parsing (用戶 2026-10-27).
       if (isCadFormat(format) && ready.size > LARGE_DXF_BYTES) {
         const mb = Math.round(ready.size / 1048576);

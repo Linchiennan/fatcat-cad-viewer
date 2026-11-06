@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickLibraryEntry, projectOf, xrefFileNames } from "./xrefAutoFind";
+import { pickLibraryEntry, projectOf, xrefFileNames, xrefPathsInDxf } from "./xrefAutoFind";
 
 // 用戶 2026-10-30「跨專案的外參比對沒有分隔，不同案子同檔名的外參可能套錯」：只在主圖所在的案子（圖面庫最上層資料夾）裡找。
 describe("references stay inside the main drawing's project", () => {
@@ -145,5 +145,22 @@ describe("several jobs imported together (世舜 101年)", () => {
     const main = entry("m", "幹線.dwg", "Ae");
     const beside = entry("b", "外參建築圖.dwg", "Ae"), old = entry("o", "外參建築圖.dwg", "Ao");
     expect((pickLibraryEntry(String.raw`D:\01陳\12018外參建築圖\外參建築圖.dwg`, [main, beside, old], main, parents, names) as { id: string }).id).toBe("b");
+  });
+});
+
+// 惠宇 A06：先畫一次、找到外參（惠宇圖框）再整張重畫，慢手機多花 6 秒；開圖前先讀出外參路徑，一次畫好
+describe("xref paths read before drawing", () => {
+  const dxf = (pairs: (string | number)[]) => new File([pairs.join("\r\n") + "\r\n"], "a.dxf");
+  const blocks = (extra: (string | number)[] = []) => ["0", "SECTION", "2", "HEADER", "9", "$ACADVER", "1", "AC1027", "0", "ENDSEC",
+    "0", "SECTION", "2", "BLOCKS",
+    "0", "BLOCK", "2", "惠宇圖框", "70", 4, "1", "..\\圖框\\惠宇圖框.dwg", "0", "ENDBLK",
+    "0", "BLOCK", "2", "門", "70", 0, "1", "", "0", "LINE", "8", "0", "0", "ENDBLK",
+    "0", "BLOCK", "2", "疊圖", "70", 12, "1", "C:\\x\\疊圖.dwg", "0", "ENDBLK",
+    "0", "ENDSEC", ...extra, "0", "EOF"];
+  it("lists the paths of xref blocks only", async () => {
+    expect(await xrefPathsInDxf(dxf(blocks()))).toEqual(["..\\圖框\\惠宇圖框.dwg", "C:\\x\\疊圖.dwg"]);
+  });
+  it("leaves drawings with pictures to the search after drawing", async () => {
+    expect(await xrefPathsInDxf(dxf(blocks(["0", "SECTION", "2", "OBJECTS", "0", "IMAGEDEF", "1", "a.png", "0", "ENDSEC"])))).toBeNull();
   });
 });

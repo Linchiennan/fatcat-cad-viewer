@@ -6,6 +6,36 @@ import { listLibraryDrawings, listLibraryFolders, readLibraryDrawing, ROOT_ID } 
 import { assembleXrefs, endsWithXrefName, normalizeCadPath, type XrefStatus } from "./xrefs";
 import { rememberedFolderFiles } from "./xrefFolders";
 import { rememberedXrefFiles } from "./xrefMemory";
+import { containsAscii, scanPairs } from "../dwg/dxfLines";
+import { detectDxfEncoding } from "./dxfEncoding";
+
+/**
+ * Reference paths of a DXF's xref blocks, read from its BLOCKS section before the drawing is drawn; null when the
+ * drawing also has pictures (IMAGEDEF), which the search after drawing finds together with them. Looking first
+ * draws a drawing with xrefs once instead of twice (惠宇 A06: 12.8 s, then 18.8 s with its frame, on a slow phone).
+ */
+export async function xrefPathsInDxf(file: File): Promise<string[] | null> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (containsAscii(bytes, "IMAGEDEF")) return null;
+  const decoder = new TextDecoder(detectDxfEncoding(bytes.subarray(0, 65536)));
+  const paths: string[] = [];
+  let inBlocks = false, sectionName = false, record: { flags: number; path: string } | null = null;
+  const flush = () => { if (record && record.flags & 4 && record.path) paths.push(record.path); record = null; };
+  scanPairs(bytes, (p) => {
+    if (p.code === 0) {
+      flush();
+      if (p.value === "SECTION") sectionName = true;
+      else if (inBlocks && p.value === "ENDSEC") return false;
+      else if (inBlocks && p.value === "BLOCK") record = { flags: 0, path: "" };
+      return;
+    }
+    if (sectionName && p.code === 2) { inBlocks = p.value === "BLOCKS"; sectionName = false; return; }
+    if (!record) return;
+    if (p.code === 70) record.flags = Number(p.value) || 0;
+    else if (p.code === 1 && !record.path) record.path = decoder.decode(bytes.subarray(p.valueStart, p.valueEnd)).trim();
+  }, (code) => code === 0 || code === 1 || code === 2 || code === 70);
+  return [...new Set(paths)];
+}
 
 /** File names a reference path can be found under (a path without extension also matches .dwg/.dxf). */
 export function xrefFileNames(path: string): string[] {
