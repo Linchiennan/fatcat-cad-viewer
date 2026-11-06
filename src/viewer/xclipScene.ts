@@ -189,11 +189,20 @@ export function insideClip(entities: Any[], polygon: DrawingPoint[], blocks?: Re
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (const p of polygon) { a = Math.min(a, p.x); b = Math.min(b, p.y); c = Math.max(c, p.x); d = Math.max(d, p.y); }
   const m = Math.max(c - a, d - b) * 0.01;
-  return trimToBox(entities, [a - m, b - m, c + m, d + m], blocks, { extents: new Map() }, 0);
+  return trimToBox(entities, [a - m, b - m, c + m, d + m], blocks, { extents: extentsOf(blocks) }, 0);
 }
 
 type Rect = [number, number, number, number];
 type TrimState = { extents: Map<string, Rect | null> };
+// A block's extents are the same for every clipped INSERT: worked out once per drawing (上晴 D區0418: 3 s recomputing
+// the whole nested plan for each of its clipped copies).
+const extentsCache = new WeakMap<object, Map<string, Rect | null>>();
+const extentsOf = (blocks: Record<string, Any> | undefined) => {
+  if (!blocks) return new Map<string, Rect | null>();
+  let m = extentsCache.get(blocks);
+  if (!m) extentsCache.set(blocks, m = new Map());
+  return m;
+};
 // Trimmed copies are named across calls: each clipped INSERT trims its own copies of the same blocks.
 let trimSerial = 0;
 const TRIM_MIN = 500, TRIM_DEPTH = 6;

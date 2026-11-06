@@ -5,8 +5,8 @@ import {drawOrderKey,installDrawOrder,sortBatches} from './drawOrder';
 class Scene {
  tree=new Map<string,any>();
  batches={each:(f:(b:any)=>void)=>[...this.tree.keys()].sort().forEach(k=>f(this.tree.get(k)))};
- _ProcessDxfEntity(e:any,_ctx:any=null){this._GetBatch(e.layer);}
- _GetBatch(key:string){let b=this.tree.get(key);if(!b)this.tree.set(key,b={key});return b;}
+ _ProcessDxfEntity(e:any,_ctx:any=null){this._GetBatch({layerName:e.layer});}
+ _GetBatch(key:any){let b=this.tree.get(key.layerName);if(!b)this.tree.set(key.layerName,b={key:key.layerName});return b;}
  _BuildScene(){const batches:any[]=[];this.batches.each(b=>batches.push({key:b.key}));return {batches};}
 }
 

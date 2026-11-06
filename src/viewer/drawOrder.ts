@@ -34,7 +34,18 @@ export function installDrawOrder(p: Any): void {
     try { return processEntity.call(this, e, ctx); } finally { this.cadDrawOrderNow = previous; }
   };
   p._GetBatch = function (key: Any) {
-    const batch = getBatch.call(this, key), k = this.cadDrawOrderNow;
+    // A map in front of the batch tree: the tree compared layer and block names for every primitive (上晴 D區0418: 2.6 s).
+    // Nested by key field, no string built per call.
+    if (this.cadBatchTree !== this.batches) { this.cadBatchTree = this.batches; this.cadBatchMap = new Map(); }
+    let level: Map<unknown, Any> = this.cadBatchMap;
+    for (const part of [key.layerName, key.blockName, key.geometryType, key.color]) {
+      let next = level.get(part);
+      if (!next) level.set(part, next = new Map());
+      level = next;
+    }
+    let batch = level.get(key.lineType);
+    if (!batch) { batch = getBatch.call(this, key); level.set(key.lineType, batch); }
+    const k = this.cadDrawOrderNow;
     if (k !== null && k !== undefined && !(batch.cadDrawOrder >= k)) batch.cadDrawOrder = k;
     return batch;
   };
