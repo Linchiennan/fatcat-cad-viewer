@@ -65,3 +65,53 @@ patch('TextRenderer.js','        case HAlign.LEFT:\n            origin.x = this.
 // %%nnn: character by decimal code (喬瓏 管道間配罝-RF「2%%34RP」is 2"RP in ZWCAD).
 patch('TextRenderer.js',"const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\\\U\\+([0-9a-f]{4}))/gi","const SPECIAL_CHARS_RE = /(?:%%([dpcou%]))|(?:\\\\U\\+([0-9a-f]{4}))|(?:%%(\\d{1,3}))/gi");
 patch('TextRenderer.js',"    return text.replaceAll(SPECIAL_CHARS_RE, (match, p1, p2) => {","    return text.replaceAll(SPECIAL_CHARS_RE, (match, p1, p2, p3) => {\n        if (p3 !== undefined) return String.fromCharCode(parseInt(p3, 10))");
+// Solid fills (and the graphics-card pattern fills over them) nest loops by containment: even depth fills, odd depth
+// is a hole of the loop around it. Upstream took the first loop as the outline and every other loop as a hole, so a
+// hatch of several separate areas kept only the first (上晴 A區0420: GRASS hatches of two areas showed one band).
+patch('DxfScene.js', `        if (entity.isSolid) {
+            const coords = this._TransformBoundaryLoop(filteredBoundaryLoops[0], transform)
+            const holes = []
+            for (let i = 1; i < filteredBoundaryLoops.length; i++) {
+                holes.push(coords.length / 2)
+                this._TransformBoundaryLoop(filteredBoundaryLoops[i], transform, coords)
+            }
+            const indices = earcut(coords, holes)
+            const vertices = []
+            for (const loop of filteredBoundaryLoops) {
+                vertices.push(...loop)
+            }
+            yield new Entity({
+                type: Entity.Type.TRIANGLES,
+                vertices, indices, layer, color
+            })
+            return`, `        if (entity.isSolid) {
+            /* fatcat: loops by containment depth */
+            const loops = filteredBoundaryLoops.map(loop => this._TransformBoundaryLoop(loop, transform)).filter(c => c.length >= 6)
+            const inside = (x, y, c) => {
+                let hit = false
+                for (let i = 0, j = c.length - 2; i < c.length; j = i, i += 2) {
+                    const ax = c[i], ay = c[i + 1], bx = c[j], by = c[j + 1]
+                    if ((ay > y) !== (by > y) && x < (bx - ax) * (y - ay) / (by - ay) + ax) hit = !hit
+                }
+                return hit
+            }
+            const around = loops.map((c, k) => loops.map((o, m) => m).filter(m => m !== k && inside(c[0], c[1], loops[m])))
+            const depth = around.map(list => list.length)
+            for (let k = 0; k < loops.length; k++) {
+                if (depth[k] % 2) continue
+                const coords = loops[k].slice(), holes = []
+                for (let h = 0; h < loops.length; h++) {
+                    if (depth[h] === depth[k] + 1 && around[h].includes(k)) {
+                        holes.push(coords.length / 2)
+                        coords.push(...loops[h])
+                    }
+                }
+                const indices = earcut(coords, holes)
+                const vertices = []
+                for (let i = 0; i < coords.length; i += 2) vertices.push({x: coords[i], y: coords[i + 1]})
+                yield new Entity({
+                    type: Entity.Type.TRIANGLES,
+                    vertices, indices, layer, color
+                })
+            }
+            return`);

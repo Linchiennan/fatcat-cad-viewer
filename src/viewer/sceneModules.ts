@@ -3,6 +3,7 @@
 import { installMeasurementPreparation } from "./measurementGeometry";
 import { installCadFontScene } from "./cadFontsScene";
 import { installXclipScene } from "./xclipScene";
+import { installPatternFillScene } from "./patternFill";
 import { installEngineeringScene } from "./engineering";
 
 type Any = any;
@@ -14,5 +15,6 @@ export function installSceneModules(sceneClass: Any): void {
   installMeasurementPreparation(sceneClass);
   installCadFontScene(sceneClass);
   installXclipScene(sceneClass);
+  installPatternFillScene(sceneClass);
   installEngineeringScene(sceneClass);
 }

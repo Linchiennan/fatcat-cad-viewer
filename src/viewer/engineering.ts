@@ -11,6 +11,7 @@ import type { SnapPoint, MeasurableEntity } from './measurementGeometry';
 import {lineCurve,curvePerpendicular,conicIntersections,type SnapPrimitive} from './curveSnaps';
 import type { CadLayerState } from "./layerStateTable";
 import { expandRegions } from "./acisRegion";
+import { hatchPatternFamilies } from "./patternFill";
 import { projectObliquePlanes } from "./ocsPlane";
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
 export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean;/** an overlay inside a reference: not drawn in CAD either */notNeeded?:boolean;/** applied from a file of another name */mismatch?:string}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
@@ -274,6 +275,11 @@ export function installEngineeringScene(ctor:Any):void {
    solid=limit===DENSE_HATCH_SEGMENTS;
    if(key)decided.set(key,solid);
   }
+  // Too dense or past the drawing's budget: the pattern is drawn by the graphics card over a fill (patternFill.ts),
+  // which merges into a solid colour zoomed out and shows the pattern zoomed in, as ZWCAD does (上晴 A區0420 地坪石材).
+  // Only one the shader cannot hold falls back to a solid fill or its outline.
+  const families=hatchPatternFamilies(this,e);
+  if(families){for(const x of decomposeHatch.call(this,{...e,isSolid:true},ctx)){if(x.type===Entity.Type.TRIANGLES)x.cadPattern=families;yield x;}return;}
   if(solid)this.cadSolidDenseHatchCount=(this.cadSolidDenseHatchCount??0)+1;else this.cadDenseHatchCount=(this.cadDenseHatchCount??0)+1;
   const transform=this._GetEntityExtrusionTransform(e),layer=this._GetEntityLayer(e,ctx),color=this._GetEntityColor(e,ctx);
   if(solid)yield* decomposeHatch.call(this,{...e,isSolid:true},ctx);

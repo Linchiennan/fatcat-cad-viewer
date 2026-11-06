@@ -23,6 +23,7 @@ import { savedViewFor, type SavedView } from "./savedView";
 import type { CadLayerState } from "./layerStateTable";
 import { drawingIdentity, loadPosition, readLayerMemory, saveLayerMemory, savePosition, sheetKey, type ReadingPosition } from "./readingPosition";
 import { installXclipViewer, XCLIP_LAYER_PREFIX, xclipBaseLayer } from "./xclipScene";
+import { installPatternFills, installPatternViewer } from "./patternFill";
 import { VIEWER_WORKER_FAILED } from "./workerMessages";
 import { attachDebug, debugRequested, detachDebug, noteLoadError } from "./engineDebug";
 import { renderRegion as drawRegion, type RegionOptions, type RegionResult } from "./regionRender";
@@ -103,6 +104,7 @@ export function installViewerPatches(viewerClass: Any = DxfViewer): void {
     };
   }
   installXclipViewer(viewerClass);
+  installPatternViewer(viewerClass);
 }
 
 function defaultWorker(): Worker {
@@ -262,6 +264,7 @@ export class DxfCadEngine implements FatcatCadEngine {
       if (!current()) throw abortError();
 
       this.strokes = installScreenStrokes(this.viewer);
+      installPatternFills(this.viewer);
       const dxf = this.viewer.GetDxf?.() ?? null;
       const report: EngineReport = (dxf?.cadReport as EngineReport) ?? { layers: [], warnings: [], xrefs: [], entityCount: 0, buildMs: 0 };
       // No index from the worker (empty sheet): an index built from nothing, so picks and fits find nothing.

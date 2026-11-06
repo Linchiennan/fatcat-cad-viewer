@@ -39,3 +39,26 @@ declare module "dxf-viewer/src/MTextFormatParser.js" {
     [member: string]: any;
   }
 }
+
+declare module "dxf-viewer/src/BatchingKey.js" {
+  export class BatchingKey {
+    constructor(layerName: string | null, blockName: string | null, geometryType: number | null, color: number, lineType: number | null);
+    static GeometryType: Readonly<Record<string, number>>;
+    [member: string]: any;
+  }
+}
+
+declare module "dxf-viewer/src/Pattern.js" {
+  export class Pattern {
+    constructor(lines: any[], name?: string | null, offsetInLineSpace?: boolean);
+    [member: string]: any;
+  }
+  export function LookupPattern(name: string, isMetric?: boolean): any;
+}
+
+declare module "dxf-viewer/src/HatchCalculator.js" {
+  export class HatchCalculator {
+    constructor(boundaryLoops: any[], style: number);
+    [member: string]: any;
+  }
+}
