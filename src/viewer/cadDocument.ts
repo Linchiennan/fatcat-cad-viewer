@@ -55,7 +55,9 @@ export function clipBoundary(e:Any):{x:number;y:number}[]|null{
  return out.length<=256?out:null;
 }
 export function selectCadSpace(source:Any,name:string):Any {
- const doc=structuredClone(source);doc.blocks??={};doc.cadDiagnostics??=[];doc.cadActiveSpace=name;
+ // A shallow copy: entities and block contents are only ever replaced, never edited, past this point (block copies
+ // for frozen layers, new entity lists); the whole-drawing structuredClone took 0.5-0.9 s per open on the PC.
+ const doc={...source,blocks:Object.fromEntries(Object.entries(source.blocks??{}).map(([k,b]:[string,Any])=>[k,{...b}])),cadDiagnostics:[...(source.cadDiagnostics??[])],entities:[...(source.entities??[])]};doc.cadActiveSpace=name;
  const belongs=(e:Any)=>(e.cadSpace??(e.inPaperSpace?'圖紙（未命名）':'Model'))===name;
  const model=(doc.entities??[]).filter((e:Any)=>!e.inPaperSpace&&(!e.cadSpace||e.cadSpace==='Model')&&e.type!=='VIEWPORT');
  const selected=(doc.entities??[]).filter(belongs);doc.entities=selected.filter((e:Any)=>e.type!=='VIEWPORT').map((e:Any)=>({...e,inPaperSpace:false}));
