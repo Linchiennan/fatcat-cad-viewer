@@ -196,7 +196,10 @@ export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFr
       // Rejoin consecutive kept pieces into open polylines so line type patterns stay continuous.
       const wSpan = Math.hypot(wb.maxX - wb.minX, wb.maxY - wb.minY), joinTolerance = wSpan * 1e-7;
       const runs: P[][] = [];
+      // A rounding sliver where a covered line meets the boundary is no piece (上晴 公設B區-2: 113 lines under a
+      // wipeout each kept a 7e-10 stub).
       for (const [a, b] of pieces) {
+        if (Math.hypot(b.x - a.x, b.y - a.y) <= joinTolerance) continue;
         const last = runs.at(-1), end = last?.at(-1);
         if (end && Math.hypot(end.x - a.x, end.y - a.y) <= joinTolerance) last!.push(b); else runs.push([a, b]);
       }

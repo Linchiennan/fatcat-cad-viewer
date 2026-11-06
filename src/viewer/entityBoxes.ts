@@ -15,7 +15,9 @@ export function installEntityBoxes(p: Any): void {
     // block definitions (ctx set) are drawn once and placed by INSERT, which counts its placed corners
     if (!this.cadBoxes || ctx || !e?.handle) return processEntity.call(this, e, ctx);
     const previous = this.cadBoxHandle;
-    this.cadBoxHandle = String(e.handle);
+    // An attribute widens its INSERT's box, as CAD's extents of the INSERT include it (世舜 潭子 弱電 「配置同」:
+    // a block holding only an ATTDEF had no box of its own and was listed as not drawn).
+    this.cadBoxHandle = String(e.type === "ATTRIB" && e.ownerHandle ? e.ownerHandle : e.handle);
     try { return processEntity.call(this, e, ctx); } finally { this.cadBoxHandle = previous; }
   };
   p._UpdateBounds = function (v: Any) {
