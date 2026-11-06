@@ -220,7 +220,7 @@ export function preserveCadMetadata(doc:Any,source:string):Any{
  for(const e of doc.entities??[])if(e&&sortKeys.has(String(e.handle)))e.cadDrawOrder=order(e); // drawOrder.ts; others use their handle
  const vars=rows.find(r=>r.type==='WIPEOUTVARIABLES'),showFrame=vars?num(vars,70,1)!==0:true,skipped=new Map<string,number>();
  if([...(doc.entities??[]),...Object.values(doc.blocks??{}).flatMap((b:Any)=>b.entities??[])].some((e:Any)=>e.type==='WIPEOUT')){
-  doc.entities=applyWipeouts(doc.entities??[],order,showFrame,skipped,doc.blocks??{});
+  doc.entities=applyWipeouts(doc.entities??[],order,showFrame,skipped,doc.blocks??{},true);
   for(const b of Object.values(doc.blocks??{}) as Any[])if(b.entities?.some((e:Any)=>e.type==='WIPEOUT'))b.entities=applyWipeouts(b.entities,order,showFrame,skipped,doc.blocks);
   for(const [type,n] of skipped)(doc.cadDiagnostics??=[]).push(`遮罩下方可能有 ${type} ${n} 個未遮蔽（陣列、鏡射或超過遮罩上限的圖塊尚未遮蔽）`);
  }

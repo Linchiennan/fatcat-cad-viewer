@@ -1,8 +1,15 @@
 // WIPEOUT (遮罩): hide what is drawn *before* it inside its boundary. The renderer batches geometry and keeps
 // no per-entity draw order, so masking is geometric: earlier lines/polylines are cut where they cross the
 // wipeout, later ones stay whole. Draw order follows SORTENTSTABLE sort handles, else the entity handle.
+import { roughBox } from "./xclipScene";
 type Any = any;
 type P = { x: number; y: number };
+
+/** Kinds put into a one-entity block when a wipeout covers them (see applyWipeouts). */
+const WRAPPED = new Set(["HATCH", "SOLID", "TRACE", "TEXT", "MTEXT", "SPLINE", "ELLIPSE"]);
+/** Name prefix of those blocks. */
+export const WIPEOUT_BLOCK_PREFIX = "__fatcat_wipe_";
+let wrapSerial = 0;
 
 /** World polygon from the IMAGE-style definition: pixel (x,y) with y down, 1×1 image, origin at its center. */
 export function wipeoutPolygon(w: { position: P; u: P; v: P; clip: P[] }): P[] {
@@ -125,7 +132,9 @@ function blockBox(blocks: Record<string, Any>, name: string, memo: Map<string, B
       continue;
     }
     const ps = curveRun(e) ?? points(e);
-    if (ps) all.push(...ps.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y)));
+    if (ps) { all.push(...ps.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))); continue; }
+    const r = roughBox(e);
+    if (r) all.push({ x: r[0], y: r[1] }, { x: r[2], y: r[3] });
   }
   const out = all.length ? box(all) : null;
   memo.set(name, out);
@@ -138,7 +147,7 @@ function blockBox(blocks: Record<string, Any>, name: string, memo: Map<string, B
  * coordinates); xclipScene hides that part of its block like an inverted clip (澄品 B2~4F 臨時水電: the fans of a
  * column symbol showed through the notes' wipeouts).
  */
-export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFrame: boolean, skipped: Map<string, number>, blocks?: Record<string, Any>): Any[] {
+export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFrame: boolean, skipped: Map<string, number>, blocks?: Record<string, Any>, wrap = false): Any[] {
   const memo = new Map<string, Box | null>();
   const wipes = entities.filter((e) => e.type === "WIPEOUT" && Array.isArray(e.polygon) && e.polygon.length >= 3 && !e.hidden);
   if (!wipes.length) return entities.filter((e) => e.type !== "WIPEOUT");
@@ -167,6 +176,22 @@ export function applyWipeouts(entities: Any[], order: (e: Any) => number, showFr
     const wb = box(w.polygon), wo = order(w), next: Any[] = [];
     for (const e of list) {
       if (orderOf(e) >= wo || e.cadWipeoutPiece === wo || (e.cadSpace ?? "Model") !== (w.cadSpace ?? "Model")) { next.push(e); continue; }
+      // Hatches, texts and the other kinds that cannot be cut by line go into a one-entity block placed where they
+      // are, which the wipeout then masks like any INSERT (上晴 公設B區-2: a hatch showed through a wipeout CAD drew
+      // over it; hatches were not even counted as left unmasked).
+      // Top level only: inside blocks (bound xrefs above all) it hid outlines CAD shows (上晴 A區0420 1F 平面).
+      if (wrap && blocks && WRAPPED.has(e.type)) {
+        const r = roughBox(e);
+        if (!r || !overlaps({ minX: r[0], minY: r[1], maxX: r[2], maxY: r[3] }, wb)) { next.push(e); continue; }
+        const name = `${WIPEOUT_BLOCK_PREFIX}${e.handle ?? wrapSerial++}`;
+        blocks[name] = { name, position: { x: 0, y: 0, z: 0 }, entities: [e] };
+        const wrapper = { type: "INSERT", name, handle: e.handle, layer: e.layer, color: e.color, colorIndex: e.colorIndex, trueColor: e.trueColor,
+          hidden: e.hidden, cadSpace: e.cadSpace, inPaperSpace: e.inPaperSpace, cadDrawOrder: e.cadDrawOrder, position: { x: 0, y: 0, z: 0 },
+          cadWipeoutMasks: [w.polygon.map((p: P) => ({ x: p.x, y: p.y }))] };
+        orders.set(wrapper, orderOf(e));
+        next.push(wrapper);
+        continue;
+      }
       if (e.type === "INSERT" && blocks) {
         const g = geometryOf(e), corners = g.corners;
         if (corners && overlaps(g.box, wb)) {

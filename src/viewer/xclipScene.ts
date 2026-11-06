@@ -124,7 +124,7 @@ function wipeoutMasks(e: Any, block: Any): DrawingPoint[][] {
 }
 
 /** Rough extents of an entity, or null when it cannot be told cheaply (kept). */
-function roughBox(e: Any): [number, number, number, number] | null {
+export function roughBox(e: Any): [number, number, number, number] | null {
   const pts = (list: Any[] | undefined, pad = 0): [number, number, number, number] | null => {
     if (!list?.length) return null;
     let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
