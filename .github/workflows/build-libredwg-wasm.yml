@@ -12,7 +12,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        flags: ['--enable-release --enable-debug']
+        # second entry: same code with tracing compiled in (LIBREDWG_TRACE) to locate failures locally
+        flags: ['--enable-release --enable-debug', '--enable-debug --enable-trace']
     steps:
       - name: Tools
         run: sudo apt-get update && sudo apt-get install -y autoconf automake libtool texinfo pkg-config
@@ -50,6 +51,11 @@ jobs:
           # A07 lost 10 of 20 bulges). The decoder has them; write them for every vertex (BD0 skips zeros anyway).
           perl -0pi -e 's/if \(FIELD_VALUE \(flag\) != 0\)(\s*\{?\s*FIELD_BD0 \((?:start_width|bulge))/if (1)$1/g' src/dwg.spec
           test "$(grep -c 'if (1)' src/dwg.spec)" -ge 2 && grep -n -A2 'if (1)' src/dwg.spec
+          # AppInfo is metadata only (saving application name). E03 開關箱裝高示意圖二.dwg has a garbled AppInfo
+          # (num_strings 1879064832); the 64-bit reader carries on, wasm32 stopped with a critical error.
+          # Never let this section abort the drawing.
+          sed -i 's/^  error = appinfo_private (dat, dwg);$/  error = appinfo_private (dat, dwg);\n  if (error >= DWG_ERR_CRITICAL)\n    error = DWG_ERR_VALUEOUTOFBOUNDS;/' src/decode.c
+          grep -n -A2 '^  error = appinfo_private (dat, dwg);$' src/decode.c
           git log --oneline -3
       - name: Build
         run: |
