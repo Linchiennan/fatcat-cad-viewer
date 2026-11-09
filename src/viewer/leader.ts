@@ -39,21 +39,37 @@ export function arrowheadEntities(kind: ArrowKind, tip: P, from: P, size: number
   return ring.map((p, i) => ({ ...common, type: "SOLID", handle: `${handle}.${i}`, points: [z(t), z(p), z(ring[(i + 1) % 12]), z(ring[(i + 1) % 12])] }));
 }
 
-/** Centripetal Catmull-Rom through the points, 16 steps a span (ends extended by reflection). */
-function catmullRom(ps: P[]): P[] {
-  const pts = [{ x: 2 * ps[0].x - ps[1].x, y: 2 * ps[0].y - ps[1].y }, ...ps, { x: 2 * ps.at(-1)!.x - ps.at(-2)!.x, y: 2 * ps.at(-1)!.y - ps.at(-2)!.y }];
+/**
+ * Cubic spline through the points (chord-length parameters), its ends tangent to the first and last segments,
+ * 16 steps a span. ZWCAD's spline leader leaves the arrow along the first segment and bends late; a Catmull-Rom
+ * through the same three points bent at once (天花板套圖-廠房-2F 379C7D, 37AA1C).
+ */
+export function clampedSpline(ps: P[]): P[] {
+  const n = ps.length - 1, t = [0];
+  for (let i = 1; i <= n; i++) t.push(t[i - 1] + Math.max(Math.hypot(ps[i].x - ps[i - 1].x, ps[i].y - ps[i - 1].y), 1e-9));
+  const unit = (a: P, b: P) => { const l = Math.hypot(b.x - a.x, b.y - a.y) || 1; return { x: (b.x - a.x) / l, y: (b.y - a.y) / l }; };
+  const d0 = unit(ps[0], ps[1]), dn = unit(ps[n - 1], ps[n]);
+  // Second derivatives of the clamped spline, one coordinate at a time (tridiagonal, Thomas algorithm).
+  const moments = (v: number[], s0: number, sn: number) => {
+    const h = (i: number) => t[i + 1] - t[i];
+    const a: number[] = [], b: number[] = [], c: number[] = [], r: number[] = [];
+    a[0] = 0; b[0] = 2 * h(0); c[0] = h(0); r[0] = 6 * ((v[1] - v[0]) / h(0) - s0);
+    for (let i = 1; i < n; i++) { a[i] = h(i - 1); b[i] = 2 * (h(i - 1) + h(i)); c[i] = h(i); r[i] = 6 * ((v[i + 1] - v[i]) / h(i) - (v[i] - v[i - 1]) / h(i - 1)); }
+    a[n] = h(n - 1); b[n] = 2 * h(n - 1); c[n] = 0; r[n] = 6 * (sn - (v[n] - v[n - 1]) / h(n - 1));
+    for (let i = 1; i <= n; i++) { const m = a[i] / b[i - 1]; b[i] -= m * c[i - 1]; r[i] -= m * r[i - 1]; }
+    const M = new Array<number>(n + 1); M[n] = r[n] / b[n];
+    for (let i = n - 1; i >= 0; i--) M[i] = (r[i] - c[i] * M[i + 1]) / b[i];
+    return M;
+  };
+  const xs = ps.map((p) => p.x), ys = ps.map((p) => p.y), mx = moments(xs, d0.x, dn.x), my = moments(ys, d0.y, dn.y);
+  const at = (v: number[], M: number[], i: number, u: number) => {
+    const h = t[i + 1] - t[i], A = t[i + 1] - u, B = u - t[i];
+    return M[i] * A ** 3 / (6 * h) + M[i + 1] * B ** 3 / (6 * h) + (v[i] / h - M[i] * h / 6) * A + (v[i + 1] / h - M[i + 1] * h / 6) * B;
+  };
   const out: P[] = [ps[0]];
-  for (let i = 1; i + 2 < pts.length; i++) {
-    const [p0, p1, p2, p3] = [pts[i - 1], pts[i], pts[i + 1], pts[i + 2]];
-    const t = (a: P, b: P) => Math.max(Math.sqrt(Math.hypot(b.x - a.x, b.y - a.y)), 1e-9);
-    const t1 = t(p0, p1), t2 = t1 + t(p1, p2), t3 = t2 + t(p2, p3);
-    for (let k = 1; k <= 16; k++) {
-      const u = t1 + (t2 - t1) * k / 16;
-      const lerp = (a: P, b: P, ta: number, tb: number) => ({ x: ((tb - u) * a.x + (u - ta) * b.x) / (tb - ta), y: ((tb - u) * a.y + (u - ta) * b.y) / (tb - ta) });
-      const a1 = lerp(p0, p1, 0, t1), a2 = lerp(p1, p2, t1, t2), a3 = lerp(p2, p3, t2, t3);
-      const b1 = lerp(a1, a2, 0, t2), b2 = lerp(a2, a3, t1, t3);
-      out.push(k === 16 ? p2 : lerp(b1, b2, t1, t2));
-    }
+  for (let i = 0; i < n; i++) for (let k = 1; k <= 16; k++) {
+    const u = t[i] + (t[i + 1] - t[i]) * k / 16;
+    out.push(k === 16 ? ps[i + 1] : { x: at(xs, mx, i, u), y: at(ys, my, i, u) });
   }
   return out;
 }
@@ -102,12 +118,11 @@ export function leaderEntities(tags: readonly Tag[], base: { handle: string; lay
     const last = vertices[vertices.length - 1], s = (hookSame ? 1 : -1) * asz * scale / hl;
     vertices.splice(vertices.length - 1, 0, { x: last.x + horizontal.x * s, y: last.y + horizontal.y * s });
   }
-  if (spline) notes.push(`舊式引線 ${base.handle} 為曲線引線，以通過各點的平滑曲線近似`);
   // LibreDWG reads 71=0 for leaders ZWCAD shows with arrows in R2018 files; follow the CAD default and say so.
   if (!arrow && base.arrowFlagUnreliable) { arrow = true; notes.push("此版本 DWG 的引線箭頭開關解析不可靠，已依 CAD 預設畫出，請與 CAD 核對"); }
-  // A spline leader (72=1) runs smoothly through its vertices; a centripetal Catmull-Rom through them is close to
-  // CAD's fit (喬瓏 鑫元鴻 天花板套圖-廠房-2F drew it as straight segments). The arrow keeps the first segment's direction.
-  const path = spline && vertices.length > 2 ? catmullRom(vertices) : vertices;
+  // A spline leader (72=1) runs smoothly through its vertices, tangent to the first and last segments; on 喬瓏 鑫元鴻
+  // 天花板套圖-廠房-2F (379C7D, 37AA1C) it lies on ZWCAD's curve. The arrow keeps the first segment's direction.
+  const path = spline && vertices.length > 2 ? clampedSpline(vertices) : vertices;
   const entities: Any[] = [{ ...common, type: "LWPOLYLINE", handle: `${base.handle}:leader`, shape: false, vertices: path }];
   // CAD leaves the arrowhead off when the first segment is shorter than twice its size (W05 地下室水箱給水: DIMASZ 40 on
   // a 16.8 long segment drew a huge filled wedge over the note; ZWCAD draws none).

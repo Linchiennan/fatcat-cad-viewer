@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { arrowKind, arrowheadEntities, leaderEntities } from "./leader";
+import { arrowKind, arrowheadEntities, clampedSpline, leaderEntities } from "./leader";
 import { preserveCadMetadata } from "./cadDocument";
 
 // Layout of a real LEADER from the 16C sheet (style taddd, arrow on, two vertices, DSTYLE override of DIMASZ).
@@ -39,10 +39,19 @@ describe("legacy LEADER display", () => {
     expect(made.notes.join()).toContain("箭頭開關解析不可靠");
   });
 
-  it("omits the arrow when 71 is off and approximates spline leaders with a note", () => {
+  it("omits the arrow when 71 is off and draws spline leaders as a curve without a note", () => {
     expect(leaderEntities(tags([], "0"), { handle: "B", layer: "0" }).entities.map((e) => e.type)).toEqual(["LWPOLYLINE"]);
     const spline = leaderEntities(tags().map(([c, v]) => [c, c === 72 ? "1" : v]), { handle: "C", layer: "0" });
-    expect(spline.notes.join()).toContain("曲線引線");
+    expect(spline.notes.join()).not.toContain("曲線引線");
+  });
+
+  it("spline leaves the arrow along the first segment and ends along the last, through every vertex (ZWCAD 379C7D)", () => {
+    const ps = [{ x: -20826.56, y: 8199.36 }, { x: -20809.28, y: 8209.72 }, { x: -20789.24, y: 8240 }];
+    const out = clampedSpline(ps);
+    expect(out[0]).toEqual(ps[0]); expect(out[16]).toEqual(ps[1]); expect(out.at(-1)).toEqual(ps[2]);
+    const dir = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.atan2(b.y - a.y, b.x - a.x);
+    expect(dir(out[0], out[1])).toBeCloseTo(dir(ps[0], ps[1]), 1);
+    expect(dir(out.at(-2)!, out.at(-1)!)).toBeCloseTo(dir(ps[1], ps[2]), 1);
   });
 
   it("maps arrow block names and draws each kind", () => {
