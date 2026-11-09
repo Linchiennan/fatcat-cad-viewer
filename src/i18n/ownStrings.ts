@@ -10,6 +10,7 @@ import { EXPORT_STRINGS } from "./exportStrings";
 export type Pair = { zh: string; en: string };
 
 export const OWN_STRINGS = {
+  "viewer.no3d": { zh: "無法開啟3D：3D 視埠不顯示", en: "Cannot open 3D: 3D viewport not shown" },
   "select.title": { zh: "選取", en: "Select" },
   "select.end": { zh: "結束選取", en: "End selection" },
   "select.tip": { zh: "選取註記與已完成量測；不改原圖", en: "Select markups and completed measurements, never original CAD" },

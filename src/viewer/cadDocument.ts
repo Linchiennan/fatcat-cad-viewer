@@ -54,6 +54,8 @@ export function clipBoundary(e:Any):{x:number;y:number}[]|null{
  });
  return out.length<=256?out:null;
 }
+/** A perspective or non-plan (3D) viewport is not drawn; the viewer says so up front (用戶 2026-11-09：3D 不處理，直接提示無法開啟3D). */
+export const NO_3D_VIEWPORT='無法開啟3D（3D／透視視埠不顯示）';
 export function selectCadSpace(source:Any,name:string):Any {
  // A shallow copy: entities and block contents are only ever replaced, never edited, past this point (block copies
  // for frozen layers, new entity lists); the whole-drawing structuredClone took 0.5-0.9 s per open on the PC.
@@ -101,7 +103,7 @@ export function selectCadSpace(source:Any,name:string):Any {
    boundary=owner?clipBoundary(owner):null;
    if(!boundary){warn(owner?`裁切邊界 ${owner.type} 尚未支援`:'找不到裁切邊界物件');continue;}
   }
-  if((v.flags&1)||Math.abs(v.direction?.x??0)>1e-9||Math.abs(v.direction?.y??0)>1e-9||(v.direction?.z??1)<=0){warn('透視／非俯視投影尚未支援');continue;}
+  if((v.flags&1)||Math.abs(v.direction?.x??0)>1e-9||Math.abs(v.direction?.y??0)>1e-9||(v.direction?.z??1)<=0){warn(NO_3D_VIEWPORT);continue;}
   if(!(v.width>0&&v.height>0&&v.viewHeight>0)){warn('比例或尺寸無效');continue;}
   // The view twist turns model into view coordinates by +twist (昭盛 2F發電機室放樣圖, twist 35.46°: with the sign the
   // other way the view centre landed 5,400 units off the model and the viewport showed nothing).

@@ -182,6 +182,8 @@ export function App() {
   const [markCount, setMarkCount] = useState(0);
   const [sharing, setSharing] = useState(false);
   const [shareNote, setShareNote] = useState<ShareNote | null>(null);
+  // "無法開啟3D" closed for this drawing and sheet (the note comes back on another sheet or drawing).
+  const [closed3d, setClosed3d] = useState("");
   const [textDialog, setTextDialog] = useState<TextDialog | null>(null);
   // Size for new text markups (remembered on this device); while editing, the edited text's size.
   const [textPx, setTextPx] = useState(loadTextPx);
@@ -651,6 +653,9 @@ export function App() {
   // another name picked by hand counts, so a wrong pick does not look done (用戶 2026-10-30).
   const xrefsUnloaded = report ? report.xrefs.filter((x) => (!x.loaded && !x.disabled && !x.savedUnloaded && !x.notNeeded) || (x.loaded && !x.disabled && x.mismatch)).length : 0;
   const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking && !selecting;
+  // 3D viewports are not drawn (cadDocument NO_3D_VIEWPORT): say so up front instead of leaving an empty frame.
+  const key3d = `${last?.entryId ?? ""}|${space}`;
+  const show3dNote = screen === "viewing" && !isPdf && !!report && closed3d !== key3d && report.warnings.some((w) => w.includes("無法開啟3D"));
   const searching = searchOpen || !!search;
 
   let viewer: ReactNode = null;
@@ -783,6 +788,12 @@ export function App() {
               <div className={`share-note${shareNote.error ? " is-error" : ""}`} role="status">
                 <span>{shareNote.text}</span>
                 <button type="button" aria-label={t("share.close")} onClick={() => setShareNote(null)}><CloseIcon /></button>
+              </div>
+            ) : null}
+            {show3dNote ? (
+              <div className="share-note is-error no3d-note" role="alert">
+                <span>{t("viewer.no3d")}</span>
+                <button type="button" aria-label={t("share.close")} onClick={() => setClosed3d(key3d)}><CloseIcon /></button>
               </div>
             ) : null}
             {saveFailed ? <p className="save-failed" role="status">{t("viewer.librarySaveFailed")}</p> : null}
