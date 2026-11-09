@@ -19,6 +19,13 @@ Built by `.github/workflows/build-libredwg-wasm.yml` on branch `build-libredwg` 
   vertex flag is non-zero, and a plain vertex has flag 0, so old-style polylines lost their arcs and widths (世舜 門窗圖
   donut 10527C224 drew as nothing; A07 工作陽台排水吊管 lost 10 of 20 bulges). They are now written for every vertex
   (BD0 still skips zeros). 186-drawing regression: error codes and entity counts unchanged. Run 40670822492.
+- one fix of ours in src/decode.c: the R2004 metadata sections (SummaryInfo, AppInfo, FileDepList, Security,
+  RevHistory) never abort the drawing; a critical error there becomes VALUEOUTOFBOUNDS, and a failed FileDepList keeps
+  no file list. E03--開關箱裝高示意圖二.dwg has garbled AppInfo/FileDepList sections: FileDepList num_files
+  1,073,741,952 passed the size check on wasm32 (32-bit overflow), calloc failed and the whole drawing was refused
+  with OUTOFMEM (8192); the 64-bit reader rejects the count and carries on (0x40). Now 4,821 model-space objects,
+  type by type the same as the 64-bit dwg2dxf. 186-drawing regression: only E03 changed. Run 42547768647
+  (built with emscripten latest of 2026-11-09).
 
 Same build commands and flags as libredwg-web's package.json (emscripten latest, `--enable-release --enable-debug`,
 linked with em++). `scripts/copy-runtime.mjs` copies these files into public/runtime/libredwg instead of the ones

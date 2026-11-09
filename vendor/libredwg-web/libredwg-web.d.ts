@@ -93,7 +93,6 @@ declare var RuntimeExports: {
         mayDelete(dir: any, name: any, isdir: any): any;
         mayOpen(node: any, flags: any): any;
         checkOpExists(op: any, err: any): any;
-        MAX_OPEN_FDS: number;
         nextfd(): number;
         getStreamChecked(fd: any): any;
         getStream: (fd: any) => any;
@@ -248,6 +247,8 @@ interface WasmModule {
   _emscripten_builtin_calloc(_0: number, _1: number): number;
   _emscripten_builtin_free(_0: number): void;
   _emscripten_builtin_realloc(_0: number, _1: number): number;
+  _free_aligned_sized(_0: number, _1: number, _2: number): void;
+  _free_sized(_0: number, _1: number): void;
   _malloc_size(_0: number): number;
   _malloc_usable_size(_0: number): number;
   _reallocf(_0: number, _1: number): number;
