@@ -13,6 +13,7 @@ import type { CadLayerState } from "./layerStateTable";
 import { expandRegions } from "./acisRegion";
 import { hatchPatternFamilies } from "./patternFill";
 import { projectObliquePlanes } from "./ocsPlane";
+import { addMissingXrefTexts } from "./xrefPlaceholder";
 export type CadLayer = { name:string; color:number; visible:boolean; originalVisible:boolean };
 export type CadReport = { layers:CadLayer[]; /** named layer states saved in the drawing (圖層狀態管理員) */ layerStates?:CadLayerState[]; warnings:string[]; xrefs:{name:string;path:string;overlay:boolean;loaded?:boolean;disabled?:boolean;savedUnloaded?:boolean;/** an overlay inside a reference: not drawn in CAD either */notNeeded?:boolean;/** applied from a file of another name */mismatch?:string}[]; blockLayers?:string[]; entityCount:number; buildMs:number };
 type Any = any;
@@ -166,6 +167,8 @@ export function prepareCad(dxf:Any):CadReport {
  const offXrefs=new Set((dxf.cadXrefStatuses??[]).filter((x:Any)=>x.status==='已關閉').map((x:Any)=>x.name));
  // Only blocks flagged as external references (70 bit 4); LibreDWG also writes a path (group 1) for plain blocks.
  for(const block of Object.values(blocks) as Any[])if(block.xrefPath&&(block.type&4))report.xrefs.push({name:block.name,path:block.xrefPath,overlay:!!(block.type&8),loaded:(block.entities?.length??0)>0,disabled:offXrefs.has(block.name),...(block.cadXrefUnloaded?{savedUnloaded:true}:{}),...(block.cadXrefNotNeeded?{notNeeded:true}:{}),...(block.cadXrefMismatch?{mismatch:block.cadXrefMismatch}:{})});
+ // A missing reference shows its saved path as text at the insertion point, as CAD does (xrefPlaceholder.ts).
+ addMissingXrefTexts(dxf,offXrefs);
  // What a block's content takes from the INSERT that places it (1 layer and so everything, 2 colour, 4 line type,
  // 8 lineweight). Copies are made only per value that matters: keyed on all four, a block placed on many layers was
  // copied for each (惠宇敦南 RF電氣1: 12 thousand entities became 400 thousand, 2 GB, the page froze).
