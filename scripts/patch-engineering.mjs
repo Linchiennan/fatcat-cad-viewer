@@ -115,3 +115,6 @@ patch('DxfScene.js', `        if (entity.isSolid) {
                 })
             }
             return`);
+// ARC_DIMENSION (弧長標註) carries its drawn *D block like any dimension; read it as a DIMENSION so the block is drawn
+// (昭盛 建築套結構-1F 1789EF: listed as an unsupported object and left out; *D576 holds its lines, arcs, arrows, text).
+patch('parser/DxfParser.js','    dxfParser.registerEntityHandler(Dimension);\n',"    dxfParser.registerEntityHandler(Dimension);\n    /* fatcat-arc-dimension */ { function ArcDimension() {} ArcDimension.ForEntityName = 'ARC_DIMENSION'; ArcDimension.prototype.parseEntity = function(scanner, curr) { const e = Dimension.prototype.parseEntity.call(this, scanner, curr); e.type = 'DIMENSION'; e.cadDxfType = 'ARC_DIMENSION'; return e; }; dxfParser.registerEntityHandler(ArcDimension); }\n");
