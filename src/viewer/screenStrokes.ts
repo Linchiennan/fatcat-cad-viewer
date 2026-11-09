@@ -39,6 +39,10 @@ export function installScreenStrokes(viewer:DxfViewer):()=>void {
   mesh.onBeforeRender=()=>{const off=(viewer as unknown as {fatcatRenderSize?:{width:number;height:number}|null}).fatcatRenderSize;if(off){material.uniforms.cadViewport.value.set(off.width,off.height);return;}const c=viewer.GetCanvas();material.uniforms.cadViewport.value.set(c.clientWidth||c.width,c.clientHeight||c.height);};
   const layer=(object as unknown as {_dxfViewerLayer?:{objects:unknown[]}})._dxfViewerLayer;
   if(layer){const at=layer.objects.indexOf(object);if(at>=0)layer.objects[at]=mesh;}
+  // Free only the old line vertices: the other attributes now belong to the stroke mesh too, and an instanced batch's
+  // transforms are shared with its triangle mesh. Disposing them deleted that GPU buffer under the fills' vertex array
+  // ("drawElementsInstanced: no buffer is bound to enabled attribute"; 鑫元鴻 電信-2F: 7 fill batches not drawn).
+  for(const key of Object.keys(source.attributes))if(key!=='position')source.deleteAttribute(key);
   scene.remove(object);scene.add(mesh);source.dispose();
  }
  return ()=>materials.forEach(m=>m.dispose());
