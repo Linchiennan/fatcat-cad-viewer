@@ -51,11 +51,18 @@ jobs:
           # A07 lost 10 of 20 bulges). The decoder has them; write them for every vertex (BD0 skips zeros anyway).
           perl -0pi -e 's/if \(FIELD_VALUE \(flag\) != 0\)(\s*\{?\s*FIELD_BD0 \((?:start_width|bulge))/if (1)$1/g' src/dwg.spec
           test "$(grep -c 'if (1)' src/dwg.spec)" -ge 2 && grep -n -A2 'if (1)' src/dwg.spec
-          # AppInfo is metadata only (saving application name). E03 開關箱裝高示意圖二.dwg has a garbled AppInfo
-          # (num_strings 1879064832); the 64-bit reader carries on, wasm32 stopped with a critical error.
-          # Never let this section abort the drawing.
-          sed -i 's/^  error = appinfo_private (dat, dwg);$/  error = appinfo_private (dat, dwg);\n  if (error >= DWG_ERR_CRITICAL)\n    error = DWG_ERR_VALUEOUTOFBOUNDS;/' src/decode.c
-          grep -n -A2 '^  error = appinfo_private (dat, dwg);$' src/decode.c
+          # R2004 metadata sections (summary info, saving application, file dependencies, security, revision history)
+          # never abort the drawing. E03 開關箱裝高示意圖二.dwg has garbled AppInfo and FileDepList sections:
+          # FileDepList num_files 1073741952 overflowed the 32-bit size check, calloc failed and the whole drawing
+          # was refused with OUTOFMEM (8192); the 64-bit reader rejects the count and carries on. Drop the file list.
+          for s in summaryinfo appinfo filedeplist security revhistory; do
+            sed -i "s/^  error = ${s}_private (dat, dwg);\$/&\n  if (error >= DWG_ERR_CRITICAL)\n    error = DWG_ERR_VALUEOUTOFBOUNDS;/" src/decode.c
+          done
+          # inserted right after the call, so it runs before the error is downgraded
+          sed -i 's/^  error = filedeplist_private (dat, dwg);$/&\n  if (error >= DWG_ERR_CRITICAL)\n    dwg->filedeplist.num_files = 0;/' src/decode.c
+          grep -n -A2 '^  error = [a-z]*_private (dat, dwg);$' src/decode.c
+          test "$(grep -c 'error = DWG_ERR_VALUEOUTOFBOUNDS;' src/decode.c)" -ge 5
+          grep -n 'dwg->filedeplist.num_files = 0;' src/decode.c
           # trace build only: overflow checks reset the log level to the section's opts (0), silencing the rest
           if [[ "${{ matrix.flags }}" == *trace* ]]; then
             sed -i 's/^\( *\)loglevel = dat->opts & DWG_OPTS_LOGLEVEL;\( *\\\)$/\1(void)0;\2/' src/bits.c
