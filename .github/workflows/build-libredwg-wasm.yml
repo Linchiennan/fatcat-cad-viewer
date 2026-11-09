@@ -56,6 +56,11 @@ jobs:
           # Never let this section abort the drawing.
           sed -i 's/^  error = appinfo_private (dat, dwg);$/  error = appinfo_private (dat, dwg);\n  if (error >= DWG_ERR_CRITICAL)\n    error = DWG_ERR_VALUEOUTOFBOUNDS;/' src/decode.c
           grep -n -A2 '^  error = appinfo_private (dat, dwg);$' src/decode.c
+          # trace build only: overflow checks reset the log level to the section's opts (0), silencing the rest
+          if [[ "${{ matrix.flags }}" == *trace* ]]; then
+            sed -i 's/^\( *\)loglevel = dat->opts & DWG_OPTS_LOGLEVEL;\( *\\\)$/\1(void)0;\2/' src/bits.c
+            grep -c '(void)0;' src/bits.c
+          fi
           git log --oneline -3
       - name: Build
         run: |
