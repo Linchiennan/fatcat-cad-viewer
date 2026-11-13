@@ -401,6 +401,9 @@ button { cursor: pointer; }
 .glove-tip strong { display: block; margin-bottom: 2px; color: #fff; font-size: 14px; font-weight: 700; }
 .glove-bar > button:first-of-type .glove-tip { left: 0; transform: none; }
 .glove-bar > button:last-of-type .glove-tip { left: auto; right: 0; transform: none; }
+/* the second and second-to-last buttons too: centred on 「搜尋」, the bubble ran off the right of a 320/360px phone */
+.glove-bar > button:nth-of-type(2) .glove-tip { left: 0; transform: none; }
+.glove-bar > button:nth-last-of-type(2) .glove-tip { left: auto; right: 0; transform: none; }
 .markup-bar .glove-tip, .search-stepper .glove-tip, .search-sheet .glove-tip, .info-panel.info-top .glove-tip { bottom: auto; top: calc(100% + 8px); }
 
 /* ---------- generic icon tile (T18 2.6) ---------- */
