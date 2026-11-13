@@ -126,6 +126,26 @@ describe("text LibreDWG's DXF writer mis-decoded (15A 客變圖 R2004 Big5 MTEXT
     expect(doc.entities.map((e) => e.text)).toEqual(["魚眼罩附防蟲網", "甲J"]);
   });
 
+  // 世舜 圖框「世」「計」+ Enter → "@^J" "p^J"；貝拉 數量及昇位「其他控制方式」→ "L\U+89A1^J"；12018-法規檢討「注水口」→ "`f^J"；
+  // 「舜」→ 單獨的 \U+03CA（ϊ）。ZWCAD 都顯示原字。
+  it("re-reads short or multibyte texts closing in ^J and lone rare Greek letters", () => {
+    expect(needsTextRecovery(head("ANSI_950", "  1\n@^J\n  7\nLMP\n"))).toBe(true);
+    expect(needsTextRecovery(head("ANSI_950", "  1\nL\\U+89A1^J\n"))).toBe(true);
+    expect(needsTextRecovery(head("ANSI_950", "  1\n\\U+03CA\n"))).toBe(true);
+    expect(needsTextRecovery(head("ANSI_950", "  1\n\\U+03C6\n"))).toBe(false); // φ is a normal drawing character
+    expect(needsTextRecovery(head("ANSI_950", "  1\nTHE PIPE SLEEVE SHALL BE GALVANIZED^J\n"))).toBe(false);
+    const doc = { entities: [
+      { type: "TEXT", handle: "2ED0", text: "@^J" },
+      { type: "TEXT", handle: "ECF9", text: "L\\U+89A1^J" },
+      { type: "TEXT", handle: "1F7A5", text: "`f^J" },
+      { type: "TEXT", handle: "2ED9", text: "\\U+03CA" },
+      { type: "TEXT", handle: "P1", text: "\\U+03C6" }, // φ stays even if the reader differs
+      { type: "TEXT", handle: "A1", text: "AB^J" }, // reader without a break: left for the caret decoder
+    ], blocks: {} };
+    expect(applyReaderTexts(doc, { "2ED0": "世\n", ECF9: "其他控制方式\n", "1F7A5": "注水口\n", "2ED9": "舜", P1: "Φ", A1: "AB" })).toBe(4);
+    expect(doc.entities.map((e) => e.text)).toEqual(["世", "其他控制方式", "注水口", "舜", "\\U+03C6", "AB^J"]);
+  });
+
   // 太原段 弱電「T: 電話水平配管線…數位式電纜線」+ Enter：DXF 是亂碼＋"^J"，備援讀到的字尾帶真的換行，單行字畫成「?」
   it("drops the raw line break of a garbled one-line text replaced by the reader's", () => {
     const doc = { entities: [

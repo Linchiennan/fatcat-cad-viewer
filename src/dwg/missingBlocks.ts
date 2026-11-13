@@ -237,6 +237,18 @@ const CARET_ONLY_LINE = /\n\s*1\r?\n(?:\^[JMI])+\r?\n/;
 // "n" + lead byte + "^J", shown 「n筏J」; ZWCAD shows the whole text).
 const LEAD_BEFORE_BREAK = /[^\x00-\x7f]J$/;
 const LEAD_BEFORE_BREAK_LINE = /\n\s*1\r?\n[^\r\n]*[^\x00-\x7f]J\r?\n/;
+// The same writer fault in other shapes: any multibyte text ending in Enter can come out mangled before the "^J" —
+// trail byte only (「世」→ "@^J"), codes ("其他控制方式" → "L\U+89A1^J"), short ASCII junk ("注水口" → "`f^J",
+// "公制" → "@@^J"; 世舜 圖框 in 太原段／太祥段／碁創 drawings, 貝拉 數量及昇位, 惠宇敦南 12018-法規檢討; ZWCAD shows the
+// text). A short value or one with non-ASCII before a closing "^J" asks the reader; its text, ending in a line
+// break, is taken over the DXF's.
+const BREAK_END_LINE = /\n\s*1\r?\n(?:[^\r\n]{0,8}|[^\r\n]*(?:[^\x00-\x7f]|\\U\+)[^\r\n]*)\^J\r?\n/;
+// A lone character read as a rare Greek letter (「舜」→ \U+03CA ϊ in the same 世舜 title block). Greek used on
+// drawings (φ α β γ δ ε θ λ μ π ρ σ τ ω Δ Σ Φ Ω) is left alone.
+const COMMON_GREEK = new Set(["03B1", "03B2", "03B3", "03B4", "03B5", "03B8", "03BB", "03BC", "03C0", "03C1", "03C3", "03C4", "03C6", "03C9", "0394", "03A3", "03A6", "03A9"]);
+const LONE_GREEK = /^\\U\+(03[89A-Fa-f][0-9A-Fa-f])$/;
+const LONE_GREEK_LINE = /\n\s*1\r?\n\\U\+(03[89A-Fa-f][0-9A-Fa-f])\r?\n/g;
+const rareGreek = (code: string) => !COMMON_GREEK.has(code.toUpperCase());
 
 export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).length;
 
@@ -244,7 +256,8 @@ export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).le
  * 世舜 神岡 法規檢討 A1～A18 each had a single 「系統種類」+ Enter that came out as "tκ؃" and showed a missing glyph. */
 export function needsTextRecovery(dxf: string): boolean {
   const head = dxf.slice(0, 20000).split(/\r?\n/), i = head.findIndex((l) => l === "$DWGCODEPAGE");
-  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 1 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf) || LEAD_BEFORE_BREAK_LINE.test(dxf));
+  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 1 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf) || LEAD_BEFORE_BREAK_LINE.test(dxf)
+    || BREAK_END_LINE.test(dxf) || [...dxf.matchAll(LONE_GREEK_LINE)].some((m) => rareGreek(m[1])));
 }
 
 /** Text of every text-bearing entity by handle, from the object reader. */
@@ -276,6 +289,10 @@ export function applyReaderTexts(doc: Any, texts: Record<string, string>): numbe
     if (CARET_ONLY.test(e.text) && /\S/.test(better)) { e.text = oneLine(e, better); fixed++; continue; }
     // the reader's text ends in a line break and the DXF kept only a lead byte before it (see LEAD_BEFORE_BREAK)
     if (/[\r\n]$/.test(better) && /\S/.test(better) && LEAD_BEFORE_BREAK.test(e.text)) { e.text = oneLine(e, better); fixed++; continue; }
+    // any text closing in "^J" whose reader text ends in a line break (see BREAK_END_LINE)
+    if (/[\r\n]$/.test(better) && /\S/.test(better) && /\^J$/.test(e.text)) { e.text = oneLine(e, better); fixed++; continue; }
+    const greek = LONE_GREEK.exec(e.text);
+    if (greek && rareGreek(greek[1]) && /\S/.test(better) && !/^\\U\+/.test(better)) { e.text = oneLine(e, better); fixed++; continue; }
     if (suspectTextCount(e.text) > 0 || MIF_CODE.test(better) || (e.text.startsWith(better) && (MIF_CODE.test(e.text) || MIF_PIECE.test(e.text.slice(better.length))))) { e.text = oneLine(e, better); fixed++; }
   }
   return fixed;
