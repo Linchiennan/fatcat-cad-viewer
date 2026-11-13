@@ -77,7 +77,9 @@
 .lib-crumbs button.current { color: var(--lib-accent); font-weight: 700; }
 .lib-web-note { flex: none; margin: 0; font-size: 12px; line-height: 1.5; color: var(--lib-muted); }
 
-.lib-actions { flex: none; display: flex; gap: 10px; }
+/* Wraps when the buttons do not fit: in English on a 320px phone 「Export history」 was pushed off the screen and could
+   not be reached (the row does not scroll). Chinese and wider screens stay on one row. */
+.lib-actions { flex: none; display: flex; flex-wrap: wrap; gap: 10px; }
 .lib-primary, .lib-secondary, .lib-danger, .lib-small {
   display: inline-flex;
   align-items: center;
