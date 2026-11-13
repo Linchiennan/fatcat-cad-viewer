@@ -232,6 +232,11 @@ const MIF_PIECE = /\+[1-5][0-9A-Fa-f]{4}/;
 // as "^J", 給排水圖例及工程說明 of 太原段／太祥段; ZWCAD shows 器). The object reader still has the character.
 const CARET_ONLY = /^(?:\^[JMI])+$/;
 const CARET_ONLY_LINE = /\n\s*1\r?\n(?:\^[JMI])+\r?\n/;
+// Or only the lead byte of that character is kept before the "^J": decoded as Big5 the lead byte takes the "^" into
+// one character and leaves a bare "J" (世舜 太祥段 參層至肆層弱電平面圖「魚眼罩附防蟲網」+ Enter came out as
+// "n" + lead byte + "^J", shown 「n筏J」; ZWCAD shows the whole text).
+const LEAD_BEFORE_BREAK = /[^\x00-\x7f]J$/;
+const LEAD_BEFORE_BREAK_LINE = /\n\s*1\r?\n[^\r\n]*[^\x00-\x7f]J\r?\n/;
 
 export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).length;
 
@@ -239,7 +244,7 @@ export const suspectTextCount = (text: string) => (text.match(SUSPECT) ?? []).le
  * 世舜 神岡 法規檢討 A1～A18 each had a single 「系統種類」+ Enter that came out as "tκ؃" and showed a missing glyph. */
 export function needsTextRecovery(dxf: string): boolean {
   const head = dxf.slice(0, 20000).split(/\r?\n/), i = head.findIndex((l) => l === "$DWGCODEPAGE");
-  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 1 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf));
+  return i >= 0 && CJK_CODEPAGE.test(head[i + 2] ?? "") && (suspectTextCount(dxf) >= 1 || MIF_CODE.test(dxf) || CARET_ONLY_LINE.test(dxf) || LEAD_BEFORE_BREAK_LINE.test(dxf));
 }
 
 /** Text of every text-bearing entity by handle, from the object reader. */
@@ -269,6 +274,8 @@ export function applyReaderTexts(doc: Any, texts: Record<string, string>): numbe
     const better = e.handle && texts[e.handle];
     if (!better || typeof e.text !== "string" || better === e.text) continue;
     if (CARET_ONLY.test(e.text) && /\S/.test(better)) { e.text = oneLine(e, better); fixed++; continue; }
+    // the reader's text ends in a line break and the DXF kept only a lead byte before it (see LEAD_BEFORE_BREAK)
+    if (/[\r\n]$/.test(better) && /\S/.test(better) && LEAD_BEFORE_BREAK.test(e.text)) { e.text = oneLine(e, better); fixed++; continue; }
     if (suspectTextCount(e.text) > 0 || MIF_CODE.test(better) || (e.text.startsWith(better) && (MIF_CODE.test(e.text) || MIF_PIECE.test(e.text.slice(better.length))))) { e.text = oneLine(e, better); fixed++; }
   }
   return fixed;

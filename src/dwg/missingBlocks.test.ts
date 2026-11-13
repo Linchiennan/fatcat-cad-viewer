@@ -114,6 +114,18 @@ describe("text LibreDWG's DXF writer mis-decoded (15A 客變圖 R2004 Big5 MTEXT
     expect(doc.entities.map((e) => e.text)).toEqual(["器", "甲\\P乙", "^J"]);
   });
 
+  // 太祥段 參層至肆層弱電平面圖「魚眼罩附防蟲網」+ Enter：DXF 只剩 "n"＋前半個位元組＋"^J"，Big5 解成「n筏J」
+  it("re-reads a text whose last character kept only its lead byte before the line break", () => {
+    expect(needsTextRecovery(head("ANSI_950", "  1\nn筏J\n 41\n0.8\n"))).toBe(true);
+    expect(needsTextRecovery(head("ANSI_950", "  1\nOK J\n"))).toBe(false);
+    const doc = { entities: [
+      { type: "TEXT", handle: "2ADF86", text: "n筏J" },
+      { type: "TEXT", handle: "K1", text: "甲J" }, // the reader's text has no line break: a real 「甲J」 stays
+    ], blocks: {} };
+    expect(applyReaderTexts(doc, { "2ADF86": "魚眼罩附防蟲網\n", K1: "甲J" })).toBe(1);
+    expect(doc.entities.map((e) => e.text)).toEqual(["魚眼罩附防蟲網", "甲J"]);
+  });
+
   // 太原段 弱電「T: 電話水平配管線…數位式電纜線」+ Enter：DXF 是亂碼＋"^J"，備援讀到的字尾帶真的換行，單行字畫成「?」
   it("drops the raw line break of a garbled one-line text replaced by the reader's", () => {
     const doc = { entities: [
