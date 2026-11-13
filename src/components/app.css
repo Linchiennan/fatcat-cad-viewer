@@ -660,7 +660,10 @@ button { cursor: pointer; }
   max-width: calc(100vw - 24px); padding: 8px 8px 8px 14px; border-radius: 12px; background: rgba(16, 26, 36, 0.96); border: 1px solid var(--line);
 }
 .share-note { top: calc(190px + var(--safe-top)); }
-.share-note.no3d-note { top: calc(78px + var(--strip-h) + var(--safe-top)); font-weight: 700; white-space: nowrap; }
+/* Centred between 12px gutters and only as wide as its text: one line when it fits, wrapped (with the ✕ kept inside)
+   on a narrow phone. "left: 50%" alone left it half the screen to grow in, so Chinese wrapped early; nowrap pushed the
+   English text and its ✕ off a 320px screen. */
+.share-note.no3d-note { top: calc(78px + var(--strip-h) + var(--safe-top)); font-weight: 700; left: 12px; right: 12px; transform: none; width: fit-content; max-width: calc(100vw - 24px); margin: 0 auto; }
 .share-note.is-error { border-color: #b34b4b; color: #ff8a80; }
 .share-note button { display: grid; place-items: center; width: 32px; height: 32px; border: 0; background: none; color: inherit; }
 .save-failed { top: calc(78px + var(--strip-h) + var(--safe-top)); margin: 0; padding: 8px 14px; color: var(--accent-hi); font-size: 0.9rem; }
