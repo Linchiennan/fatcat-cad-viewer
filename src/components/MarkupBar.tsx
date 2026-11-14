@@ -128,10 +128,14 @@ export function MarkupTextDialog({ onOk, onCancel, initial, multiline, color, te
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { y: e.clientY, h: box.current.getBoundingClientRect().height };
   };
+  // Height goes straight to the element while dragging (no React re-render per move); state once on release.
+  const dragTo = useRef<number | null>(null);
   const moveDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (drag.current) setHeight(Math.min(maxHeight(), Math.max(MTEXT_MIN_HEIGHT, drag.current.h - (e.clientY - drag.current.y))));
+    if (!drag.current || !box.current) return;
+    dragTo.current = Math.min(maxHeight(), Math.max(MTEXT_MIN_HEIGHT, drag.current.h - (e.clientY - drag.current.y)));
+    box.current.style.height = `${dragTo.current}px`;
   };
-  const endDrag = () => { drag.current = null; };
+  const endDrag = () => { drag.current = null; if (dragTo.current) setHeight(dragTo.current); dragTo.current = null; };
   useEffect(() => { input.current?.focus(); if (editing) input.current?.select(); }, [editing]);
   // Half the screen to start, but never over the toolbar on a short screen.
   useEffect(() => { if (multiline && box.current && box.current.getBoundingClientRect().height > maxHeight()) setHeight(maxHeight()); }, [multiline]);

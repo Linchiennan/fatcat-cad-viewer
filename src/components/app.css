@@ -801,3 +801,24 @@ button { cursor: pointer; }
 /* last picture held while the same sheet is drawn again with its references (DrawingCanvas HeldPicture) */
 .held-picture { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
 .held-picture-canvas { width: 100%; height: 100%; display: block; }
+
+/* ── Mobile-native pass (Emil Kowalski skills, 2026-11-14) ─────────────────────────────── */
+/* Buttons: no 300ms double-tap wait, no text selection or callout on long-press. */
+button, a, [role="button"], label { touch-action: manipulation; }
+button, [role="button"] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+@media (pointer: coarse) {
+  /* iPhone Safari zooms the page into any input under 16px and never zooms back. */
+  html:root input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  html:root textarea, html:root select { font-size: 16px; }
+  /* Small controls get an invisible 44×44 hit area; the look does not change.
+     :where() keeps specificity 0 so any existing position rule still wins. */
+  :where(.lang-item, .home-link, .home-legal a, .lib-crumbs button, .file-library, .file-close) { position: relative; }
+  :where(.lang-item, .home-link, .home-legal a, .lib-crumbs button, .file-library, .file-close)::after {
+    content: ""; position: absolute; left: 50%; top: 50%;
+    width: max(100%, 44px); height: max(100%, 44px); transform: translate(-50%, -50%);
+  }
+  /* The breadcrumb row scrolls sideways, which clips the hit area; room inside, taken back outside. */
+  .lib-crumbs { padding-top: 6px; padding-bottom: 6px; margin-top: -6px; margin-bottom: -6px; }
+  /* Layer panel tabs/buttons: the 40px rule above outranks the 52px touch rule; at least 44px on touch. */
+  .cad-sheet header button, .cad-sheet nav button, .cad-sheet-body button, .cad-sheet-body select { min-height: 44px; }
+}
