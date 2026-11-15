@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { hitMark, markBounds, translateMark } from "../viewer/markupMove";
+import { useI18n } from "../i18n/translations";
 import type { DrawingPoint } from "../viewer/savedView";
 import { arrowHead, PEN_PX, squareBox, TEXT_LINE_GAP, TEXT_PX, textLines, thinStroke, type Mark, type MarkTool } from "../viewer/markup";
 
@@ -63,6 +64,7 @@ function twoPointMark(t: MarkTool, color: string, a: DrawingPoint, b: DrawingPoi
 
 /** Existing markups are moved as whole objects; middle drag or two fingers pan, the wheel or a pinch zooms. */
 export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd, onText, onEditText, onPan, onZoom, textAnchor, textPx = TEXT_PX, active = true, onMove }: Props) {
+  const { t } = useI18n();
   const svg = useRef<SVGSVGElement>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [moved, setMoved] = useState<Mark | null>(null);
@@ -220,7 +222,7 @@ export function MarkupLayer({ marks, tool, color, project, unproject, ppu, onAdd
   const selection = selected !== null && shown[selected] ? markBounds(shown[selected],project,ppu) : null;
 
   return (
-    <svg ref={svg} className={`markup-layer${!active ? " passive" : ""}`} aria-label="註記" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={e=>{if(e.pointerType==="touch")lift(e.pointerId);cancel();}} onLostPointerCapture={()=>{if(gesture.current || drawing.current || panning.current || textTap.current)cancel();}}
+    <svg ref={svg} className={`markup-layer${!active ? " passive" : ""}`} aria-label={t("markup.layerLabel")} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={e=>{if(e.pointerType==="touch")lift(e.pointerId);cancel();}} onLostPointerCapture={()=>{if(gesture.current || drawing.current || panning.current || textTap.current)cancel();}}
       onDoubleClick={e=>{if(!active)return;e.preventDefault();e.stopPropagation(); /* Pointer taps already handled editing; swallow synthetic dblclick only while marking. */}}>
       {all.map((m, i) => m.kind === "text"
         ? (() => { const [p] = project([m.at]); const px = Math.max(6, m.size * ppu); return <text key={i} data-mark-index={i} x={p.x} y={p.y + px * 0.85} fontSize={px} fill={m.color} className="markup-text">

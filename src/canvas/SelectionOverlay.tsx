@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import type {DrawingPoint} from '../types/drawing';
+import {useI18n} from '../i18n/translations';
 import type {Mark} from '../viewer/markup';
 import {hitMark,markBounds} from '../viewer/markupMove';
 import type {OverlayModel} from './overlayModel';
@@ -13,6 +14,7 @@ export function SelectionOverlay({tool,marks,model,project,ppu,selected,onChange
  project(points:readonly DrawingPoint[]):DrawingPoint[];ppu:number;
  selected:Selection;onChange(s:Selection):void;
 }){
+ const {t}=useI18n();
  const svg=useRef<SVGSVGElement>(null),live=useRef({tool,marks,model,project,ppu,onChange});
  live.current={tool,marks,model,project,ppu,onChange};
  const [drag,setDrag]=useState<Box|null>(null);
@@ -50,7 +52,7 @@ export function SelectionOverlay({tool,marks,model,project,ppu,selected,onChange
   return()=>{root.removeEventListener('pointerdown',down,true);root.removeEventListener('pointermove',move,true);root.removeEventListener('pointerup',up,true);root.removeEventListener('pointercancel',cancel,true);};
  },[tool]);
  const b=bounds();
- return <svg ref={svg} className={`selection-overlay ${tool}`} aria-label="選取註記與量測">
+ return <svg ref={svg} className={`selection-overlay ${tool}`} aria-label={t('select.overlayLabel')}>
   {selected.marks.map(i=>b.marks[i]?<rect key={`m${i}`} data-selected-mark={i} {...selectionBounds(b.marks[i])} className="selected-object"/>:null)}
   {selected.measures.map(i=>b.measures[i]?<rect key={`q${i}`} data-selected-measure={i} {...selectionBounds(b.measures[i])} className="selected-object"/>:null)}
   {drag?<rect {...drag} className="selection-window"/>:null}
