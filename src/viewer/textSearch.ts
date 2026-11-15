@@ -10,7 +10,9 @@ export type TextHit = { text: string; layer: string; bounds: DrawingBounds; text
 export function plainCadText(raw: string): string {
   return raw
     .replace(/\\U\+([0-9A-Fa-f]{4})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)))
-    .replace(/\\[Pp]|\\[Nn]|\^J/g, " ")
+    // \P is a line break; lowercase \p…; is paragraph formatting (\pxqc; centred, \pxi-3,l3,t3; indents), removed
+    // below like the other codes (it left "xqc;" before the text: 2026-11-15 查 BUG)
+    .replace(/\\P|\\[Nn]|\^J/g, " ")
     .replace(/\\S([^;]*?)[#^/]([^;]*);/g, "$1/$2")
     .replace(/\\[ACcFfHhQTWpLlOoKkXx][^;\\{}]*;?|\\[LlOoKk]/g, "")
     .replace(/\\~/g, " ")

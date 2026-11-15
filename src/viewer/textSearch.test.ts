@@ -13,6 +13,11 @@ describe("text search", () => {
     expect(plainCadText("\\A1;\\H0.7x;\\U+6D88防栓%%c50")).toBe("消防栓Ø50");
     expect(plainCadText("\\S1/2;\"")).toBe("1/2\"");
   });
+  it("drops paragraph formatting (lowercase \\p…;), keeps \\P as a line break", () => {
+    expect(plainCadText("\\pxqc;消防栓")).toBe("消防栓");
+    expect(plainCadText("\\pxi-3,l3,t3;1.說明\\P2.附註")).toBe("1.說明 2.附註");
+    expect(plainCadText("\\pi-2.5,l2.5,t2.5;項目")).toBe("項目");
+  });
 
   it("finds 消防栓 in plain text, MTEXT and attributes, ignoring width and case", () => {
     const hits = searchTexts([ent("室內消防栓設備", 0, 100), ent("{\\C6;消防栓}箱", 0, 200), ent("ＦＢ米黃石", 0, 300), ent("其他", 0, 400)], "消防栓");
