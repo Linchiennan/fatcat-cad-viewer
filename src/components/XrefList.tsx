@@ -4,6 +4,7 @@
 import { useRef } from "react";
 import { useI18n } from "../i18n/translations";
 import type { XrefStatus } from "../viewer/xrefs";
+import { cadMessageText } from "../viewer/warningText";
 
 export type XrefRow = Pick<XrefStatus, "name" | "path" | "key" | "overlay"> & { status?: string; mismatch?: boolean };
 
@@ -23,7 +24,7 @@ export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle, can
   onPick(row: XrefRow, file: File): void;
   onToggle(row: XrefRow, on: boolean): void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const input = useRef<HTMLInputElement>(null);
   const target = useRef<XrefRow | null>(null);
   const needed = rows.filter((r) => !xrefNotNeeded(r.status));
@@ -60,10 +61,10 @@ export function XrefList({ rows, rootName, disabled, busy, onPick, onToggle, can
       <div className={"cad-xref-row " + (off ? "off" : mismatch ? "mismatch" : applied ? "applied" : notNeeded ? "not-needed" : "missing")} key={r.key}>
         <button type="button" className="cad-xref-name" disabled={busy} title={canPick ? t("cad.xref.pickOne", { name: r.name }) : undefined}
           onClick={() => { if (!canPick) return; target.current = r; input.current?.click(); }}>
-          <strong>{r.name}</strong>
+          <strong>{cadMessageText(r.name, locale)}</strong>
           <small>{r.path} · {r.overlay ? t("cad.xref.overlay") : t("cad.xref.attach")}</small>
           {parent && parent !== rootName ? <small className="cad-xref-nested">{t("cad.xref.nestedIn", { parent })}</small> : null}
-          {r.status ? <small className="cad-xref-state">{notNeeded ? t("cad.xref.notNeeded") : mismatch ? t("cad.xref.mismatch", { picked, wanted: r.path.split(/[\\/]/).at(-1) ?? r.name }) : r.status}</small> : null}
+          {r.status ? <small className="cad-xref-state">{notNeeded ? t("cad.xref.notNeeded") : mismatch ? t("cad.xref.mismatch", { picked, wanted: r.path.split(/[\\/]/).at(-1) ?? r.name }) : cadMessageText(r.status, locale)}</small> : null}
         </button>
         <label className="cad-xref-load">
           <input type="checkbox" checked={!off} disabled={busy} onChange={(e) => onToggle(r, e.target.checked)} />
