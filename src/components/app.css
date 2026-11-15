@@ -539,6 +539,17 @@ button { cursor: pointer; }
   border: 1.5px solid var(--accent-hi); background: var(--accent); color: var(--on-accent); font: inherit; font-size: 1rem; font-weight: 700; cursor: pointer; }
 @media (pointer: coarse) { .cad-font-import input[type="file"]::file-selector-button { min-height: 52px; } }
 .cad-sheet-body { flex: 1; overflow-y: auto; padding: 0 14px 14px; line-height: 1.5; }
+/* 手機橫放（高 360～412）：標題、頁籤列、底部工具列吃掉大半高度，圖層清單只剩 70px、一列都看不到（2026-11-15 查 BUG）。
+   面板改從畫面頂端開始、標題／頁籤／關閉排成同一列；底部工具列照常露出，標題列與關閉鈕固定、只有內容區捲動 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .cad-sheet { top: calc(8px + var(--safe-top)); max-width: 900px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); align-items: center; column-gap: 10px; }
+  .cad-sheet header { display: contents; }
+  .cad-sheet header strong { grid-column: 1; grid-row: 1; padding: 8px 0 8px 14px; white-space: nowrap; }
+  .cad-sheet header button { grid-column: 3; grid-row: 1; margin: 8px 14px 8px 0; }
+  .cad-sheet nav { grid-column: 2; grid-row: 1; padding: 8px 0; gap: 6px; }
+  .cad-sheet nav button { padding: 0 8px; }
+  .cad-sheet-body { grid-column: 1 / -1; grid-row: 2; align-self: stretch; }
+}
 .cad-sheet-body input[type="search"], .cad-sheet-body input:not([type]) { width: 100%; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; }
 .cad-layer { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
 /* 圖層列：勾選｜隔離｜色塊＋名稱（用戶 2026-10-27：隔離改到打勾右邊、名稱放最右） */
