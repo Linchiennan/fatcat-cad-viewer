@@ -12,6 +12,7 @@ const Entry = previewHost
   ? lazy(() => import('./auth/WebEntry'))
   : lazy(() => import('./app/App').then(m => ({ default: m.App })));
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { RotateNotice } from "./components/RotateNotice";
 import { IS_WEB_BUILD } from "./app/platform";
 import { installDiagnosticHandlers } from "./viewer/parseAudit";
 import "./components/app.css";
@@ -48,6 +49,7 @@ async function start() {
       <I18nProvider>
         <ErrorBoundary>
           <UiStyleDefs />
+          {previewHost ? null : <RotateNotice />}
           <Suspense fallback={<p role="status">正在載入 / Loading…</p>}><Entry /></Suspense>
         </ErrorBoundary>
       </I18nProvider>

@@ -96,6 +96,9 @@ export const OWN_STRINGS = {
   "bar.undoShort": { zh: "復原", en: "Undo" },
 
   // Full measure panel (T19 5.3, for group C)
+  "rotate.title": { zh: "請把手機轉回直向", en: "Turn your phone upright" },
+  "rotate.body": { zh: "手機只支援直向使用；電腦與平板可以橫向。", en: "Phones work upright only; computers and tablets can be used sideways." },
+  "measure.saveFailed": { zh: "量測保存失敗；目前仍顯示，關閉圖面前請確認裝置儲存空間。", en: "Measurements could not be saved; they still show now. Check the device storage before closing the drawing." },
   "measure.tile.distance.short": { zh: "距離", en: "Dist" },
   "measure.tile.distance.tip": { zh: "點兩點量直線距離", en: "Tap two points for a straight distance" },
   "measure.tile.path.short": { zh: "總長", en: "Total" },

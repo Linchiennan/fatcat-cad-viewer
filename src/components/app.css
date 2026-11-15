@@ -482,6 +482,16 @@ button { cursor: pointer; }
 .search-results li button { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; }
 .search-text { font-weight: 600; overflow-wrap: anywhere; }
 .search-layer { color: var(--muted); font-size: 0.82rem; }
+/* 手機橫放（高 360～412）：搜尋面板只剩 138px，標題＋搜尋框就用完，找到的結果一筆都看不到（2026-11-15 查 BUG）。
+   面板改從畫面頂端開始（蓋過檔名列與頁籤列），標題／搜尋框／關閉排成同一列，結果清單在下方捲動 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .search-sheet { z-index: 31; top: calc(8px + var(--safe-top)); max-width: 900px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr); column-gap: 10px; }
+  .search-sheet header { display: contents; }
+  .search-sheet header strong { grid-column: 1; grid-row: 1; align-self: start; padding: 20px 0 0 14px; white-space: nowrap; }
+  .search-sheet header > :last-child { grid-column: 3; grid-row: 1; align-self: start; margin: 8px 14px 0 0; }
+  .search-box { grid-column: 2; grid-row: 1; padding: 8px 0 6px; }
+  .search-results { grid-column: 1 / -1; grid-row: 2; min-height: 0; }
+}
 .search-stepper {
   position: absolute; z-index: 22; left: 50%; top: calc(78px + var(--strip-h) + var(--safe-top)); transform: translateX(-50%);
   display: flex; align-items: center; gap: 6px; max-width: calc(100vw - 16px); padding: 6px; border-radius: 999px;
@@ -568,6 +578,20 @@ button { cursor: pointer; }
 .layer-state-list td.same { color: #7fd88a; }
 .layer-state-list td.differs { color: var(--muted); }
 .layer-state-manager > p { margin: 0 0 12px; }
+/* 面板裡跳出的對話框（圖層狀態管理員、匯入版本）畫在面板的層級內，會被底部工具列蓋住：只用工具列以上的區域
+   （手機橫放時「還原／關閉」整排被蓋住，2026-11-15 查 BUG） */
+.cad-sheet .confirm-backdrop { padding-bottom: calc(var(--bar-top) + 16px); }
+.layer-state-manager { max-height: min(80vh, 640px, 100%); }
+/* 手機橫放：清單在左、說明與按鈕在右，清單才留得下高度 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .cad-sheet .confirm-backdrop { padding-top: 8px; }
+  .layer-state-manager { width: min(760px, 94vw); padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) 220px; grid-template-rows: auto minmax(0, 1fr) auto; column-gap: 16px; }
+  .layer-state-manager > h2 { grid-column: 1 / -1; margin: 0 0 8px; font-size: 1.15rem; }
+  .layer-state-manager > .layer-state-list { grid-column: 1; grid-row: 2 / 4; margin: 0; }
+  .layer-state-manager > p { grid-column: 2; grid-row: 2; margin: 0 0 8px; font-size: 0.9rem; }
+  .layer-state-manager > .layer-state-buttons { grid-column: 2; grid-row: 3; flex-direction: column; gap: 8px; }
+  .layer-state-manager .layer-state-buttons button { height: 44px; }
+}
 .layer-state-more { display: block; margin-top: 4px; font-size: 14px; font-weight: 400; color: var(--accent-hi); }
 .layer-state-buttons { display: flex; gap: 12px; }
 .layer-state-buttons button { flex: 1; height: 52px; border-radius: 12px; font-size: 17px; font-weight: 700; }
@@ -833,3 +857,9 @@ button, [role="button"] { -webkit-user-select: none; user-select: none; -webkit-
   /* Layer panel tabs/buttons: the 40px rule above outranks the 52px touch rule; at least 44px on touch. */
   .cad-sheet header button, .cad-sheet nav button, .cad-sheet-body button, .cad-sheet-body select { min-height: 44px; }
 }
+
+/* 手機橫放：整頁蓋上「請轉回直向」（用戶 2026-11-15：手機只能直向，電腦與平板可橫向）。APP 在手機上原生鎖直向，見不到這層 */
+.rotate-notice { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: var(--bg, #0b131b); color: var(--text, #e8eef3); text-align: center; }
+.rotate-notice svg { color: var(--accent, #ffb547); }
+.rotate-notice strong { font-size: 1.4rem; }
+.rotate-notice span { color: var(--muted, #9fb0bf); max-width: 420px; }

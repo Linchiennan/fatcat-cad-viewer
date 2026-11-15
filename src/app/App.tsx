@@ -797,7 +797,7 @@ export function App() {
               </div>
             ) : null}
             {saveFailed ? <p className="save-failed" role="status">{t("viewer.librarySaveFailed")}</p> : null}
-            {measureSaveFailed ? <p className="save-failed" role="status">量測保存失敗；目前仍顯示，關閉圖面前請確認裝置儲存空間。</p> : null}
+            {measureSaveFailed ? <p className="save-failed" role="status">{t("measure.saveFailed")}</p> : null}
 
             {/* One cat-paw bar on phone and desktop alike (用戶 2026-10-27：電腦版與手機版統一貓咪風格). */}
             {exportStage === "box" ? null : <GloveBar {...toolbarProps} />}
