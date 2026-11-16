@@ -21,11 +21,15 @@ describe("sheet units (T16 3.4)", () => {
 
   it("the display default follows the language: 繁中 cm; English inches in the US, mm elsewhere (用戶 2026-10-28)", () => {
     expect(defaultDisplayUnit("zh-TW", ["en-US"])).toBe("cm");
-    expect(defaultDisplayUnit("en", ["en-US", "zh-TW"])).toBe("in");
-    expect(defaultDisplayUnit("en", ["en-GB"])).toBe("mm");
-    expect(defaultDisplayUnit("en", ["de-DE"])).toBe("mm");
-    expect(defaultDisplayUnit("en", ["zh-Hant-TW"])).toBe("mm");
-    expect(defaultDisplayUnit("en", ["en"])).toBe("mm");
+    expect(defaultDisplayUnit("en", ["en-US"], "America/New_York")).toBe("in");
+    expect(defaultDisplayUnit("en", ["en-GB"], "Europe/London")).toBe("mm");
+    expect(defaultDisplayUnit("en", ["de-DE"], "Europe/Berlin")).toBe("mm");
+    expect(defaultDisplayUnit("en", ["en"], "Europe/London")).toBe("mm");
+    // Taiwan is centimetres in English too (用戶 2026-11-16): Taipei time zone, TW region or Traditional Chinese
+    expect(defaultDisplayUnit("en", ["en-US"], "Asia/Taipei")).toBe("cm");
+    expect(defaultDisplayUnit("en", ["en-US", "zh-TW"], "America/New_York")).toBe("cm");
+    expect(defaultDisplayUnit("en", ["zh-Hant-TW"], "Europe/London")).toBe("cm");
+    expect(defaultDisplayUnit("en", ["en-TW"], "")).toBe("cm");
     // the default only fills in: a unit saved for the sheet stays
     expect(sheetUnits("k3", "mm", "in")).toEqual({ source: "mm", display: "in", assumed: false });
     const key = "fatcat-reading-v1:b.dxf:00";

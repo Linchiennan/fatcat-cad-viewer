@@ -22,10 +22,18 @@ export type SheetUnits = {
  * Display unit before the user picks one (用戶 2026-10-28): 繁中 cm, as Taiwanese drawings are read; English follows the
  * phone's region: inches in the US (also Liberia, Myanmar), millimetres elsewhere, what architects there draw in.
  */
-export function defaultDisplayUnit(locale: string, languages: readonly string[] = typeof navigator === "undefined" ? [] : navigator.languages?.length ? navigator.languages : [navigator.language]): MeasurementUnit {
+export function defaultDisplayUnit(locale: string, languages: readonly string[] = typeof navigator === "undefined" ? [] : navigator.languages?.length ? navigator.languages : [navigator.language], timeZone: string = deviceTimeZone()): MeasurementUnit {
   if (locale !== "en") return "cm";
-  const region = languages.map((l) => /^[a-z]{2,3}[-_]([a-z]{2})\b/i.exec(l ?? "")?.[1]?.toUpperCase()).find(Boolean);
+  // Taiwan reads drawings in centimetres in the English UI too (用戶 2026-11-16：台灣的是用公分). Many Taiwanese phones run
+  // en-US, so the Taipei time zone counts as Taiwan as well as a TW region or a Traditional Chinese language.
+  const regions = languages.map((l) => /^[a-z]{2,3}(?:[-_][a-z]{4})?[-_]([a-z]{2})\b/i.exec(l ?? "")?.[1]?.toUpperCase());
+  if (timeZone === "Asia/Taipei" || regions.includes("TW") || languages.some((l) => /^zh[-_](hant|tw)/i.test(l ?? ""))) return "cm";
+  const region = regions.find(Boolean);
   return region && ["US", "LR", "MM"].includes(region) ? "in" : "mm";
+}
+
+function deviceTimeZone(): string {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""; } catch { return ""; }
 }
 
 /** Units when a sheet is ready: saved choice, else INSUNITS, else centimetres; display saved, else the default for the language. */
