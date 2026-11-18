@@ -65,7 +65,9 @@ jobs:
           grep -n 'dwg->filedeplist.num_files = 0;' src/decode.c
           # R2013+ REGION / 3DSOLID shapes (AcDs section): each SAB blob was handed to the solids in the order they were
           # read, but the blobs are stored in another order. The search table lists every solid as 64-bit triples
-          # (handle, 1, data index). A blob's data index is not its count: the data index table (datidx) lists each record
+          # (handle, 1, data index), but long handles (26A 0x70739C3) were not found there; each record's own 20-byte
+          # header (entry size, 1, handle, offset) names its solid and is tried first.
+          # A blob's data index is not its count: the data index table (datidx) lists each record
           # as (segment, offset); the r-th blob inside a _data_ segment is that segment's r-th record by offset (20A: the
           # first record sits in another segment, so the regions are 1..10, not 0..9). PARK 23 12C 客變圖: all 10 regions
           # were off by two, a 6x3 rectangle came out as another region's shape 7,200 units away.
@@ -75,7 +77,7 @@ jobs:
           s = open(p, encoding='utf-8').read()
           decl = 'const char start[] = "ACIS BinaryFile";'
           assert s.count(decl) == 1, s.count(decl)
-          s = s.replace(decl, decl + '\n    long fc_seg = -1; /* fatcat-acds-map */\n    unsigned int fc_rank = 0;')
+          s = s.replace(decl, decl + '\n    long fc_seg = -1; /* fatcat-acds-map */\n    unsigned int fc_rank = 0;\n    long fc_dseg = -1;\n    int fc_delta = -1;')
           old = 'hdl = SHIFT_HV (dwg, num_acis_sab_hdl, acis_sab_hdl);'
           assert s.count(old) == 1, s.count(old)
           new = '''hdl = NULL;
@@ -116,6 +118,65 @@ jobs:
                           }
                         LOG_TRACE ("fatcat-acds-map blob %u segment %ld rank %u data index %u\\n",
                                    num_acis_sab_data, seg, fc_rank, (unsigned)didx);
+                        /* First choice: the record header (entry size, 1, handle, offset; 20 bytes) of that data index
+                           names the solid. Where the headers start in the segment is found once per segment: the
+                           offset at which the most records carry the handle of a solid still waiting for its data. */
+                        if (seg >= 0 && didx < _obj->datidx.num_entries
+                            && (long)_obj->datidx.entries[didx].segidx == seg)
+                          {
+                            if (fc_dseg != seg)
+                              {
+                                unsigned int dl, best = 0;
+                                fc_dseg = seg;
+                                fc_delta = -1;
+                                for (dl = 0; dl <= 128; dl += 4)
+                                  {
+                                    unsigned int hits = 0, q4, q5;
+                                    for (q4 = 0; q4 < _obj->datidx.num_entries; q4++)
+                                      if ((long)_obj->datidx.entries[q4].segidx == seg)
+                                        {
+                                          size_t at = (size_t)_obj->segidx[seg].offset
+                                                      + _obj->datidx.entries[q4].offset + dl + 8;
+                                          BITCODE_RLL hv;
+                                          if (at + 8 > dat->size)
+                                            continue;
+                                          memcpy (&hv, &dat->chain[at], 8);
+                                          for (q5 = 0; q5 < dwg->num_acis_sab_hdl; q5++)
+                                            if (dwg->acis_sab_hdl[q5]->handleref.value == hv)
+                                              {
+                                                hits++;
+                                                break;
+                                              }
+                                        }
+                                    if (hits > best)
+                                      {
+                                        best = hits;
+                                        fc_delta = (int)dl;
+                                      }
+                                  }
+                                LOG_TRACE ("fatcat-acds-map segment %ld headers at +%d (%u handles)\\n", seg,
+                                           fc_delta, best);
+                              }
+                            if (fc_delta >= 0)
+                              {
+                                size_t at = (size_t)_obj->segidx[seg].offset + _obj->datidx.entries[didx].offset
+                                            + fc_delta + 8;
+                                if (at + 8 <= dat->size)
+                                  {
+                                    BITCODE_RLL hv;
+                                    memcpy (&hv, &dat->chain[at], 8);
+                                    for (q = 0; !hdl && q < dwg->num_acis_sab_hdl; q++)
+                                      if (dwg->acis_sab_hdl[q]->handleref.value == hv)
+                                        {
+                                          hdl = dwg->acis_sab_hdl[q];
+                                          memmove (&dwg->acis_sab_hdl[q], &dwg->acis_sab_hdl[q + 1],
+                                                   (dwg->num_acis_sab_hdl - q - 1) * sizeof (BITCODE_H));
+                                          dwg->num_acis_sab_hdl--;
+                                        }
+                                  }
+                              }
+                          }
+                        /* Second choice: the search table triple (handle, 1, data index). */
                         for (q = 0; !hdl && q < dwg->num_acis_sab_hdl; q++)
                           {
                             BITCODE_RLL want[3];
