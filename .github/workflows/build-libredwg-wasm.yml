@@ -197,6 +197,19 @@ jobs:
           open(p, 'w', encoding='utf-8').write(s.replace(old, new))
           PY
           grep -n -A3 'fatcat-acds-map' src/acds.spec
+          # SAB -> SAT for DXF wrote every number with %g (6 significant digits). PARK 23 26A regions sit 1,012,960 units
+          # away under a body transform, so their 2-unit outlines were rounded to 10 units. Write them in full (%.17g).
+          python3 - <<'PY'
+          p = 'src/out_dxf.c'
+          s = open(p, encoding='utf-8').read()
+          old = 's = sprintf ((char *)&dest.chain[dest.byte], "%g ", f);'
+          assert s.count(old) == 1, s.count(old)
+          s = s.replace(old, 's = sprintf ((char *)&dest.chain[dest.byte], "%.17g ", f); /* fatcat-sat-precision */')
+          s = s.replace('dest.byte += sprintf ((char *)&dest.chain[dest.byte], "%g ", key);', 'dest.byte += sprintf ((char *)&dest.chain[dest.byte], "%.17g ", key);')
+          s = s.replace('if (dest.byte + 16 >= dest.size)', 'if (dest.byte + 40 >= dest.size)').replace('if (l + 16 > 255)', 'if (l + 40 > 255)')
+          open(p, 'w', encoding='utf-8').write(s)
+          PY
+          grep -n 'fatcat-sat-precision\|dest.byte + 40\|l + 40' src/out_dxf.c
           # trace build only: overflow checks reset the log level to the section's opts (0), silencing the rest
           if [[ "${{ matrix.flags }}" == *trace* ]]; then
             sed -i 's/^\( *\)loglevel = dat->opts & DWG_OPTS_LOGLEVEL;\( *\\\)$/\1(void)0;\2/' src/bits.c
