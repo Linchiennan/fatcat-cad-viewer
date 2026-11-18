@@ -109,6 +109,8 @@ jobs:
           mkdir -p build-wasm && cd build-wasm
           emconfigure ../configure CFLAGS="-O2 -sUSE_ZLIB=1 -DNDEBUG" CC=emcc ${{ matrix.flags }} --disable-docs --disable-write --disable-python --disable-bindings --disable-shared --disable-json
           emmake make -j4
+          # --emit-tsd needs tsc since Emscripten 2026-11 (the link failed with "tsc executable not found")
+          npm install -g typescript@5.6.3
           # em++ (not emcc as in package.json): newer Emscripten links the C++ library only for em++
           em++ ../bindings/javascript/embind/*.cpp src/*.o -O2 -lembind -std=c++17 -Isrc -I../src -I../include -o libredwg-web.js -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=1GB -s MAXIMUM_MEMORY=4GB -s MALLOC=mimalloc -s EXPORT_ES6=1 -s MODULARIZE=1 -s EXPORT_NAME="createModule" -sEXPORTED_RUNTIME_METHODS=FS,ENV,ccall,cwrap,UTF8ToString,stringToNewUTF8,setValue --emit-tsd libredwg-web.d.ts
           ls -la libredwg-web.*
