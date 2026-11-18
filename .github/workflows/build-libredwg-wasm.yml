@@ -77,7 +77,7 @@ jobs:
           s = open(p, encoding='utf-8').read()
           decl = 'const char start[] = "ACIS BinaryFile";'
           assert s.count(decl) == 1, s.count(decl)
-          s = s.replace(decl, decl + '\n    long fc_seg = -1; /* fatcat-acds-map */\n    unsigned int fc_rank = 0;\n    long fc_dseg = -1;\n    int fc_delta = -1;')
+          s = s.replace(decl, decl + '\n    long fc_seg = -1; /* fatcat-acds-map */\n    unsigned int fc_rank = 0;\n    long fc_dseg = -1;\n    int fc_delta = -1;\n    long fc_schema = -2;')
           old = 'hdl = SHIFT_HV (dwg, num_acis_sab_hdl, acis_sab_hdl);'
           assert s.count(old) == 1, s.count(old)
           new = '''hdl = NULL;
@@ -92,6 +92,31 @@ jobs:
                               seg = (long)sg;
                               break;
                             }
+                        /* The records of the SAB schema: the schema with as many records as there are solids
+                           (6AB: record 0 of another schema sits first in the same segment; 12C uses schema 0). */
+                        if (fc_schema == -2 && _obj->datidx.entries)
+                          {
+                            unsigned int q6, q7, cnt, most = 0;
+                            fc_schema = -1;
+                            for (q6 = 0; q6 < _obj->datidx.num_entries; q6++)
+                              {
+                                cnt = 0;
+                                for (q7 = 0; q7 < _obj->datidx.num_entries; q7++)
+                                  if (_obj->datidx.entries[q7].schidx == _obj->datidx.entries[q6].schidx)
+                                    cnt++;
+                                if (cnt == wanted)
+                                  {
+                                    fc_schema = (long)_obj->datidx.entries[q6].schidx;
+                                    break;
+                                  }
+                                if (cnt > most)
+                                  {
+                                    most = cnt;
+                                    fc_schema = (long)_obj->datidx.entries[q6].schidx;
+                                  }
+                              }
+                            LOG_TRACE ("fatcat-acds-map SAB schema %ld\\n", fc_schema);
+                          }
                         if (seg >= 0 && _obj->datidx.entries)
                           {
                             if (seg != fc_seg)
@@ -102,11 +127,13 @@ jobs:
                             else
                               fc_rank++;
                             for (q = 0; q < _obj->datidx.num_entries; q++)
-                              if ((long)_obj->datidx.entries[q].segidx == seg)
+                              if ((long)_obj->datidx.entries[q].segidx == seg
+                                  && (fc_schema < 0 || (long)_obj->datidx.entries[q].schidx == fc_schema))
                                 {
                                   unsigned int r = 0, q3;
                                   for (q3 = 0; q3 < _obj->datidx.num_entries; q3++)
                                     if ((long)_obj->datidx.entries[q3].segidx == seg
+                                        && (fc_schema < 0 || (long)_obj->datidx.entries[q3].schidx == fc_schema)
                                         && _obj->datidx.entries[q3].offset < _obj->datidx.entries[q].offset)
                                       r++;
                                   if (r == fc_rank)
