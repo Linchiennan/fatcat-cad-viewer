@@ -65,23 +65,63 @@ jobs:
           grep -n 'dwg->filedeplist.num_files = 0;' src/decode.c
           # R2013+ REGION / 3DSOLID shapes (AcDs section): each SAB blob was handed to the solids in the order they were
           # read, but the blobs are stored in another order. The search table lists every solid as 64-bit triples
-          # (handle, 1, data index), so the k-th blob belongs to the solid whose triple ends in k. PARK 23 12C 客變圖:
-          # all 10 regions were off by two, a 6x3 rectangle came out as another region's shape 7,200 units away.
+          # (handle, 1, data index). A blob's data index is not its count: the data index table (datidx) lists each record
+          # as (segment, offset); the r-th blob inside a _data_ segment is that segment's r-th record by offset (20A: the
+          # first record sits in another segment, so the regions are 1..10, not 0..9). PARK 23 12C 客變圖: all 10 regions
+          # were off by two, a 6x3 rectangle came out as another region's shape 7,200 units away.
           # A solid missing from the table keeps the old order.
           python3 - <<'PY'
           p = 'src/acds.spec'
           s = open(p, encoding='utf-8').read()
+          decl = 'const char start[] = "ACIS BinaryFile";'
+          assert s.count(decl) == 1, s.count(decl)
+          s = s.replace(decl, decl + '\n    long fc_seg = -1; /* fatcat-acds-map */\n    unsigned int fc_rank = 0;')
           old = 'hdl = SHIFT_HV (dwg, num_acis_sab_hdl, acis_sab_hdl);'
           assert s.count(old) == 1, s.count(old)
           new = '''hdl = NULL;
                       { /* fatcat-acds-map */
-                        unsigned int q;
+                        unsigned int q, sg;
+                        long seg = -1;
+                        BITCODE_RLL didx = num_acis_sab_data;
+                        for (sg = 0; sg < _obj->num_segidx; sg++)
+                          if (_obj->segidx[sg].offset && j >= _obj->segidx[sg].offset
+                              && j < _obj->segidx[sg].offset + _obj->segidx[sg].size)
+                            {
+                              seg = (long)sg;
+                              break;
+                            }
+                        if (seg >= 0 && _obj->datidx.entries)
+                          {
+                            if (seg != fc_seg)
+                              {
+                                fc_seg = seg;
+                                fc_rank = 0;
+                              }
+                            else
+                              fc_rank++;
+                            for (q = 0; q < _obj->datidx.num_entries; q++)
+                              if ((long)_obj->datidx.entries[q].segidx == seg)
+                                {
+                                  unsigned int r = 0, q3;
+                                  for (q3 = 0; q3 < _obj->datidx.num_entries; q3++)
+                                    if ((long)_obj->datidx.entries[q3].segidx == seg
+                                        && _obj->datidx.entries[q3].offset < _obj->datidx.entries[q].offset)
+                                      r++;
+                                  if (r == fc_rank)
+                                    {
+                                      didx = q;
+                                      break;
+                                    }
+                                }
+                          }
+                        LOG_TRACE ("fatcat-acds-map blob %u segment %ld rank %u data index %u\\n",
+                                   num_acis_sab_data, seg, fc_rank, (unsigned)didx);
                         for (q = 0; !hdl && q < dwg->num_acis_sab_hdl; q++)
                           {
                             BITCODE_RLL want[3];
                             want[0] = dwg->acis_sab_hdl[q]->handleref.value;
                             want[1] = 1;
-                            want[2] = num_acis_sab_data;
+                            want[2] = didx;
                             if (memmem (dat->chain, dat->size, want, sizeof (want)))
                               {
                                 hdl = dwg->acis_sab_hdl[q];
