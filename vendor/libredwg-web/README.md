@@ -31,8 +31,10 @@ Same build commands and flags as libredwg-web's package.json (emscripten latest,
 linked with em++). `scripts/copy-runtime.mjs` copies these files into public/runtime/libredwg instead of the ones
 in node_modules. Licence: GPL-3.0-or-later, as LibreDWG (node_modules/@mlightcad/libredwg-web/LICENSE).
 - one fix of ours in src/acds.spec (R2013+ REGION / 3DSOLID shapes in the AcDs section): each ACIS blob was given to
-  the solids in the order they were read, but the blobs are stored in another order. The AcDs search table lists every
-  solid as 64-bit triples (handle, 1, data index); the k-th blob now goes to the solid whose triple ends in k (a solid
-  missing from the table keeps the old order). PARK 23 12C 客變圖: all 10 regions were two places off, a 6×3 rectangle
-  came out as another region's shape 7,200 units away; now all 10 match ZWCAD. Run 44250465819 (that run also installs
-  tsc, which newer Emscripten needs for --emit-tsd).
+  the solids in the order they were read, but the blobs are stored in another order. Now: the blob's data index comes
+  from the data index table (the r-th blob in a _data_ segment is that segment's r-th record of the SAB schema, the schema
+  with as many records as solids), then the record's own 20-byte header (size, 1, handle, offset) names the solid, else the
+  search table triple (handle, 1, data index), else the old order. Checked against ZWCAD (ASM data of a DXF it saved):
+  PARK 23 12C 10/10, 20A 10/10, 26A 26/26, 6AB 482/482, 19C 94/142 (the other 48 are shapes the viewer does not draw).
+- one fix of ours in src/out_dxf.c: SAB -> SAT numbers are written with %.17g instead of %g (6 digits); 26A regions sit
+  1,012,960 units away under a body transform and their 2-unit outlines were rounded to 10 units. Run 44258479000.
