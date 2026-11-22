@@ -12,6 +12,9 @@ import {
 import { markerText, photoLabels, plainLabel, rocDate } from "./numbering";
 import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
+import { CameraScreen } from "./CameraScreen";
+import { SignaturePad } from "./SignaturePad";
+import { boardTitle } from "./whiteboard";
 import type { CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
 
 const LAST_KEY = "fatcat.camera.last";
@@ -49,6 +52,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState("");
   const [renumbering, setRenumbering] = useState(false);
+  const [shooting, setShooting] = useState(false);
 
   const fail = useCallback((e: unknown) => {
     const code = (e as { code?: string } | null)?.code;
@@ -91,6 +95,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const labels = useMemo(() => new Map(points.map((p) => [p.id, markerText(p, photos)])), [points, photos]);
   const selected = points.find((p) => p.id === selectedId) ?? null;
+  /** number the next photo of a point will get, as on the card (01, 01-2 …) */
+  const nextLabel = (p: ShotPoint) => { const n = photos.filter((x) => x.pointId === p.id).length; const no = String(p.no).padStart(2, "0"); return n ? `${no}-${n + 1}` : no; };
   const unplaced = photos.filter((p) => !p.pointId).length;
 
   const openBatch = async (b: CameraBatch) => {
@@ -122,14 +128,14 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   });
 
   /** Keep photos (from the camera or the gallery) for the selected point, or unplaced. */
-  const keepPhotos = async (files: readonly Blob[], takenAt: number[] = []) => {
+  const keepPhotos = async (files: readonly Blob[], takenAt: number[] = [], pos?: Pick<Whiteboard, "x" | "y" | "width">) => {
     if (!batch) return;
     try {
       for (let i = 0; i < files.length; i++) {
         const f = files[i];
         const bmp = await createImageBitmap(f);
         const when = new Date(takenAt[i] ?? (f instanceof File ? f.lastModified : Date.now()));
-        await addPhoto({ batchId: batch.id, pointId: selected?.id ?? null, takenAt: when.getTime(), width: bmp.width, height: bmp.height, board: boardFor(selected, when) }, f);
+        await addPhoto({ batchId: batch.id, pointId: selected?.id ?? null, takenAt: when.getTime(), width: bmp.width, height: bmp.height, board: { ...boardFor(selected, when), ...(pos ?? {}) } }, f);
         bmp.close();
       }
       await reload(batch);
@@ -197,7 +203,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <p className="camera-batch-line"><strong>{batch.name}</strong>{unplaced ? <em>{t("camera.unplaced", { N: unplaced })}</em> : null}</p>
         <div className="camera-actions">
           <button type="button" aria-pressed={placing} title={t("camera.placeTip")} onClick={() => setPlacing((v) => !v)}>{t("camera.place")}</button>
-          <label className="camera-shoot" title={t("camera.shootTip")}>{t("camera.shoot")}
+          <button type="button" className="camera-primary" title={t("camera.shootTip")} onClick={() => { setPlacing(false); setShooting(true); }}>{t("camera.shoot")}</button>
+          <label className="camera-shoot">{t("camera.fromGallery")}
             <input type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; void keepPhotos(fs); }} />
           </label>
           <button type="button" onClick={() => setView("photos")}>{t("camera.list")}</button>
@@ -230,17 +237,24 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       {body}
       {message ? <p className="camera-message" role="status">{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
+      {shooting && batch ? (
+        <CameraScreen board={boardFor(selected, new Date())} signer={signers.find((x) => x.id === batch.signerId) ?? null}
+          text={{ title: boardTitle(batch.project, batch.trade), no: selected ? nextLabel(selected) : "—" }}
+          onShot={(blob, pos) => keepPhotos([blob], [Date.now()], pos)} onClose={() => setShooting(false)} />
+      ) : null}
     </section>
   ) : null;
 
   return { photoMarkers: markers, panel, batch, points, photos, keepPhotos };
 }
 
-function BatchSettings({ initial, signers, onSave, onCancel, onDelete }: {
+function BatchSettings({ initial, signers: initialSigners, onSave, onCancel, onDelete }: {
   initial: NewBatch; signers: readonly Signer[]; onSave(d: NewBatch): void; onCancel(): void; onDelete?(): void;
 }) {
   const { t } = useI18n();
   const [d, setD] = useState<NewBatch>(initial);
+  const [signers, setSigners] = useState<readonly Signer[]>(initialSigners);
+  const [signing, setSigning] = useState(false);
   const field = (key: keyof NewBatch, label: string) => (
     <label key={key}>{label}<input value={String(d[key] ?? "")} onChange={(e) => setD({ ...d, [key]: e.target.value })} /></label>
   );
@@ -259,6 +273,9 @@ function BatchSettings({ initial, signers, onSave, onCancel, onDelete }: {
           {signers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </label>
+      <button type="button" onClick={() => setSigning(true)}>{t("camera.signNew")}</button>
+      {signing ? <SignaturePad initialName={d.inspector} onCancel={() => setSigning(false)}
+        onSaved={(s) => { setSigning(false); setSigners([...signers.filter((x) => x.id !== s.id), s]); setD({ ...d, signerId: s.id, inspector: d.inspector || s.name }); }} /> : null}
       {field("cardDate", t("camera.field.cardDate"))}
       <div className="camera-actions">
         <button type="submit" className="camera-primary">{t("camera.save")}</button>
