@@ -166,7 +166,9 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
           const g = gesture.current;
           if (!g || g.id !== e.pointerId) return;
           const dx = e.clientX - g.x;
-          if (!g.dragged && (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(e.clientY - g.y))) return;
+          // a finger wobbles 5-15 px on a tap: only a clear slide changes page (用戶 2026-11-22：點擊工程相機不靈敏)
+          const slop = e.pointerType === "mouse" ? 8 : 16;
+          if (!g.dragged && (Math.abs(dx) < slop || Math.abs(dx) < Math.abs(e.clientY - g.y))) return;
           g.dragged = true; g.dx = dx;
           suppressClick.current = true;
           e.currentTarget.setPointerCapture(e.pointerId);
