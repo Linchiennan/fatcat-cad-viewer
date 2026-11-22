@@ -121,3 +121,14 @@ patch('parser/DxfParser.js','    dxfParser.registerEntityHandler(Dimension);\n',
 // A font fetch that fails once (a busy server, a dropped mobile connection) left the drawing stuck before "ready":
 // 鑫元鴻 照明-4F in a batch run, "Failed to fetch" in _FetchFont and no picture. Check the status and try twice more.
 patch('DxfWorker.js','const data = await fetch(url).then(response => response.arrayBuffer())',"let data; /* fatcat-font-retry */ for (let attempt = 0; ; attempt++) { try { const response = await fetch(url); if (!response.ok) throw new Error('HTTP ' + response.status + ' ' + url); data = await response.arrayBuffer(); break } catch (e) { if (attempt >= 2) throw e; await new Promise(r => setTimeout(r, 500 * (attempt + 1))) } }");
+// R2018 ATTRIB/ATTDEF (用戶 2026-11-22 工程相機：ZWCAD 插入的「對位箭頭」編號沒顯示): LibreDWG writes the R2018 field
+// mtext_type (1 = single line) as a second group 70 after subclass AcDbXrecord, and the parser took it as the flags
+// (bit 1 = invisible), so every single-line attribute saved as R2018 was hidden. After AcDbXrecord, 70 is that type.
+// cadStyleGiven marks a 7 that was really there: LibreDWG drops the style of R2018 ATTRIBs (ZWCAD reads 標楷體 from the
+// same file), and the reader then takes the style of the ATTDEF with the same tag (xrefs.ts fillAttribStyles).
+for (const f of ['parser/entities/attribute.js', 'parser/entities/attdef.js']) {
+  patch(f, 'case 7:\n                entity.textStyle = curr.value;\n                break;', 'case 7:\n                entity.textStyle = curr.value;\n                entity.cadStyleGiven = true;\n                break;');
+  patch(f, 'case 70:\n                entity.hidden', 'case 70:\n                if (entity.cadXrecord) { entity.mtextType = curr.value; break; }\n                entity.hidden');
+  patch(f, 'case 100:\n                break;', "case 100:\n                if (curr.value === 'AcDbXrecord') entity.cadXrecord = true;\n                break;");
+}
+patch('parser/entities/attribute.js', 'case 280:\n                entity.lockPositionFlag = curr.value;', 'case 280:\n                if (entity.cadXrecord) { entity.keepDuplicateRecords = curr.value; break; }\n                entity.lockPositionFlag = curr.value;');

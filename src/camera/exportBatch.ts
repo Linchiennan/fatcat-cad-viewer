@@ -10,14 +10,15 @@ import { buildCardDocx } from "./cardDocx";
 import { buildCardPdf } from "./cardPdf";
 import { composePhoto } from "./composePhoto";
 import { dxfRadius, markerDxf } from "./alignment";
+import { arrowBlockLisp } from "./blockLisp";
 import { cardLabel, cardOrder, markerText, photoLabels, plainLabel, rocDateLong } from "./numbering";
 import type { CardEntry } from "./photoCard";
 import type { CameraBatch, PhotoRecord, ShotPoint, Signer } from "./types";
 import { boardTitle } from "./whiteboard";
 
 /** What goes into the ZIP (用戶 2026-11-22：匯出的資料要能勾選). */
-export type ExportParts = { sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean };
-export const ALL_PARTS: ExportParts = { sheetPdf: true, markerDxf: true, photos: true, originals: false, cardDocx: true, cardPdf: true };
+export type ExportParts = { sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
+export const ALL_PARTS: ExportParts = { sheetPdf: true, markerDxf: true, photos: true, originals: false, cardDocx: true, cardPdf: true, arrowLisp: true };
 
 export type ExportInput = {
   batch: CameraBatch;
@@ -69,6 +70,7 @@ export async function exportBatch(input: ExportInput): Promise<{ blob: Blob; fil
   const sheet = safe(batch.drawingName.replace(/\.[^.]+$/, ""));
   const markerLabels = new Map(points.map((p) => [p.id, markerText(p, photos)]));
   if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
+  if (parts.arrowLisp) files[`對位圖/${sheet}-插入對位箭頭.lsp`] = [strToU8(arrowBlockLisp(points, markerLabels, { scale: batch.markerScale ?? 1, title: batch.name })), { level: 0 }];
   if (parts.markerDxf) files[`對位圖/${sheet}-標記.dxf`] = strToU8(markerDxf(points, markerLabels, dxfRadius(input.sheetWidth, batch.markerScale ?? 1)));
   const data = await new Promise<Uint8Array>((resolve, reject) => zip(files, (err, out) => (err ? reject(err) : resolve(out))));
   input.onProgress?.(total, total);

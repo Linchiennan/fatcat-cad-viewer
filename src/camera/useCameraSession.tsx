@@ -273,7 +273,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <p className="camera-hint">{t("camera.exportWhat")}</p>
         {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
         <fieldset className="camera-parts">
-          {(["sheetPdf", "markerDxf", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
+          {(["sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
             <label key={k} className="camera-check"><input type="checkbox" checked={parts[k]} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
           ))}
         </fieldset>

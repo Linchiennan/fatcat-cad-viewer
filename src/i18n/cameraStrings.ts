@@ -83,6 +83,7 @@ export const CAMERA_STRINGS = {
   "camera.placeHintShort": { zh: "點圖面放位置；拖紅圈移動、拖箭頭轉方向", en: "Tap the drawing to add a spot; drag the circle to move, the arrow to turn" },
   "camera.part.sheetPdf": { zh: "對位圖 PDF", en: "Alignment sheet PDF" },
   "camera.part.markerDxf": { zh: "對位標記 DXF", en: "Marker DXF" },
+  "camera.part.arrowLisp": { zh: "對位箭頭圖塊 LISP", en: "Arrow block LISP" },
   "camera.part.photos": { zh: "照片（含白板）", en: "Photos (with board)" },
   "camera.part.originals": { zh: "原圖（沒有白板）", en: "Originals (no board)" },
   "camera.part.cardDocx": { zh: "保存卡 Word", en: "Record cards Word" },

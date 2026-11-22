@@ -42,23 +42,27 @@ export function angleFromScreen(dx: number, dy: number): number {
 }
 
 /**
- * The arrow as on the user's 對位圖 (block 對位箭頭): a filled wedge whose sides are tangent to the circle and meet at
- * √2·r from the centre (the corner of a square around the circle), hollowed along the circle. Outline points around
- * (cx, cy) for unit direction (dx, dy) in any coordinate system: the tip, then the arc from one tangent point to the other.
+ * The arrow of the example block 「對位箭頭」 (measured in ZWCAD, 8F-室內隔間對位圖.dwg): the triangle with its tip at
+ * r·√2 in the shot direction and its base through the centre (base corners r·√2 to each side), minus the circle. Its
+ * sides touch the circle at ±45°, so it is three pieces: the tip, and a fin on each side between the tangent point,
+ * the base corner and the circle. Each piece starts with a point it can be fanned from (tip, base corners).
  */
-export function wedgeOutline(cx: number, cy: number, dx: number, dy: number, r: number, segments = 12): { x: number; y: number }[] {
-  const a = Math.atan2(dy, dx), out = [{ x: cx + dx * r * Math.SQRT2, y: cy + dy * r * Math.SQRT2 }];
-  for (let i = 0; i <= segments; i++) {
-    const t = a + Math.PI / 4 - (i / segments) * (Math.PI / 2);
-    out.push({ x: cx + Math.cos(t) * r, y: cy + Math.sin(t) * r });
-  }
-  return out;
+export function wedgePieces(cx: number, cy: number, dx: number, dy: number, r: number, segments = 12): { x: number; y: number }[][] {
+  const a = Math.atan2(dy, dx), at = (t: number, k: number) => ({ x: cx + Math.cos(t) * r * k, y: cy + Math.sin(t) * r * k });
+  const arc = (from: number, to: number, n: number) => Array.from({ length: n + 1 }, (_, i) => at(from + ((to - from) * i) / n, 1));
+  const q = Math.PI / 4, half = Math.max(2, Math.round(segments / 2));
+  return [
+    [at(a, Math.SQRT2), ...arc(a + q, a - q, segments)],
+    [at(a + 2 * q, Math.SQRT2), ...arc(a + 2 * q, a + q, half)],
+    [at(a - 2 * q, Math.SQRT2), ...arc(a - 2 * q, a - q, half)],
+  ];
 }
 
-/** The wedge on screen as an SVG polygon `points` string. */
-export function arrowTriangle(cx: number, cy: number, angle: number, scale = 1): string {
+/** The arrow on screen as an SVG path `d` string (three closed pieces). */
+export function arrowPath(cx: number, cy: number, angle: number, scale = 1): string {
   const d = screenDirection(angle);
-  return wedgeOutline(cx, cy, d.x, d.y, MARKER_RADIUS_PX * scale).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  return wedgePieces(cx, cy, d.x, d.y, MARKER_RADIUS_PX * scale)
+    .map((piece) => piece.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join("") + "Z").join("");
 }
 
 type Drag = { id: string; kind: "move" | "turn"; pointerId: number; start: number; moved: boolean; free: boolean };
@@ -147,7 +151,7 @@ export function PhotoMarkerLayer(props: Props) {
         return (
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k + 6} className="photo-marker-ring" /> : null}
-            <polygon points={arrowTriangle(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
+            <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
             <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={1.4 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED}
               onPointerDown={(e) => begin(e, p.id, "move")} />
