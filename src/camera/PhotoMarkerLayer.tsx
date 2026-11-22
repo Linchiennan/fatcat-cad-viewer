@@ -42,26 +42,29 @@ export function angleFromScreen(dx: number, dy: number): number {
 }
 
 /**
- * How far the tip reaches, in circle radii. The example block 「對位箭頭」 (measured in ZWCAD, 8F-室內隔間對位圖.dwg)
- * has it at √2, so the tip sticks out as far as the two side fins and the direction is hard to read on a phone
- * (用戶 2026-11-22：「箭頭方向太不明顯了」). Same construction, longer tip: at 2.2 the fins shrink to slivers.
- * The exported LISP still inserts the user's own block, unchanged.
+ * Arrow size in circle radii: the tip reaches ARROW_TIP from the centre and the base, through the centre, reaches
+ * ARROW_WIDTH to each side. The example block 「對位箭頭」 (ZWCAD, 8F-室內隔間對位圖.dwg) is √2 / √2, so the tip sticks
+ * out no further than the side fins and the direction is hard to read on a phone (用戶 2026-11-22：「箭頭方向太不明顯了」
+ * → 「是箭頭兩邊要加大」→ 選「加寬 1.4」): longer tip, wider base. The exported LISP still inserts the user's own block, unchanged.
  */
 export const ARROW_TIP = 2.2;
+export const ARROW_WIDTH = 1.4;
 
 /**
- * The arrow: the triangle with its tip at k·r in the shot direction, sides touching the circle and base through the
- * centre, minus the circle. That is three pieces: the tip, and a fin on each side between the tangent point, the base
- * corner and the circle. Each piece starts with a point it can be fanned from (tip, base corners).
+ * The arrow: the triangle (tip k·r ahead, base corners w·r to each side of the centre) minus the circle, as three
+ * pieces that can each be fanned from their first point: the tip piece between the two tangents from the tip, and
+ * one side piece each (base corner, circle at ±90°, arc to the tangent point, tip). Needs the sides outside the
+ * circle, i.e. w ≥ k/√(k²−1); smaller w is raised to that (then the sides are the tangents, as in the example block).
  */
-export function wedgePieces(cx: number, cy: number, dx: number, dy: number, r: number, k = ARROW_TIP, segments = 12): { x: number; y: number }[][] {
+export function wedgePieces(cx: number, cy: number, dx: number, dy: number, r: number, k = ARROW_TIP, w = ARROW_WIDTH, segments = 12): { x: number; y: number }[][] {
   const a = Math.atan2(dy, dx), at = (t: number, m: number) => ({ x: cx + Math.cos(t) * r * m, y: cy + Math.sin(t) * r * m });
   const arc = (from: number, to: number, n: number) => Array.from({ length: n + 1 }, (_, i) => at(from + ((to - from) * i) / n, 1));
-  const th = Math.acos(1 / k), base = 1 / Math.sqrt(1 - 1 / (k * k)), p = Math.PI / 2, half = Math.max(2, Math.round(segments / 2));
+  const th = Math.acos(1 / k), wide = Math.max(w, k / Math.sqrt(k * k - 1)), p = Math.PI / 2, half = Math.max(2, Math.round(segments / 2));
+  const tip = at(a, k);
   return [
-    [at(a, k), ...arc(a + th, a - th, segments)],
-    [at(a + p, base), ...arc(a + p, a + th, half)],
-    [at(a - p, base), ...arc(a - p, a - th, half)],
+    [tip, ...arc(a + th, a - th, segments)],
+    [at(a + p, wide), ...arc(a + p, a + th, half), tip],
+    [at(a - p, wide), ...arc(a - p, a - th, half), tip],
   ];
 }
 
