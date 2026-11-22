@@ -1,10 +1,13 @@
 // In-app camera (spec 009 plan 1): the back camera fills the screen with the whiteboard drawn on top, where it will
 // sit on the saved photo. Drag the board to move it, the slider sizes it. The shutter keeps the original picture
 // (ImageCapture at the camera's full resolution when the phone offers it); the board stays data until export.
-// Without camera access (refused, or no getUserMedia) the system camera is offered instead.
+// Without camera access (refused, or no getUserMedia) the system camera is offered instead. A computer uses a
+// built-in test photo instead of its webcam (testPhoto.ts), so the flow can be tried on a PC.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Capacitor } from "@capacitor/core";
 import { useI18n } from "../i18n/translations";
+import { testPhoto, usesTestPhoto } from "./testPhoto";
 import type { Signer, Whiteboard } from "./types";
 import { boardRect, drawBoard, type BoardText } from "./whiteboard";
 
@@ -18,6 +21,9 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
 }) {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
+  const sample = useRef<HTMLImageElement>(null);
+  const [testMode] = useState(() => usesTestPhoto(Capacitor.isNativePlatform()));
+  const [sampleUrl, setSampleUrl] = useState("");
   const overlay = useRef<HTMLCanvasElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const [pos, setPos] = useState<Pos>({ x: board.x, y: board.y, width: board.width });
@@ -28,6 +34,11 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
 
   useEffect(() => {
     let live = true;
+    if (testMode) {
+      let url = "";
+      void testPhoto(shots + 1).then((b) => { if (!live) return; url = URL.createObjectURL(b); setSampleUrl(url); setState("ready"); });
+      return () => { live = false; if (url) URL.revokeObjectURL(url); };
+    }
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) { setState("denied"); return; }
     md.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 4096 }, height: { ideal: 3072 } }, audio: false })
@@ -39,14 +50,16 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
       })
       .catch(() => live && setState("denied"));
     return () => { live = false; stream.current?.getTracks().forEach((tr) => tr.stop()); stream.current = null; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testMode, testMode ? shots : 0]);
 
   /** Where the picture shows inside the video element (object-fit: contain). */
   const shown = () => {
-    const v = video.current;
-    if (!v || !v.videoWidth) return null;
-    const r = v.getBoundingClientRect(), s = Math.min(r.width / v.videoWidth, r.height / v.videoHeight);
-    const w = v.videoWidth * s, h = v.videoHeight * s;
+    const v = testMode ? sample.current : video.current;
+    const vw = v instanceof HTMLVideoElement ? v.videoWidth : v?.naturalWidth ?? 0, vh = v instanceof HTMLVideoElement ? v.videoHeight : v?.naturalHeight ?? 0;
+    if (!v || !vw) return null;
+    const r = v.getBoundingClientRect(), s = Math.min(r.width / vw, r.height / vh);
+    const w = vw * s, h = vh * s;
     return { left: (r.width - w) / 2, top: (r.height - h) / 2, w, h };
   };
 
@@ -65,13 +78,14 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
       frame = requestAnimationFrame(() => { if (!c || !area) paint(); });
     };
     paint();
-    const v = video.current;
-    v?.addEventListener("loadedmetadata", paint);
+    const v: HTMLElement | null = testMode ? sample.current : video.current;
+    v?.addEventListener(testMode ? "load" : "loadedmetadata", paint);
     window.addEventListener("resize", paint);
-    return () => { cancelAnimationFrame(frame); v?.removeEventListener("loadedmetadata", paint); window.removeEventListener("resize", paint); };
-  }, [pos, board, text, signer, state]);
+    return () => { cancelAnimationFrame(frame); v?.removeEventListener(testMode ? "load" : "loadedmetadata", paint); window.removeEventListener("resize", paint); };
+  }, [pos, board, text, signer, state, sampleUrl, testMode]);
 
   const takePicture = async (): Promise<Blob> => {
+    if (testMode) return testPhoto(shots + 1);
     const track = stream.current?.getVideoTracks()[0];
     const IC = (globalThis as { ImageCapture?: new (t: MediaStreamTrack) => Capture }).ImageCapture;
     if (track && IC) {
@@ -118,7 +132,8 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
         </div>
       ) : (
         <div className="camera-stage">
-          <video ref={video} playsInline muted />
+          {testMode ? <img ref={sample} src={sampleUrl || undefined} alt="" className="camera-sample" /> : <video ref={video} playsInline muted />}
+          {testMode ? <p className="camera-test-note">{t("camera.testPhoto")}</p> : null}
           <canvas ref={overlay} className="camera-overlay" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
         </div>
       )}

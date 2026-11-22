@@ -53,3 +53,5 @@
 .camera-sign-pad { width: 100%; border-radius: 10px; background: #fbfbf8; touch-action: none; }
 .camera-sign button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); font: inherit; }
 .camera-check { display: flex; align-items: center; gap: 10px; min-height: 44px; } .camera-check input { width: 24px; height: 24px; }
+.camera-stage .camera-sample { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.camera-test-note { position: absolute; left: 12px; right: 12px; top: calc(10px + var(--safe-top, 0px)); margin: 0; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.6); color: #ffd23f; text-align: center; pointer-events: none; }

@@ -63,5 +63,6 @@ export const CAMERA_STRINGS = {
   "camera.exportUnplaced": { zh: "有 {N} 張照片還沒定位，不會放進保存卡。", en: "{N} photos are not placed and are left out." },
   "camera.exportEmpty": { zh: "還沒有已定位的照片。", en: "No placed photos yet." },
   "camera.exported": { zh: "已匯出 {name}", en: "Exported {name}" },
+  "camera.testPhoto": { zh: "電腦版沒有後鏡頭：按快門會拍這張內建測試照片", en: "No back camera on a computer: the shutter takes this built-in test photo" },
   "camera.failed": { zh: "動作沒有完成：{why}", en: "That did not work: {why}" },
 } as const;
