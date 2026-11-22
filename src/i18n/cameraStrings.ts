@@ -55,5 +55,13 @@ export const CAMERA_STRINGS = {
   "camera.signTitle": { zh: "查驗人員簽名", en: "Inspector's signature" },
   "camera.signNew": { zh: "新增簽名", en: "New signature" },
   "camera.signClear": { zh: "清除重簽", en: "Clear" },
+  "camera.exportTitle": { zh: "匯出請款資料", en: "Export the photo package" },
+  "camera.exportWhat": { zh: "一個 ZIP：對位圖（PDF＋標記 DXF）、照片（含電子白板）、照片保存卡（Word＋PDF）。", en: "One ZIP: alignment sheet (PDF + marker DXF), photos (with the board), photo record cards (Word + PDF)." },
+  "camera.withOriginals": { zh: "另附原圖（沒有白板）", en: "Also include the originals (no board)" },
+  "camera.exportGo": { zh: "匯出並分享", en: "Export and share" },
+  "camera.exporting": { zh: "匯出中… {done}／{total}", en: "Exporting… {done}/{total}" },
+  "camera.exportUnplaced": { zh: "有 {N} 張照片還沒定位，不會放進保存卡。", en: "{N} photos are not placed and are left out." },
+  "camera.exportEmpty": { zh: "還沒有已定位的照片。", en: "No placed photos yet." },
+  "camera.exported": { zh: "已匯出 {name}", en: "Exported {name}" },
   "camera.failed": { zh: "動作沒有完成：{why}", en: "That did not work: {why}" },
 } as const;

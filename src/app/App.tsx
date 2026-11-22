@@ -646,7 +646,7 @@ export function App() {
   const cad = useLazyPart<CadViewerParts>(loadCadViewer, !!drawable && !isPdf && showing, onMissingViewer);
   // Engineering camera (spec 009): batches of site photos placed on this sheet.
   const [cameraOpen, setCameraOpen] = useState(false);
-  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { drawingName: last?.file.name ?? "", viewKey: index?.viewKey ?? "", space, index }, () => setCameraOpen(false));
+  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { drawingName: last?.file.name ?? "", viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await h.exportWithOverlay({ range: "sheet", format: "pdf", paper: "A3", title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
 

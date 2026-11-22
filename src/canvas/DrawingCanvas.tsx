@@ -229,6 +229,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       return r.blob;
     },
     exportDrawing: (request: ExportRequest) => runExport(request),
+    async exportWithOverlay(request, paint) {
+      const e = engine.current as (CadEngine & Partial<ExportEngine>) | null;
+      if (!e || !readyRef.current || typeof e.renderRegion !== "function" || !e.sheetBounds || !e.viewBounds || !e.screenToDrawing) throw new ExportError("EXPORT_NOT_READY");
+      const b = e.sheetBounds();
+      const result = await exportDrawing(e as CadEngine & ExportEngine, request, [], { paintMeasures: paint });
+      return { ...result, sheetWidth: b ? b.maxX - b.minX : 0 };
+    },
     showSearchHit(bounds, textHeight, at) {
       const e = engine.current;
       if (!e) return;

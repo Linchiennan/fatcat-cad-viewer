@@ -12,6 +12,10 @@ import {
 import { markerText, photoLabels, plainLabel, rocDate } from "./numbering";
 import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
+import type { ExportCapable } from "../export/types";
+import { exportBatch } from "./exportBatch";
+import { paintPhotoMarkers } from "./alignment";
+import { shareFile } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
 import { boardTitle } from "./whiteboard";
@@ -35,9 +39,11 @@ export type CameraContext = {
   viewKey: string;
   space: string;
   index: MeasurementIndex | null;
+  /** the sheet as PDF with `paint` drawn on (photo points), and its width in drawing units */
+  exportSheet?(paint: Parameters<NonNullable<ExportCapable["exportWithOverlay"]>>[1]): Promise<{ blob: Blob; sheetWidth: number }>;
 };
 
-type View = "batches" | "settings" | "work" | "photos";
+type View = "batches" | "settings" | "work" | "photos" | "export";
 
 export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () => void) {
   const { t } = useI18n();
@@ -53,6 +59,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [message, setMessage] = useState("");
   const [renumbering, setRenumbering] = useState(false);
   const [shooting, setShooting] = useState(false);
+  const [withOriginals, setWithOriginals] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
 
   const fail = useCallback((e: unknown) => {
     const code = (e as { code?: string } | null)?.code;
@@ -195,6 +203,30 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       onEdit={(ph, board) => void updatePhoto(ph.id, { board }).then(() => reload(batch)).catch(fail)}
       onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(() => reload(batch)).catch(fail) })}
       onBack={() => setView("work")} />;
+  } else if (view === "export" && batch) {
+    const placedCount = photos.filter((p) => p.pointId).length;
+    const run = async () => {
+      setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
+      try {
+        const sheet = ctx.exportSheet ? await ctx.exportSheet((c, project, _ppu, scale) => paintPhotoMarkers(c, points, labels, project, scale)).catch(() => null) : null;
+        const out = await exportBatch({ batch, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth ?? 0, withOriginals, onProgress: (done, total) => setProgress({ done, total }) });
+        await shareFile(out.blob, out.fileName, "application/zip");
+        setMessage(t("camera.exported", { name: out.fileName }));
+      } catch (e) { fail(e); } finally { setProgress(null); }
+    };
+    body = (
+      <div className="camera-body">
+        <h3>{t("camera.exportTitle")}</h3>
+        <p className="camera-hint">{t("camera.exportWhat")}</p>
+        {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
+        <label className="camera-check"><input type="checkbox" checked={withOriginals} onChange={(e) => setWithOriginals(e.target.checked)} />{t("camera.withOriginals")}</label>
+        {progress ? <p role="status">{t("camera.exporting", { done: progress.done, total: progress.total })}</p> : null}
+        <div className="camera-actions">
+          <button type="button" className="camera-primary" disabled={!placedCount || !!progress} onClick={() => void run()}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
+          <button type="button" disabled={!!progress} onClick={() => setView("work")}>{t("camera.cancel")}</button>
+        </div>
+      </div>
+    );
   } else if (view === "work" && batch) {
     const nos = photoLabels(points, photos);
     const count = selected ? photos.filter((p) => p.pointId === selected.id).length : 0;
@@ -209,6 +241,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
           </label>
           <button type="button" onClick={() => setView("photos")}>{t("camera.list")}</button>
           <button type="button" onClick={() => setView("settings")}>{t("camera.settings")}</button>
+          <button type="button" onClick={() => { setMessage(""); setView("export"); }}>{t("camera.export")}</button>
         </div>
         {placing ? <p className="camera-hint">{t("camera.placeTip")}</p> : null}
         {selected ? (

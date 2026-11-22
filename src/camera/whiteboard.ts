@@ -68,8 +68,11 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
   const titlePx = r.h * 0.1;
   ctx.fillStyle = "#111";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  // a long project name shrinks to fit (down to 60 %) before it is cut
   ctx.font = `700 ${titlePx}px ${FONT}`;
-  ctx.fillText(fit(ctx, text.title, r.w - pad * 2), r.x + r.w / 2, r.y + r.h * 0.12);
+  const room = r.w - pad * 2, wide = ctx.measureText(text.title).width;
+  if (wide > room) ctx.font = `700 ${Math.max(titlePx * 0.6, (titlePx * room) / wide)}px ${FONT}`;
+  ctx.fillText(fit(ctx, text.title, room), r.x + r.w / 2, r.y + r.h * 0.12);
   const rows = boardRows(board, text, signer);
   const top = r.y + r.h * 0.24, rowH = (r.h * 0.72) / rows.length, labelW = r.w * 0.3;
   const px = rowH * 0.5;

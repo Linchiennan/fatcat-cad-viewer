@@ -52,3 +52,4 @@
 .camera-sign input { min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
 .camera-sign-pad { width: 100%; border-radius: 10px; background: #fbfbf8; touch-action: none; }
 .camera-sign button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); font: inherit; }
+.camera-check { display: flex; align-items: center; gap: 10px; min-height: 44px; } .camera-check input { width: 24px; height: 24px; }
