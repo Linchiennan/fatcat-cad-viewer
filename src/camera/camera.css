@@ -1,0 +1,36 @@
+/* Engineering camera (spec 009) */
+.photo-marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
+.photo-marker-layer [data-photo-marker] { pointer-events: auto; }
+.photo-marker-circle { fill: rgba(0, 0, 0, 0.001); stroke-width: 2.5; cursor: grab; touch-action: none; }
+.photo-marker-arrow { cursor: grab; touch-action: none; }
+.photo-marker-text { font-weight: 700; pointer-events: none; user-select: none; -webkit-user-select: none; }
+.photo-marker-ring { fill: none; stroke: #ffd23f; stroke-width: 3; pointer-events: none; }
+.photo-marker-layer.placing { cursor: crosshair; }
+.camera-sheet {
+  position: absolute; z-index: 24; left: 8px; right: 8px; bottom: calc(96px + var(--safe-bottom, 0px)); max-width: 560px; margin: 0 auto;
+  max-height: min(46vh, 420px); display: flex; flex-direction: column; border-radius: 14px; background: var(--panel); border: 1px solid var(--line);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45); overflow: hidden;
+}
+.camera-sheet header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; }
+.camera-sheet header strong { font-size: 1.05rem; }
+.camera-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+.camera-body h3 { margin: 4px 0 0; font-size: 0.95rem; color: var(--muted); }
+.camera-sheet button, .camera-shoot { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); font: inherit; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.camera-sheet button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-hi); color: #1b1b1b; }
+.camera-primary { background: var(--accent) !important; border-color: var(--accent-hi) !important; color: #1b1b1b !important; font-weight: 700; }
+.camera-danger { color: #ff8a80 !important; }
+.camera-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.camera-actions > * { flex: 1 0 auto; }
+.camera-batches, .camera-photos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.camera-batches button { width: 100%; flex-direction: column; align-items: flex-start; padding: 8px 12px; text-align: left; }
+.camera-batches small, .camera-photo small { color: var(--muted); overflow-wrap: anywhere; }
+.camera-batch-line { margin: 0; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.camera-batch-line em { font-style: normal; color: var(--accent-hi); }
+.camera-hint { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.camera-selected p { margin: 0 0 6px; overflow-wrap: anywhere; }
+.camera-settings label, .camera-board-form label, .camera-renumber label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+.camera-settings input, .camera-settings select, .camera-board-form input, .camera-renumber input { min-height: 40px; padding: 0 10px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
+.camera-photo { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.camera-photo > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.camera-thumb { flex: none; width: 96px; height: 54px; object-fit: cover; border-radius: 6px; background: #0b151d; }
+.camera-message { margin: 0; padding: 6px 14px 10px; color: var(--accent-hi); }

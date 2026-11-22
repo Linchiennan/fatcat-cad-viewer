@@ -6,6 +6,7 @@
 import { PANEL_STRINGS } from "./panelStrings";
 import { LEGAL_STRINGS } from "./legalStrings";
 import { EXPORT_STRINGS } from "./exportStrings";
+import { CAMERA_STRINGS } from "./cameraStrings";
 
 export type Pair = { zh: string; en: string };
 
@@ -51,6 +52,7 @@ export const OWN_STRINGS = {
   ...PANEL_STRINGS,
   ...LEGAL_STRINGS,
   ...EXPORT_STRINGS,
+  ...CAMERA_STRINGS,
   "preview.label": { zh: "版面預覽", en: "Layout preview" },
   "preview.desktop": { zh: "電腦原尺寸", en: "Desktop · original size" },
   "preview.note": { zh: "整頁自動縮放，保留手機版面尺寸；非 Safari／iOS 引擎模擬。", en: "Auto-fit whole screen; phone viewport preserved. Not Safari/iOS emulation." },

@@ -50,6 +50,7 @@ import { CloseIcon } from "../components/Icons";
 import { backStack, decideBack, registerBackHandler, type ShellBackState, type ShellScreen } from "./backDispatch";
 import { HomeScreen } from "./HomeScreen";
 import { CheckStrip, FileBar, type StripTab } from "./ViewerChrome";
+import { useCameraSession } from "../camera/useCameraSession";
 import { isAbort, progressFraction, readFailureCode, toAppError, viewerFailureCode } from "./shellText";
 import { loadCadViewer, loadMeasurePanel, loadPdfViewer, MissingModuleError, type CadViewerParts, type MeasurePanelComponent, type PdfViewerComponent } from "./viewerModules";
 
@@ -643,6 +644,9 @@ export function App() {
   // ---- lazily loaded viewers -------------------------------------------------------------------------------
   const showing = screen === "loading" || screen === "viewing";
   const cad = useLazyPart<CadViewerParts>(loadCadViewer, !!drawable && !isPdf && showing, onMissingViewer);
+  // Engineering camera (spec 009): batches of site photos placed on this sheet.
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { drawingName: last?.file.name ?? "", viewKey: index?.viewKey ?? "", space, index }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
 
@@ -672,7 +676,8 @@ export function App() {
           onEditMarkText={(i, initial, color, px, multiline) => { if (!marking) return; setMarkColor(color); setTextPx(clampTextPx(px)); setTextDialog({ kind: "edit", index: i, initial, multiline }); }}
           onEngine={(engine) => { engineRef.current = engine; }}
           onProgress={onProgress} onReady={onReady} onError={onViewerError} onPick={onPick} onPreview={setMeasurePreview}
-          onMeasurementIndex={onMeasurementIndex} onSpaces={onSpaces} onMarkCount={setMarkCount} onReport={setReport} />
+          onMeasurementIndex={onMeasurementIndex} onSpaces={onSpaces} onMarkCount={setMarkCount} onReport={setReport}
+          photoMarkers={camera.photoMarkers} />
       );
     }
   }
@@ -716,7 +721,8 @@ export function App() {
             {showStrip ? (
               <CheckStrip spaces={spaces} space={space} switching={switching} missing={missingCount} xrefsUnloaded={xrefsUnloaded} xrefsApplying={xrefsApplying}
                 onSpace={(name) => { setSwitching(true); canvasRef.current?.switchSpace(name); }}
-                onTab={(tab) => { setSearchOpen(false); endMeasure(); setCadTab(tab); }} /* 用戶 2026-10-28：量測中打開圖層等面板，自動結束量測 */ onExport={openExport} onInspect={toggleInspect} />
+                onTab={(tab) => { setSearchOpen(false); endMeasure(); setCadTab(tab); }} /* 用戶 2026-10-28：量測中打開圖層等面板，自動結束量測 */ onExport={openExport} onInspect={toggleInspect}
+                onCamera={isPdf ? undefined : () => { setSearchOpen(false); endMeasure(); endMarkup(); setCadTab(null); setCameraOpen(true); }} />
             ) : null}
 
             {selecting ? <SelectionBar tool={selectionTool} count={selectionCount} onTool={setSelectionTool} onDelete={askDeleteSelection} /> : null}
@@ -802,6 +808,7 @@ export function App() {
             {/* One cat-paw bar on phone and desktop alike (用戶 2026-10-27：電腦版與手機版統一貓咪風格). */}
             {exportStage === "box" ? null : <GloveBar {...toolbarProps} />}
 
+            {camera.panel}
             {exportStage === "sheet" ? (
               <ExportSheet choice={exportChoice} onChange={(next) => { setExportChoice(next); saveExportChoice(next); }} onExport={startExport} onClose={closeExport} />
             ) : null}

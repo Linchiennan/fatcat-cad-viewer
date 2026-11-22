@@ -21,6 +21,8 @@ export type DrawingCanvasProps = DrawingCanvasEvents & {
   selectionTool?: 'single' | 'box' | null;
   onSelectionCount?(count: number): void;
   onDeleteMeasurements?(indices: number[]): void;
+  /** Engineering camera points (spec 009), or null when the camera is not in use. */
+  photoMarkers?: import("../canvas/DrawingCanvas").DrawingCanvasProps["photoMarkers"];
   /** Markup tool and colour while marking, else null; `textAnchor` is the spot being typed into. */
   markup: { tool: MarkTool; color: string; editingIndex?: number; textAnchor: { at: DrawingPoint; width?: number } | null; textPx?: number } | null;
   /** A text tool tapped a spot (or dragged a box) → the App asks for the text, then calls addTextMark. */

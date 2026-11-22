@@ -81,7 +81,7 @@ export function FileBar({ name, size, source, file, entryId, cardOpen, onCard, o
 
 export type StripTab = "layers" | "missing" | "xrefs";
 
-export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, xrefsApplying = false, onSpace, onTab, onExport, onInspect }: {
+export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, xrefsApplying = false, onSpace, onTab, onExport, onInspect, onCamera }: {
   spaces: CadSpace[];
   space: string;
   switching: boolean;
@@ -93,6 +93,8 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
   onTab(tab: StripTab): void;
   onExport?(): void;
   onInspect?(): void;
+  /** Engineering camera (spec 009). */
+  onCamera?(): void;
 }) {
   const { t, locale } = useI18n();
   const [page, setPage] = useState(0);
@@ -199,6 +201,7 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
       </button>
       {xrefsFirst ? shareButton : xrefButton}
       {onInspect ? <button type="button" onClick={onInspect}>{t("bar.info")}</button> : null}
+      {onCamera ? <button type="button" className="strip-camera" title={t("camera.buttonTip")} onClick={onCamera}>{t("camera.button")}</button> : null}
         </div>
         </div>
       </div>

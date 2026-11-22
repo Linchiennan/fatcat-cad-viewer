@@ -22,6 +22,9 @@ import { ExportError, type ExportCapable, type ExportEngine, type ExportRequest,
 import "./canvas.css";
 import { SelectionOverlay, emptySelection, type Selection } from './SelectionOverlay';
 import { removeSelected } from './selection';
+import type { ComponentProps } from "react";
+import { PhotoMarkerLayer } from "../camera/PhotoMarkerLayer";
+import "../camera/camera.css";
 
 type CanvasCommon = DrawingCanvasEvents & {
   /** Drawable file (DXF, converted DWG or the xref-assembled file). A new File object = load again. */
@@ -36,6 +39,8 @@ type CanvasCommon = DrawingCanvasEvents & {
   onDeleteMeasurements?(indices: number[]): void;
   /** Long-press aiming preview (optional). */
   onPreview?(preview: MeasurePreview): void;
+  /** Engineering camera points on the drawing (spec 009), or null when the camera is not in use. */
+  photoMarkers?: Omit<ComponentProps<typeof PhotoMarkerLayer>, "project" | "unproject" | "ppu"> | null;
 };
 
 /** Everything spelled out by the App. */
@@ -320,6 +325,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           onAdd={(mark) => updateMarks([...marksRef.current, mark])} onText={askText} onEditText={askEdit}
           onPan={(dx, dy) => { if (ppu > 0) engine.current?.panBy(dx, dy); }} onZoom={(x, y, factor) => { if (ppu > 0) engine.current?.zoomAt(x, y, factor); }} textAnchor={textAnchor} textPx={editPx} />
       ) : null}
+      {e && props.photoMarkers ? <PhotoMarkerLayer {...props.photoMarkers} project={project} unproject={unproject} ppu={ppu} /> : null}
       {e && props.selectionTool ? <SelectionOverlay tool={props.selectionTool} marks={marks} model={model} project={project} ppu={ppu} selected={selection} onChange={changeSelection} /> : null}
       {box ? <div key={searchHit?.serial} className="search-hit-box" style={{ left: box.left, top: box.top, width: box.width, height: box.height }} /> : null}
     </div>
