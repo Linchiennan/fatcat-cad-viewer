@@ -14,7 +14,7 @@ import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
 import { ALL_PARTS, exportBatch, type ExportParts } from "./exportBatch";
-import { paintPhotoMarkers } from "./alignment";
+import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
@@ -155,6 +155,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   /** drawing width from the sheet's objects (sizes the DXF markers when no sheet PDF is made) */
   const indexWidth = useMemo(() => { let lo = Infinity, hi = -Infinity; for (const e of ctx.index?.entities ?? []) { const b = e.bounds; if (Number.isFinite(b.minX) && Number.isFinite(b.maxX)) { lo = Math.min(lo, b.minX); hi = Math.max(hi, b.maxX); } } return hi > lo ? hi - lo : 0; }, [ctx.index]);
   const labels = useMemo(() => new Map(points.map((p) => [p.id, markerText(p, photos)])), [points, photos]);
+  /** points with at least one photo: shown green on the drawing */
+  const done = useMemo(() => new Set(photos.flatMap((p) => (p.pointId ? [p.pointId] : []))), [photos]);
   const selected = points.find((p) => p.id === selectedId) ?? null;
   /** number the next photo of a point will get, as on the card (01, 01-2 …) */
   const nextLabel = (p: ShotPoint) => { const n = photos.filter((x) => x.pointId === p.id).length; const no = String(p.no).padStart(2, "0"); return n ? `${no}-${n + 1}` : no; };
@@ -204,7 +206,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   };
 
   const markers = open && batch ? {
-    points, labels, selectedId, placing, scale: markerScale,
+    points, labels, selectedId, placing, scale: markerScale, done,
     onAdd: async (at: { x: number; y: number }) => {
       try {
         const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts) });
@@ -261,7 +263,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     const run = async () => {
       setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
       try {
-        const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet((c, project, _ppu, scale) => paintPhotoMarkers(c, points, labels, project, scale, markerScale)).catch(() => null) : null;
+        const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet((c, project, ppu, scale, sheetWidth) => paintPhotoMarkers(c, points, labels, project, scale, markerUnitRadius(sheetWidth || indexWidth, markerScale) * ppu)).catch(() => null) : null;
         const out = await exportBatch({ batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth || indexWidth, parts, onProgress: (done, total) => setProgress({ done, total }) });
         await shareFile(out.blob, out.fileName, "application/zip");
         setMessage(t("camera.exported", { name: out.fileName }));

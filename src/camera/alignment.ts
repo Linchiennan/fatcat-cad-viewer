@@ -4,10 +4,12 @@ import type { DrawingPoint } from "../viewer/savedView";
 import { MARKER_RADIUS_PX, MARKER_RED, screenDirection, wedgePieces } from "./PhotoMarkerLayer";
 import type { ShotPoint } from "./types";
 
-/** Paint the points on an export picture (`project` gives picture units; `scale` = output pixels per unit). */
+/** Paint the points on an export picture (`project` gives picture units; `scale` = output pixels per unit;
+ * `radius` = circle radius in picture units, from markerUnitRadius × picture units per drawing unit). */
 export function paintPhotoMarkers(ctx: CanvasRenderingContext2D, points: readonly ShotPoint[], labels: ReadonlyMap<string, string>,
-  project: (pts: readonly DrawingPoint[]) => DrawingPoint[], scale: number, markerScale = 1): void {
-  const k = markerScale;
+  project: (pts: readonly DrawingPoint[]) => DrawingPoint[], scale: number, radius = MARKER_RADIUS_PX): void {
+  const k = radius / MARKER_RADIUS_PX;
+  if (!(k > 0)) return;
   ctx.save();
   ctx.scale(scale, scale);
   for (const p of points) {
@@ -58,7 +60,13 @@ export function markerDxf(points: readonly ShotPoint[], labels: ReadonlyMap<stri
   return out.join("\r\n") + "\r\n";
 }
 
-/** Circle radius in drawing units for the DXF: about the size the circles have on the exported sheet. */
-export function dxfRadius(sheetWidth: number, markerScale = 1): number {
+/**
+ * Circle radius in drawing units: 17/2000 of the sheet width at 100 %. One rule for the screen, the sheet PDF and the
+ * DXF, so the marker is a fixed size on the drawing and zooms with it like a CAD block (用戶 2026-11-22：「建築圖縮小，
+ * 他沒跟著縮小」). On the 8F example (7,885 units wide) that is r ≈ 67, near the user's own 「對位箭頭」 block (r = 53).
+ */
+export function markerUnitRadius(sheetWidth: number, markerScale = 1): number {
   return Math.max(sheetWidth * (MARKER_RADIUS_PX / 2000) * markerScale, 1e-6);
 }
+/** The DXF circle radius (same as on screen). */
+export const dxfRadius = markerUnitRadius;

@@ -64,5 +64,5 @@ export class ExportError extends Error {
 export type ExportCapable = {
   exportDrawing(request: ExportRequest): Promise<ExportResult>;
   /** The sheet without the user's markups or measures, with `paint` drawn on top (009 對位圖), and its width in drawing units. */
-  exportWithOverlay?(request: ExportRequest, paint: (ctx: CanvasRenderingContext2D, project: (pts: readonly { x: number; y: number }[]) => { x: number; y: number }[], ppu: number, scale: number) => void): Promise<ExportResult & { sheetWidth: number }>;
+  exportWithOverlay?(request: ExportRequest, paint: (ctx: CanvasRenderingContext2D, project: (pts: readonly { x: number; y: number }[]) => { x: number; y: number }[], ppu: number, scale: number, sheetWidth: number) => void): Promise<ExportResult & { sheetWidth: number }>;
 };

@@ -1,6 +1,6 @@
 // The CAD drawing with its overlays (T15): group B's engine underneath, then the measuring overlay,
 // our markup layer and the search box, all following pan and zoom.
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useReducer, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useMemo, useImperativeHandle, useReducer, useRef, useState } from "react";
 import type { CadEngine, DrawingCanvasEvents, DrawingCanvasHandle, MeasurePreview } from "../types/engine";
 import type { DrawingBounds, DrawingPoint } from "../types/drawing";
 import type { MeasurableEntity, MeasurementSettings, SnapKind } from "../viewer/measurementGeometry";
@@ -40,7 +40,7 @@ type CanvasCommon = DrawingCanvasEvents & {
   /** Long-press aiming preview (optional). */
   onPreview?(preview: MeasurePreview): void;
   /** Engineering camera points on the drawing (spec 009), or null when the camera is not in use. */
-  photoMarkers?: Omit<ComponentProps<typeof PhotoMarkerLayer>, "project" | "unproject" | "ppu"> | null;
+  photoMarkers?: Omit<ComponentProps<typeof PhotoMarkerLayer>, "project" | "unproject" | "ppu" | "sheetWidth"> | null;
 };
 
 /** Everything spelled out by the App. */
@@ -232,9 +232,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     async exportWithOverlay(request, paint) {
       const e = engine.current as (CadEngine & Partial<ExportEngine>) | null;
       if (!e || !readyRef.current || typeof e.renderRegion !== "function" || !e.sheetBounds || !e.viewBounds || !e.screenToDrawing) throw new ExportError("EXPORT_NOT_READY");
-      const b = e.sheetBounds();
-      const result = await exportDrawing(e as CadEngine & ExportEngine, request, [], { paintMeasures: paint });
-      return { ...result, sheetWidth: b ? b.maxX - b.minX : 0 };
+      const b = e.sheetBounds(), sheetWidth = b ? b.maxX - b.minX : 0;
+      const result = await exportDrawing(e as CadEngine & ExportEngine, request, [], { paintMeasures: (ctx, project, ppu, scale) => paint(ctx, project, ppu, scale, sheetWidth) });
+      return { ...result, sheetWidth };
     },
     showSearchHit(bounds, textHeight, at) {
       const e = engine.current;
@@ -282,6 +282,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const unproject = useCallback((x: number, y: number) => engine.current?.unproject(x, y) ?? { x: NaN, y: NaN }, []);
   const ppu = e?.pixelsPerUnit() ?? 0;
   const index = e?.measurementIndex() ?? null;
+  // photo markers are sized in drawing units, from the sheet width, so they zoom with the drawing (用戶 2026-11-22)
+  const sheetWidth = useMemo(() => { const b = (e as (CadEngine & Partial<ExportEngine>) | null)?.sheetBounds?.(); return b ? b.maxX - b.minX : 0; }, [e, index]);
 
   let model = null;
   measureModelRef.current = null;
@@ -332,7 +334,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
           onAdd={(mark) => updateMarks([...marksRef.current, mark])} onText={askText} onEditText={askEdit}
           onPan={(dx, dy) => { if (ppu > 0) engine.current?.panBy(dx, dy); }} onZoom={(x, y, factor) => { if (ppu > 0) engine.current?.zoomAt(x, y, factor); }} textAnchor={textAnchor} textPx={editPx} />
       ) : null}
-      {e && props.photoMarkers ? <PhotoMarkerLayer {...props.photoMarkers} project={project} unproject={unproject} ppu={ppu} /> : null}
+      {e && props.photoMarkers ? <PhotoMarkerLayer {...props.photoMarkers} project={project} unproject={unproject} ppu={ppu} sheetWidth={sheetWidth} /> : null}
       {e && props.selectionTool ? <SelectionOverlay tool={props.selectionTool} marks={marks} model={model} project={project} ppu={ppu} selected={selection} onChange={changeSelection} /> : null}
       {box ? <div key={searchHit?.serial} className="search-hit-box" style={{ left: box.left, top: box.top, width: box.width, height: box.height }} /> : null}
     </div>

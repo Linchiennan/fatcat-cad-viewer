@@ -10,12 +10,17 @@ import type { ShotPoint } from "./types";
 
 export const MARKER_RADIUS_PX = 17;
 export const MARKER_RED = "#ff2a1a";
+/** inside of a point that has its photo (用戶 2026-11-22：「箭頭有拍完照片，內部改成綠色代表完成」); screen only, the
+ * exported 對位圖 keeps the user's red */
+export const MARKER_DONE = "#22c55e";
 const HOLD_FOR_FREE_MS = 450;
 
 type Props = {
   points: readonly ShotPoint[];
   /** text in each circle by point id ("21" / "21x2") */
   labels: ReadonlyMap<string, string>;
+  /** ids of points that already have a photo: drawn filled green (done) */
+  done?: ReadonlySet<string>;
   selectedId: string | null;
   /** taps on the drawing add a point */
   placing: boolean;
@@ -28,7 +33,19 @@ type Props = {
   onTurn(id: string, angle: number): void;
   /** size of every marker (1 = normal), set with the panel slider */
   scale?: number;
+  /** sheet width in drawing units: markers are sized on the drawing (markerUnitRadius) and zoom with it */
+  sheetWidth?: number;
 };
+
+/**
+ * Marker size factor on screen (1 = MARKER_RADIUS_PX): the radius in drawing units × pixels per unit, so the marker
+ * shrinks and grows with the drawing like a CAD block (用戶 2026-11-22：「建築圖縮小，他沒跟著縮小」). Without a sheet
+ * width (not known yet) it falls back to the fixed screen size.
+ */
+export function screenMarkerScale(sheetWidth: number | undefined, ppu: number, scale = 1): number {
+  if (!(sheetWidth && sheetWidth > 0 && ppu > 0)) return scale;
+  return (sheetWidth * (MARKER_RADIUS_PX / 2000) * scale * ppu) / MARKER_RADIUS_PX;
+}
 
 /** Screen direction of a drawing angle (degrees CCW from +X); screen y grows downward. */
 export function screenDirection(angle: number): { x: number; y: number } {
@@ -170,22 +187,22 @@ export function PhotoMarkerLayer(props: Props) {
         const g = ghost?.id === p.id ? ghost : null;
         const [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
         if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
-        const angle = g?.angle ?? p.angle, selected = props.selectedId === p.id;
-        const label = props.labels.get(p.id) ?? String(p.no), k = props.scale ?? 1;
+        const angle = g?.angle ?? p.angle, selected = props.selectedId === p.id, isDone = !!props.done?.has(p.id);
+        const label = props.labels.get(p.id) ?? String(p.no), k = screenMarkerScale(props.sheetWidth, props.ppu, props.scale ?? 1);
         return (
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k + 6} className="photo-marker-ring" /> : null}
             {/* finger-sized grips (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it;
                 on the selected point anywhere around the circle turns it (only there, so taps between points still
                 add points while placing). Invisible; the drawn arrow and circle are unchanged. */}
-            {selected ? <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip"
+            {selected && !props.placing ? <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip"
               onPointerDown={(e) => begin(e, p.id, "turn")} /> : null}
             <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
-            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={1.4 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED} />
-            <circle cx={c.x} cy={c.y} r={moveGripRadius(k)} className="photo-marker-grip"
+            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={Math.max(0.6, 1.4 * k)} className="photo-marker-circle" stroke={MARKER_RED} fill={isDone ? MARKER_DONE : "none"} />
+            <circle cx={c.x} cy={c.y} r={props.placing ? Math.max(MARKER_RADIUS_PX * k + 2, 8) : moveGripRadius(k)} className="photo-marker-grip"
               onPointerDown={(e) => begin(e, p.id, "move")} />
-            <text x={c.x} y={c.y} className="photo-marker-text" fill={MARKER_RED} fontSize={(label.length > 3 ? 10.5 : label.length > 2 ? 13 : 16) * k}
+            <text x={c.x} y={c.y} className="photo-marker-text" fill={isDone ? "#fff" : MARKER_RED} fontSize={(label.length > 3 ? 10.5 : label.length > 2 ? 13 : 16) * k}
               textAnchor="middle" dominantBaseline="central">{label}</text>
           </g>
         );

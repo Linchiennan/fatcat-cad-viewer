@@ -1,7 +1,7 @@
 /* Engineering camera (spec 009) */
 .photo-marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
 .photo-marker-layer [data-photo-marker] { pointer-events: auto; }
-.photo-marker-circle { fill: none; stroke-width: 2.5; pointer-events: none; }
+.photo-marker-circle { stroke-width: 2.5; pointer-events: none; }
 .photo-marker-grip { fill: rgba(0, 0, 0, 0.001); stroke: none; cursor: grab; touch-action: none; }
 .photo-marker-arrow { cursor: grab; touch-action: none; }
 .photo-marker-text { font-weight: 700; pointer-events: none; user-select: none; -webkit-user-select: none; }
