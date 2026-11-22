@@ -89,7 +89,7 @@ export function wedgePieces(cx: number, cy: number, dx: number, dy: number, r: n
 export function arrowPath(cx: number, cy: number, angle: number, scale = 1): string {
   const d = screenDirection(angle);
   return wedgePieces(cx, cy, d.x, d.y, MARKER_RADIUS_PX * scale)
-    .map((piece) => piece.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join("") + "Z").join("");
+    .map((piece) => piece.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join("") + "Z").join("");
 }
 
 /** Finger grips in px: a fingertip is about 44 px across. Moving takes the circle plus a margin (at least 22 px
@@ -102,6 +102,17 @@ export function turnGripRadius(scale = 1): number {
 }
 
 /** ox / oy: finger minus marker centre at the start, so a moved point keeps its place under the finger */
+/** Circle line width: in proportion to the marker (2.5 px at normal size, as before), at least a thin hairline. */
+export function markerLine(k: number): number {
+  return Math.max(0.5, 2.5 * k);
+}
+/** Number size in px for a label at marker size k. */
+export function markerFont(label: string, k: number): number {
+  return (label.length > 3 ? 10.5 : label.length > 2 ? 13 : 16) * k;
+}
+/** Below this the number is a blot that hides the circle and arrow, so it is left out until the drawing is zoomed in. */
+export const MIN_TEXT_PX = 5;
+
 type Drag = { id: string; kind: "move" | "turn"; pointerId: number; start: number; moved: boolean; free: boolean; ox: number; oy: number };
 
 export function PhotoMarkerLayer(props: Props) {
@@ -191,7 +202,7 @@ export function PhotoMarkerLayer(props: Props) {
         const label = props.labels.get(p.id) ?? String(p.no), k = screenMarkerScale(props.sheetWidth, props.ppu, props.scale ?? 1);
         return (
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
-            {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k + 6} className="photo-marker-ring" /> : null}
+            {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k * 1.3 + 2} strokeWidth={Math.max(1, 3 * k)} className="photo-marker-ring" /> : null}
             {/* finger-sized grips (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it;
                 on the selected point anywhere around the circle turns it (only there, so taps between points still
                 add points while placing). Invisible; the drawn arrow and circle are unchanged. */}
@@ -199,11 +210,11 @@ export function PhotoMarkerLayer(props: Props) {
               onPointerDown={(e) => begin(e, p.id, "turn")} /> : null}
             <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
-            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={Math.max(0.6, 1.4 * k)} className="photo-marker-circle" stroke={MARKER_RED} fill={isDone ? MARKER_DONE : "none"} />
+            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={markerLine(k)} className="photo-marker-circle" stroke={MARKER_RED} fill={isDone ? MARKER_DONE : "none"} />
             <circle cx={c.x} cy={c.y} r={props.placing ? Math.max(MARKER_RADIUS_PX * k + 2, 8) : moveGripRadius(k)} className="photo-marker-grip"
               onPointerDown={(e) => begin(e, p.id, "move")} />
-            <text x={c.x} y={c.y} className="photo-marker-text" fill={isDone ? "#fff" : MARKER_RED} fontSize={(label.length > 3 ? 10.5 : label.length > 2 ? 13 : 16) * k}
-              textAnchor="middle" dominantBaseline="central">{label}</text>
+            {markerFont(label, k) >= MIN_TEXT_PX ? <text x={c.x} y={c.y} className="photo-marker-text" fill={isDone ? "#fff" : MARKER_RED} fontSize={markerFont(label, k)}
+              textAnchor="middle" dominantBaseline="central">{label}</text> : null}
           </g>
         );
       })}

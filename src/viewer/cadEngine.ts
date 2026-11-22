@@ -11,6 +11,7 @@ import type { Mark } from "./markup";
 import { paintMarks } from "./markup";
 import { labelHeight } from "./measureResults";
 import { installPanInertia } from "./panInertia";
+import { applyTouchPan } from "./touchPan";
 import { resolveMeasurePick, toleranceFor } from "../measure/resolvePick";
 import { assertFileSize, MAX_DXF_BYTES } from "../files/fileTypes";
 import { parseCadFile } from "./xrefs";
@@ -103,6 +104,7 @@ export function installViewerPatches(viewerClass: Any = DxfViewer): void {
       create.call(this);
       if (this.controls) this.controls.mouseButtons = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.PAN };
       installPanInertia(this);
+      applyTouchPan(this);
     };
   }
   installXclipViewer(viewerClass);

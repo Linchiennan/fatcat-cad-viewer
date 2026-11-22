@@ -24,6 +24,7 @@ import { SelectionOverlay, emptySelection, type Selection } from './SelectionOve
 import { removeSelected } from './selection';
 import type { ComponentProps } from "react";
 import { PhotoMarkerLayer } from "../camera/PhotoMarkerLayer";
+import { setOneFingerPan } from "../viewer/touchPan";
 import "../camera/camera.css";
 
 type CanvasCommon = DrawingCanvasEvents & {
@@ -284,6 +285,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
   const index = e?.measurementIndex() ?? null;
   // photo markers are sized in drawing units, from the sheet width, so they zoom with the drawing (用戶 2026-11-22)
   const sheetWidth = useMemo(() => { const b = (e as (CadEngine & Partial<ExportEngine>) | null)?.sheetBounds?.(); return b ? b.maxX - b.minX : 0; }, [e, index]);
+  // camera open: one finger is for the photo points, two fingers move the drawing (用戶 2026-11-22)
+  const cameraOpen = !!props.photoMarkers;
+  useEffect(() => { setOneFingerPan(!cameraOpen); return () => setOneFingerPan(true); }, [cameraOpen]);
 
   let model = null;
   measureModelRef.current = null;

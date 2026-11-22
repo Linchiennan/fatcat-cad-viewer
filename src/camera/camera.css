@@ -1,11 +1,14 @@
 /* Engineering camera (spec 009) */
-.photo-marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
+/* touch-action on the svg itself: Chrome ignores it on svg shapes, so a finger dragging a point was taken over by the
+   page scroll after a few px (pointercancel; 用戶 2026-11-22：箭頭在手機上移動困難). The layer takes no taps itself. */
+.photo-marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; touch-action: none; }
 .photo-marker-layer [data-photo-marker] { pointer-events: auto; }
-.photo-marker-circle { stroke-width: 2.5; pointer-events: none; }
+/* line widths come from the marker size (attributes), so a small marker keeps its shape */
+.photo-marker-circle { pointer-events: none; }
 .photo-marker-grip { fill: rgba(0, 0, 0, 0.001); stroke: none; cursor: grab; touch-action: none; }
 .photo-marker-arrow { cursor: grab; touch-action: none; }
 .photo-marker-text { font-weight: 700; pointer-events: none; user-select: none; -webkit-user-select: none; }
-.photo-marker-ring { fill: none; stroke: #ffd23f; stroke-width: 3; pointer-events: none; }
+.photo-marker-ring { fill: none; stroke: #ffd23f; pointer-events: none; }
 .photo-marker-layer.placing { cursor: crosshair; }
 .camera-sheet {
   position: absolute; z-index: 24; left: 8px; right: 8px; bottom: calc(8px + var(--safe-bottom, 0px)); max-width: 560px; margin: 0 auto;
