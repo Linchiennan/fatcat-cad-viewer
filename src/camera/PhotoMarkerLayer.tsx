@@ -6,7 +6,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useI18n } from "../i18n/translations";
 import type { DrawingPoint } from "../viewer/savedView";
-import { snapAngle } from "./numbering";
 import type { ShotPoint } from "./types";
 
 export const MARKER_RADIUS_PX = 17;
@@ -42,13 +41,24 @@ export function angleFromScreen(dx: number, dy: number): number {
   return ((Math.atan2(-dy, dx) * 180) / Math.PI + 360) % 360;
 }
 
-/** The triangle outside the circle, in screen pixels around the centre (cx, cy). */
+/**
+ * The arrow as on the user's 對位圖 (block 對位箭頭): a filled wedge whose sides are tangent to the circle and meet at
+ * √2·r from the centre (the corner of a square around the circle), hollowed along the circle. Outline points around
+ * (cx, cy) for unit direction (dx, dy) in any coordinate system: the tip, then the arc from one tangent point to the other.
+ */
+export function wedgeOutline(cx: number, cy: number, dx: number, dy: number, r: number, segments = 12): { x: number; y: number }[] {
+  const a = Math.atan2(dy, dx), out = [{ x: cx + dx * r * Math.SQRT2, y: cy + dy * r * Math.SQRT2 }];
+  for (let i = 0; i <= segments; i++) {
+    const t = a + Math.PI / 4 - (i / segments) * (Math.PI / 2);
+    out.push({ x: cx + Math.cos(t) * r, y: cy + Math.sin(t) * r });
+  }
+  return out;
+}
+
+/** The wedge on screen as an SVG polygon `points` string. */
 export function arrowTriangle(cx: number, cy: number, angle: number, scale = 1): string {
-  const r = MARKER_RADIUS_PX * scale, d = screenDirection(angle), n = { x: -d.y, y: d.x };
-  const tip = { x: cx + d.x * (r + 13 * scale), y: cy + d.y * (r + 13 * scale) };
-  const b = { x: cx + d.x * (r - 2 * scale), y: cy + d.y * (r - 2 * scale) };
-  const w = 9 * scale;
-  return [tip, { x: b.x + n.x * w, y: b.y + n.y * w }, { x: b.x - n.x * w, y: b.y - n.y * w }].map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const d = screenDirection(angle);
+  return wedgeOutline(cx, cy, d.x, d.y, MARKER_RADIUS_PX * scale).map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 }
 
 type Drag = { id: string; kind: "move" | "turn"; pointerId: number; start: number; moved: boolean; free: boolean };
@@ -111,7 +121,9 @@ export function PhotoMarkerLayer(props: Props) {
     if (!drag.moved) setDrag({ ...drag, moved: true, free });
     if (drag.kind === "move") { const at = props.unproject(x, y); setGhost({ id: drag.id, x: at.x, y: at.y }); return; }
     const [c] = props.project([{ x: point.x, y: point.y }]);
-    setGhost({ id: drag.id, angle: snapAngle(angleFromScreen(x - c.x, y - c.y), free) });
+    // smooth, follows the finger (用戶 2026-11-22：箭頭要能滑順調整)
+    void free;
+    setGhost({ id: drag.id, angle: Math.round(angleFromScreen(x - c.x, y - c.y) * 10) / 10 });
   };
   const endDrag = (e: ReactPointerEvent) => {
     if (!drag || drag.pointerId !== e.pointerId) return;
@@ -137,9 +149,9 @@ export function PhotoMarkerLayer(props: Props) {
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k + 6} className="photo-marker-ring" /> : null}
             <polygon points={arrowTriangle(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
-            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={2.5 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED}
+            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={1.4 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED}
               onPointerDown={(e) => begin(e, p.id, "move")} />
-            <text x={c.x} y={c.y} className="photo-marker-text" fill={MARKER_RED} fontSize={(label.length > 3 ? 11 : 14) * k}
+            <text x={c.x} y={c.y} className="photo-marker-text" fill={MARKER_RED} fontSize={(label.length > 3 ? 10.5 : label.length > 2 ? 13 : 16) * k}
               textAnchor="middle" dominantBaseline="central">{label}</text>
           </g>
         );

@@ -79,3 +79,21 @@
 .camera-flash, .camera-flash-space { grid-column: 3; grid-row: 1; justify-self: end; }
 .camera-flash { min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1.5px solid #888; background: #222; color: #fff; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
 .camera-flash span { color: #ffd23f; }
+/* compact panel (用戶 2026-11-22 白板 #2) */
+.camera-titles { display: flex; flex-direction: column; min-width: 0; }
+.camera-titles small { color: var(--muted); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 30vw; }
+.camera-sheet button.camera-x { justify-self: end; width: 40px; min-height: 40px; height: 40px; padding: 0; border-radius: 50%; }
+.camera-x svg { width: 20px; height: 20px; }
+.camera-compact { gap: 6px; padding-bottom: 10px; }
+.camera-tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.camera-sheet .camera-tools > button, .camera-tools > label { position: relative; min-height: 50px; height: 50px; padding: 2px 0; flex-direction: column; gap: 1px; font-size: 0.78rem; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.camera-tools svg { width: 22px; height: 22px; }
+.camera-badge { position: absolute; top: -5px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #ff5a4a; color: #fff; font-style: normal; font-size: 0.7rem; line-height: 18px; }
+.camera-row { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 0.85rem; color: var(--muted); }
+.camera-row > span { flex: none; }
+.camera-scale-row input { flex: 1; min-width: 0; }
+.camera-sel > span { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camera-sheet .camera-row button { min-height: 36px; height: 36px; padding: 0 12px; font-size: 0.85rem; }
+.camera-row input[type="number"] { width: 64px; min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
+.camera-sheet .camera-paw { width: 64px; height: 64px; margin: 2px 0 4px; }
+.camera-parts { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; } .camera-parts .camera-check { min-height: 38px; font-size: 0.88rem; }

@@ -13,7 +13,7 @@ import { markerText, photoLabels, plainLabel, rocDate } from "./numbering";
 import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
-import { exportBatch } from "./exportBatch";
+import { ALL_PARTS, exportBatch, type ExportParts } from "./exportBatch";
 import { paintPhotoMarkers } from "./alignment";
 import { shareFile } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
@@ -99,7 +99,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     },
     onPointerCancel: () => { pullFrom.current = null; setPull(0); },
   };
-  const [withOriginals, setWithOriginals] = useState(false);
+  const [parts, setPartsNow] = useState<ExportParts>(() => { try { return { ...ALL_PARTS, ...(JSON.parse(localStorage.getItem("fatcat.camera.parts") ?? "{}") as Partial<ExportParts>) }; } catch { return { ...ALL_PARTS }; } });
+  const setParts = (p: ExportParts) => { setPartsNow(p); try { localStorage.setItem("fatcat.camera.parts", JSON.stringify(p)); } catch { /* private mode */ } };
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   /** size of every marker (slider); saved to the batch a moment after the slider stops */
   const [markerScale, setMarkerScale] = useState(1);
@@ -151,6 +152,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     return out;
   }, [ctx.index]);
 
+  /** drawing width from the sheet's objects (sizes the DXF markers when no sheet PDF is made) */
+  const indexWidth = useMemo(() => { let lo = Infinity, hi = -Infinity; for (const e of ctx.index?.entities ?? []) { const b = e.bounds; if (Number.isFinite(b.minX) && Number.isFinite(b.maxX)) { lo = Math.min(lo, b.minX); hi = Math.max(hi, b.maxX); } } return hi > lo ? hi - lo : 0; }, [ctx.index]);
   const labels = useMemo(() => new Map(points.map((p) => [p.id, markerText(p, photos)])), [points, photos]);
   const selected = points.find((p) => p.id === selectedId) ?? null;
   /** number the next photo of a point will get, as on the card (01, 01-2 …) */
@@ -258,8 +261,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     const run = async () => {
       setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
       try {
-        const sheet = ctx.exportSheet ? await ctx.exportSheet((c, project, _ppu, scale) => paintPhotoMarkers(c, points, labels, project, scale, markerScale)).catch(() => null) : null;
-        const out = await exportBatch({ batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth ?? 0, withOriginals, onProgress: (done, total) => setProgress({ done, total }) });
+        const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet((c, project, _ppu, scale) => paintPhotoMarkers(c, points, labels, project, scale, markerScale)).catch(() => null) : null;
+        const out = await exportBatch({ batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth || indexWidth, parts, onProgress: (done, total) => setProgress({ done, total }) });
         await shareFile(out.blob, out.fileName, "application/zip");
         setMessage(t("camera.exported", { name: out.fileName }));
       } catch (e) { fail(e); } finally { setProgress(null); }
@@ -269,10 +272,14 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <h3>{t("camera.exportTitle")}</h3>
         <p className="camera-hint">{t("camera.exportWhat")}</p>
         {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
-        <label className="camera-check"><input type="checkbox" checked={withOriginals} onChange={(e) => setWithOriginals(e.target.checked)} />{t("camera.withOriginals")}</label>
+        <fieldset className="camera-parts">
+          {(["sheetPdf", "markerDxf", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
+            <label key={k} className="camera-check"><input type="checkbox" checked={parts[k]} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
+          ))}
+        </fieldset>
         {progress ? <p role="status">{t("camera.exporting", { done: progress.done, total: progress.total })}</p> : null}
         <div className="camera-actions">
-          <button type="button" className="camera-primary" disabled={!placedCount || !!progress} onClick={() => void run()}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
+          <button type="button" className="camera-primary" disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run()}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
           <button type="button" disabled={!!progress} onClick={() => setView("work")}>{t("camera.cancel")}</button>
         </div>
       </div>
@@ -280,38 +287,37 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   } else if (view === "work" && batch) {
     const nos = photoLabels(points, photos);
     const count = selected ? photos.filter((p) => p.pointId === selected.id).length : 0;
+    const I = (d: string) => <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
     body = (
-      <div className="camera-body">
-        <p className="camera-batch-line"><strong>{batch.name}</strong>{unplaced ? <em>{t("camera.unplaced", { N: unplaced })}</em> : null}</p>
-        <div className="camera-actions">
-          <button type="button" aria-pressed={placing} title={t("camera.placeTip")} onClick={() => setPlacing((v) => !v)}>{t("camera.place")}</button>
-          <label className="camera-shoot">{t("camera.fromGallery")}
+      <div className="camera-body camera-compact">
+        {/* compact tool row (用戶 2026-11-22 白板 #2：精簡美化，太佔空間) */}
+        <div className="camera-tools">
+          <button type="button" aria-pressed={placing} title={t("camera.placeTip")} onClick={() => setPlacing((v) => !v)}>{I("M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21zM12 8.2v4.6M9.7 10.5h4.6")}<span>{t("camera.tool.place")}</span></button>
+          <label title={t("camera.fromGallery")}>{I("M4 5h16v14H4zM4 15l4.5-4.5 4 4 3-3L20 15M15.5 9.2h.01")}<span>{t("camera.tool.gallery")}</span>
             <input type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; void keepPhotos(fs); }} />
           </label>
-          <button type="button" onClick={() => setView("photos")}>{t("camera.list")}</button>
-          <button type="button" onClick={() => setView("settings")}>{t("camera.settings")}</button>
-          <button type="button" onClick={() => { setMessage(""); setView("export"); }}>{t("camera.export")}</button>
+          <button type="button" title={t("camera.list")} onClick={() => setView("photos")}>{I("M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01")}<span>{t("camera.tool.list")}</span>{unplaced ? <em className="camera-badge">{unplaced}</em> : null}</button>
+          <button type="button" title={t("camera.settings")} onClick={() => setView("settings")}>{I("M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM19.4 13.5l1.6 1.2-1.8 3.1-1.9-.6a7.6 7.6 0 0 1-2 1.2l-.4 2H11l-.4-2a7.6 7.6 0 0 1-2-1.2l-1.9.6-1.8-3.1 1.6-1.2a7.4 7.4 0 0 1 0-2.4L4.9 9.3l1.8-3.1 1.9.6a7.6 7.6 0 0 1 2-1.2L11 3.6h3.6l.4 2a7.6 7.6 0 0 1 2 1.2l1.9-.6 1.8 3.1-1.6 1.2a7.4 7.4 0 0 1 0 2.4z")}<span>{t("camera.tool.settings")}</span></button>
+          <button type="button" title={t("camera.exportTitle")} onClick={() => { setMessage(""); setView("export"); }}>{I("M12 15V4M8 8l4-4 4 4M5 13v6h14v-6")}<span>{t("camera.tool.export")}</span></button>
         </div>
-        <label className="camera-scale">{t("camera.markerSize", { pct: Math.round(markerScale * 100) })}
-          <input type="range" min={0.5} max={3} step={0.1} value={markerScale} onChange={(e) => changeScale(Number(e.target.value))} />
+        <label className="camera-row camera-scale-row"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
+          <input type="range" min={0.5} max={3} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
         </label>
-        {placing ? <p className="camera-hint">{t("camera.placeTip")}</p> : null}
         {selected ? (
-          <div className="camera-selected">
-            <p>{t("camera.selected", { no: markerText(selected, photos), place: selected.place || "—" })}{count ? ` · ${photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(nos.get(p.id)!)).join("、")}` : ""}</p>
-            {renumbering ? (
-              <form className="camera-renumber" onSubmit={(e) => { e.preventDefault(); const v = Number(new FormData(e.currentTarget).get("no")); setRenumbering(false); void renumberPoint(selected.id, v).then(() => reload(batch)).catch(fail); }}>
-                <label>{t("camera.renumberAsk", { no: selected.no, max: points.length })}<input name="no" type="number" min={1} max={points.length} defaultValue={selected.no} autoFocus /></label>
-                <button type="submit">{t("camera.save")}</button>
-              </form>
-            ) : (
-              <div className="camera-actions">
-                <button type="button" onClick={() => setRenumbering(true)}>{t("camera.renumber")}</button>
-                <button type="button" onClick={() => setConfirm({ message: t("camera.deletePointAsk", { no: selected.no }), okLabel: t("camera.deletePoint"), onOk: () => void deletePoint(selected.id).then(() => { setSelectedId(null); return reload(batch); }).catch(fail) })}>{t("camera.deletePoint")}</button>
-              </div>
-            )}
-          </div>
-        ) : null}
+          renumbering ? (
+            <form className="camera-row" onSubmit={(e) => { e.preventDefault(); const v = Number(new FormData(e.currentTarget).get("no")); setRenumbering(false); void renumberPoint(selected.id, v).then(() => reload(batch)).catch(fail); }}>
+              <span>{t("camera.renumberShort", { no: selected.no, max: points.length })}</span>
+              <input name="no" type="number" min={1} max={points.length} defaultValue={selected.no} autoFocus aria-label={t("camera.renumberAsk", { no: selected.no, max: points.length })} />
+              <button type="submit">{t("camera.save")}</button>
+            </form>
+          ) : (
+            <div className="camera-row camera-sel">
+              <span>{t("camera.selected", { no: markerText(selected, photos), place: selected.place || "—" })}{count ? " · " + photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(nos.get(p.id)!)).join("、") : ""}</span>
+              <button type="button" onClick={() => setRenumbering(true)}>{t("camera.renumber")}</button>
+              <button type="button" className="camera-danger" onClick={() => setConfirm({ message: t("camera.deletePointAsk", { no: selected.no }), okLabel: t("camera.deletePoint"), onOk: () => void deletePoint(selected.id).then(() => { setSelectedId(null); return reload(batch); }).catch(fail) })}>{t("camera.tool.delete")}</button>
+            </div>
+          )
+        ) : placing ? <p className="camera-hint">{t("camera.placeHintShort")}</p> : null}
       </div>
     );
   }
@@ -321,7 +327,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
-      <header className="camera-head"><strong>{t("camera.title")}</strong>
+      <header className="camera-head"><span className="camera-titles"><strong>{t("camera.title")}</strong>{batch ? <small>{batch.name}</small> : null}</span>
         {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
         {batch && view === "work" ? (
           <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setShooting(true); }}>
@@ -330,7 +336,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
             <span>{t("camera.shoot")}</span>
           </button>
         ) : <span />}
-        <button type="button" onClick={() => { setPlacing(false); onClose(); }}>{t("camera.close")}</button></header>
+        <button type="button" className="camera-x" aria-label={t("camera.close")} title={t("camera.close")} onClick={() => { setPlacing(false); onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></header>
       {body}
       {message ? <p className="camera-message" role="status">{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
