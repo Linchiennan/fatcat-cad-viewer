@@ -195,7 +195,22 @@ export function PhotoMarkerLayer(props: Props) {
   return (
     <svg ref={svg} className={"photo-marker-layer" + (props.placing ? " placing" : "")} aria-label={t("camera.markersLabel")}
       onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
-      {/* the selected point last, so its grips are on top of its neighbours */}
+      {/* The selected point's turn ring, under every point: anywhere around it turns it, but a neighbour inside the
+          ring is still grabbed by its own move grip (用戶 2026-11-22：「當定點箭頭有照片時，變成不能移動」— the new
+          point's ring lay on top of the photographed one next to it). Not while placing, so taps add points. */}
+      {(() => {
+        const p = props.placing ? null : props.points.find((q) => q.id === props.selectedId);
+        if (!p) return null;
+        const g = ghost?.id === p.id ? ghost : null, [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
+        if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
+        const k = screenMarkerScale(props.sheetWidth, props.ppu, props.scale ?? 1);
+        return (
+          <g data-photo-marker={p.id}>
+            <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip photo-marker-turn" onPointerDown={(e) => begin(e, p.id, "turn")} />
+          </g>
+        );
+      })()}
+      {/* the selected point last, so its arrow and move grip are on top of its neighbours */}
       {[...props.points].sort((a, b) => Number(a.id === props.selectedId) - Number(b.id === props.selectedId)).map((p) => {
         const g = ghost?.id === p.id ? ghost : null;
         const [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
@@ -205,11 +220,8 @@ export function PhotoMarkerLayer(props: Props) {
         return (
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k * 1.3 + 2} strokeWidth={Math.max(1, 3 * k)} className="photo-marker-ring" /> : null}
-            {/* finger-sized grips (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it;
-                on the selected point anywhere around the circle turns it (only there, so taps between points still
-                add points while placing). Invisible; the drawn arrow and circle are unchanged. */}
-            {selected && !props.placing ? <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip photo-marker-turn"
-              onPointerDown={(e) => begin(e, p.id, "turn")} /> : null}
+            {/* finger-sized grip (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it.
+                Invisible; the drawn arrow and circle are unchanged. The selected point's turn ring is drawn below. */}
             <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
             <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={markerLine(k)} className="photo-marker-circle" stroke={MARKER_RED} fill={isDone ? MARKER_DONE : "none"} />
