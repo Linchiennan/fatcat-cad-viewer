@@ -12,11 +12,17 @@ import type { Signer, Whiteboard } from "./types";
 import { boardRect, drawBoard, type BoardText } from "./whiteboard";
 
 type Pos = Pick<Whiteboard, "x" | "y" | "width">;
-type Capture = { takePhoto(): Promise<Blob> };
+type FlashMode = "off" | "auto" | "flash" | "torch";
+type Capture = { takePhoto(settings?: { fillLightMode?: string }): Promise<Blob>; getPhotoCapabilities?(): Promise<{ fillLightMode?: string[] }> };
+const FLASH_KEY = "fatcat.camera.flash";
+const FLASH_ORDER: FlashMode[] = ["off", "auto", "flash", "torch"];
+const loadFlash = (): FlashMode => { try { const v = localStorage.getItem(FLASH_KEY); return (FLASH_ORDER as string[]).includes(v ?? "") ? (v as FlashMode) : "off"; } catch { return "off"; } };
 
-export function CameraScreen({ board, text, signer, onShot, onClose }: {
+export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   board: Whiteboard; text: BoardText; signer?: Signer | null;
   onShot(photo: Blob, pos: Pos): Promise<void> | void;
+  /** the board was moved or resized: remembered for the next photos and the next time */
+  onPos?(pos: Pos): void;
   onClose(): void;
 }) {
   const { t } = useI18n();
@@ -27,10 +33,16 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
   const overlay = useRef<HTMLCanvasElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const [pos, setPos] = useState<Pos>({ x: board.x, y: board.y, width: board.width });
+  // remember where the board is left (a moment after it stops moving)
+  useEffect(() => { const id = window.setTimeout(() => onPos?.(pos), 300); return () => window.clearTimeout(id); }, [pos]); // eslint-disable-line react-hooks/exhaustive-deps
   const [state, setState] = useState<"starting" | "ready" | "denied">("starting");
   const [shots, setShots] = useState(0);
   const [busy, setBusy] = useState(false);
   const drag = useRef<{ id: number; dx: number; dy: number } | null>(null);
+  /** flash modes this phone offers (用戶 2026-11-22：拍照模式下的閃光燈模式切換); none on computers */
+  const [flashModes, setFlashModes] = useState<FlashMode[]>([]);
+  const [flash, setFlash] = useState<FlashMode>(loadFlash);
+  const capture = useRef<Capture | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -47,6 +59,20 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
         stream.current = s;
         if (video.current) { video.current.srcObject = s; void video.current.play().catch(() => {}); }
         setState("ready");
+        void (async () => {
+          const track = s.getVideoTracks()[0];
+          const IC = (globalThis as { ImageCapture?: new (t: MediaStreamTrack) => Capture }).ImageCapture;
+          const modes: FlashMode[] = ["off"];
+          try {
+            if (track && IC) {
+              capture.current = new IC(track);
+              const caps = await capture.current.getPhotoCapabilities?.();
+              for (const m of ["auto", "flash"] as const) if (caps?.fillLightMode?.includes(m)) modes.push(m);
+            }
+          } catch { /* no photo capabilities */ }
+          if ((track?.getCapabilities?.() as { torch?: boolean } | undefined)?.torch) modes.push("torch");
+          if (live) setFlashModes(modes.length > 1 ? modes : []);
+        })();
       })
       .catch(() => live && setState("denied"));
     return () => { live = false; stream.current?.getTracks().forEach((tr) => tr.stop()); stream.current = null; };
@@ -89,13 +115,28 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
     const track = stream.current?.getVideoTracks()[0];
     const IC = (globalThis as { ImageCapture?: new (t: MediaStreamTrack) => Capture }).ImageCapture;
     if (track && IC) {
-      try { return await new IC(track).takePhoto(); } catch { /* fall back to a video frame */ }
+      const cap = capture.current ?? new IC(track);
+      const mode = flashModes.includes(flash) && (flash === "auto" || flash === "flash") ? flash : flashModes.length ? "off" : undefined;
+      try { return await cap.takePhoto(mode ? { fillLightMode: mode } : undefined); } catch { /* fall back to a video frame */ }
     }
     const v = video.current!;
     const c = document.createElement("canvas");
     c.width = v.videoWidth; c.height = v.videoHeight;
     c.getContext("2d")!.drawImage(v, 0, 0);
     return new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error("no picture"))), "image/jpeg", 0.95));
+  };
+
+  // the torch stays on while 常亮 is chosen
+  useEffect(() => {
+    const track = stream.current?.getVideoTracks()[0];
+    if (!track || !flashModes.includes("torch")) return;
+    void track.applyConstraints({ advanced: [{ torch: flash === "torch" } as MediaTrackConstraintSet] }).catch(() => {});
+  }, [flash, flashModes]);
+  const nextFlash = () => {
+    const i = flashModes.indexOf(flash);
+    const next = flashModes[(i + 1) % flashModes.length] ?? "off";
+    setFlash(next);
+    try { localStorage.setItem(FLASH_KEY, next); } catch { /* private mode */ }
   };
 
   const shoot = async () => {
@@ -143,6 +184,7 @@ export function CameraScreen({ board, text, signer, onShot, onClose }: {
         </label>
         <div className="camera-buttons">
           <button type="button" onClick={onClose}>{t("camera.done")}{shots ? ` (${shots})` : ""}</button>
+          {flashModes.length ? <button type="button" className="camera-flash" aria-label={t("camera.flash")} onClick={nextFlash}><span aria-hidden="true">⚡</span>{t(`camera.flash.${flashModes.includes(flash) ? flash : "off"}` as "camera.flash.off")}</button> : <span className="camera-flash-space" />}
           <button type="button" className="camera-shutter" aria-label={t("camera.shutter")} disabled={state !== "ready" || busy} onClick={() => void shoot()}><span /></button>
         </div>
       </div>

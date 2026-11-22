@@ -67,5 +67,10 @@ export const CAMERA_STRINGS = {
   "camera.markerSize": { zh: "位置符號大小 {pct}%（全部一起調，對位圖也跟著變）", en: "Spot marker size {pct}% (all at once, also on the alignment sheet)" },
   "camera.gripHide": { zh: "往下拉收起視窗，看清楚對位圖", en: "Pull down to hide the panel and see the drawing" },
   "camera.gripOpen": { zh: "往上拉或點一下打開視窗", en: "Pull up or tap to open the panel" },
+  "camera.flash": { zh: "閃光燈", en: "Flash" },
+  "camera.flash.off": { zh: "關閉", en: "Off" },
+  "camera.flash.auto": { zh: "自動", en: "Auto" },
+  "camera.flash.flash": { zh: "開啟", en: "On" },
+  "camera.flash.torch": { zh: "常亮", en: "Torch" },
   "camera.failed": { zh: "動作沒有完成：{why}", en: "That did not work: {why}" },
 } as const;

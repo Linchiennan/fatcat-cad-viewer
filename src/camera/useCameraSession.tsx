@@ -19,6 +19,7 @@ import { shareFile } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
 import { boardTitle } from "./whiteboard";
+import { PawShape } from "../components/ViewerToolbar";
 import type { CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
 
 const LAST_KEY = "fatcat.camera.last";
@@ -32,6 +33,19 @@ function remember(b: Remembered): void {
 
 /** Default board place and size: bottom-left, as the hand-held board in the user's photos. */
 export const DEFAULT_BOARD = { x: 0.02, y: 0.6, width: 0.3 } as const;
+const BOARD_KEY = "fatcat.camera.board";
+type BoardPos = Pick<Whiteboard, "x" | "y" | "width">;
+/** Where the user last left the board in the camera (用戶 2026-11-22：調整後的白板位置跟大小要自動記憶). */
+export function loadBoardPos(): BoardPos {
+  try {
+    const v = JSON.parse(localStorage.getItem(BOARD_KEY) ?? "null") as Partial<BoardPos> | null;
+    if (v && [v.x, v.y, v.width].every((n) => typeof n === "number" && Number.isFinite(n))) return { x: v.x!, y: v.y!, width: v.width! };
+  } catch { /* private mode */ }
+  return { ...DEFAULT_BOARD };
+}
+export function saveBoardPos(p: BoardPos): void {
+  try { localStorage.setItem(BOARD_KEY, JSON.stringify({ x: p.x, y: p.y, width: p.width })); } catch { /* private mode */ }
+}
 
 export type CameraContext = {
   /** file name of the drawing (floor and batch name come from it) */
@@ -168,7 +182,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const boardFor = (point: ShotPoint | null, when: Date): Whiteboard => ({
     item: batch?.item ?? "", place: point?.place ?? "", date: rocDate(when), inspector: batch?.inspector ?? "",
-    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...DEFAULT_BOARD,
+    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(),
   });
 
   /** Keep photos (from the camera or the gallery) for the selected point, or unplaced. */
@@ -271,7 +285,6 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <p className="camera-batch-line"><strong>{batch.name}</strong>{unplaced ? <em>{t("camera.unplaced", { N: unplaced })}</em> : null}</p>
         <div className="camera-actions">
           <button type="button" aria-pressed={placing} title={t("camera.placeTip")} onClick={() => setPlacing((v) => !v)}>{t("camera.place")}</button>
-          <button type="button" className="camera-primary" title={t("camera.shootTip")} onClick={() => { setPlacing(false); setShooting(true); }}>{t("camera.shoot")}</button>
           <label className="camera-shoot">{t("camera.fromGallery")}
             <input type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; void keepPhotos(fs); }} />
           </label>
@@ -308,14 +321,23 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
-      <header><strong>{t("camera.title")}</strong><button type="button" onClick={() => { setPlacing(false); onClose(); }}>{t("camera.close")}</button></header>
+      <header className="camera-head"><strong>{t("camera.title")}</strong>
+        {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
+        {batch && view === "work" ? (
+          <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setShooting(true); }}>
+            <PawShape className="camera-paw-shape" />
+            <svg className="camera-paw-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z" /><circle cx="12" cy="13.2" r="3.4" /></svg>
+            <span>{t("camera.shoot")}</span>
+          </button>
+        ) : <span />}
+        <button type="button" onClick={() => { setPlacing(false); onClose(); }}>{t("camera.close")}</button></header>
       {body}
       {message ? <p className="camera-message" role="status">{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
       {shooting && batch ? (
         <CameraScreen board={boardFor(selected, new Date())} signer={signers.find((x) => x.id === batch.signerId) ?? null}
           text={{ title: boardTitle(batch.project, batch.trade), no: selected ? nextLabel(selected) : "—" }}
-          onShot={(blob, pos) => keepPhotos([blob], [Date.now()], pos)} onClose={() => setShooting(false)} />
+          onShot={(blob, pos) => keepPhotos([blob], [Date.now()], pos)} onPos={saveBoardPos} onClose={() => setShooting(false)} />
       ) : null}
     </section>
   ) : null;
