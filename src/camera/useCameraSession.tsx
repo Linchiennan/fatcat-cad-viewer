@@ -208,7 +208,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     onAdd: async (at: { x: number; y: number }) => {
       try {
         const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts) });
-        setPoints((list) => [...list, p]); setSelectedId(p.id); setPlacing(false);
+        setPoints((list) => [...list, p]); setSelectedId(p.id); // placing stays on: tap after tap (用戶 2026-11-22：放點要能連續放)
       } catch (e) { fail(e); }
     },
     onSelect: (id: string | null) => { setSelectedId(id); setRenumbering(false); },

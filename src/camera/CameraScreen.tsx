@@ -16,7 +16,23 @@ type FlashMode = "off" | "auto" | "flash" | "torch";
 type Capture = { takePhoto(settings?: { fillLightMode?: string }): Promise<Blob>; getPhotoCapabilities?(): Promise<{ fillLightMode?: string[] }> };
 const FLASH_KEY = "fatcat.camera.flash";
 const FLASH_ORDER: FlashMode[] = ["off", "auto", "flash", "torch"];
-const loadFlash = (): FlashMode => { try { const v = localStorage.getItem(FLASH_KEY); return (FLASH_ORDER as string[]).includes(v ?? "") ? (v as FlashMode) : "off"; } catch { return "off"; } };
+/**
+ * Let the camera go: the torch off first, then every track stopped. Stopping alone left the phone's light on after
+ * the app was closed (用戶 2026-11-22：「APP關閉 閃光燈一樣開著」), so the torch is switched off explicitly and the
+ * tracks stop when that settles (or after 300 ms if the phone never answers).
+ */
+export function releaseCamera(s: MediaStream | null): void {
+  if (!s) return;
+  const stop = () => s.getTracks().forEach((tr) => tr.stop());
+  const track = s.getVideoTracks()[0];
+  const torch = (track?.getCapabilities?.() as { torch?: boolean } | undefined)?.torch;
+  if (!track || !torch || track.readyState === "ended") { stop(); return; }
+  let done = false;
+  const finish = () => { if (!done) { done = true; stop(); } };
+  try { void track.applyConstraints({ advanced: [{ torch: false } as MediaTrackConstraintSet] }).then(finish, finish); } catch { finish(); }
+  setTimeout(finish, 300);
+}
+const loadFlash =(): FlashMode => { try { const v = localStorage.getItem(FLASH_KEY); return (FLASH_ORDER as string[]).includes(v ?? "") ? (v as FlashMode) : "off"; } catch { return "off"; } };
 
 export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   board: Whiteboard; text: BoardText; signer?: Signer | null;
@@ -43,9 +59,38 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   const [flashModes, setFlashModes] = useState<FlashMode[]>([]);
   const [flash, setFlash] = useState<FlashMode>(loadFlash);
   const capture = useRef<Capture | null>(null);
+  // The camera (and its torch) only runs while the page is in front: switching apps, locking the phone or closing
+  // the tab lets it go; coming back starts it again with the chosen flash mode.
+  const [awake, setAwake] = useState(() => typeof document === "undefined" || document.visibilityState !== "hidden");
+  useEffect(() => {
+    const vis = () => setAwake(document.visibilityState !== "hidden");
+    const gone = () => { releaseCamera(stream.current); stream.current = null; setAwake(false); };
+    const back = () => setAwake(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", vis);
+    window.addEventListener("pagehide", gone); window.addEventListener("pageshow", back);
+    return () => { document.removeEventListener("visibilitychange", vis); window.removeEventListener("pagehide", gone); window.removeEventListener("pageshow", back); };
+  }, []);
+
+  // The phone's back gesture / key closes the camera and returns to the drawing, instead of leaving the page
+  // (用戶 2026-11-22：「拍完照片，回不去改定位，沒有返回」). One history entry while the camera is open; closing with
+  // the button takes it off again. The back is deferred a tick so React's dev double-mount does not pop the new entry.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const mark = `${Date.now()}-${Math.random()}`;
+    let popped = false;
+    try { history.pushState({ ...(history.state ?? {}), fatcatCamera: mark }, ""); } catch { return; }
+    const pop = () => { if ((history.state as { fatcatCamera?: string } | null)?.fatcatCamera !== mark) { popped = true; closeRef.current(); } };
+    window.addEventListener("popstate", pop);
+    return () => {
+      window.removeEventListener("popstate", pop);
+      if (!popped) window.setTimeout(() => { if ((history.state as { fatcatCamera?: string } | null)?.fatcatCamera === mark) history.back(); }, 0);
+    };
+  }, []);
 
   useEffect(() => {
     let live = true;
+    if (!testMode && !awake) return;
     if (testMode) {
       let url = "";
       void testPhoto(shots + 1).then((b) => { if (!live) return; url = URL.createObjectURL(b); setSampleUrl(url); setState("ready"); });
@@ -55,7 +100,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
     if (!md?.getUserMedia) { setState("denied"); return; }
     md.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 4096 }, height: { ideal: 3072 } }, audio: false })
       .then((s) => {
-        if (!live) { s.getTracks().forEach((tr) => tr.stop()); return; }
+        if (!live) { releaseCamera(s); return; }
         stream.current = s;
         if (video.current) { video.current.srcObject = s; void video.current.play().catch(() => {}); }
         setState("ready");
@@ -75,9 +120,9 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
         })();
       })
       .catch(() => live && setState("denied"));
-    return () => { live = false; stream.current?.getTracks().forEach((tr) => tr.stop()); stream.current = null; };
+    return () => { live = false; releaseCamera(stream.current); stream.current = null; capture.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [testMode, testMode ? shots : 0]);
+  }, [testMode, testMode ? shots : 0, awake]);
 
   /** Where the picture shows inside the video element (object-fit: contain). */
   const shown = () => {
@@ -178,12 +223,16 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
           <canvas ref={overlay} className="camera-overlay" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
         </div>
       )}
+      <button type="button" className="camera-back" aria-label={t("camera.backToDrawing")} title={t("camera.backToDrawing")} onClick={onClose}>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+        <span>{t("camera.back")}{shots ? ` (${shots})` : ""}</span>
+      </button>
       <div className="camera-controls">
         <label className="camera-size">{t("camera.boardSize")}
           <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />
         </label>
         <div className="camera-buttons">
-          <button type="button" onClick={onClose}>{t("camera.done")}{shots ? ` (${shots})` : ""}</button>
+          <button type="button" title={t("camera.backToDrawing")} onClick={onClose}>{t("camera.back")}{shots ? ` (${shots})` : ""}</button>
           {flashModes.length ? <button type="button" className="camera-flash" aria-label={t("camera.flash")} onClick={nextFlash}><span aria-hidden="true">⚡</span>{t(`camera.flash.${flashModes.includes(flash) ? flash : "off"}` as "camera.flash.off")}</button> : <span className="camera-flash-space" />}
           <button type="button" className="camera-shutter" aria-label={t("camera.shutter")} disabled={state !== "ready" || busy} onClick={() => void shoot()}><span /></button>
         </div>

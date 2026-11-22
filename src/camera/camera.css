@@ -1,7 +1,8 @@
 /* Engineering camera (spec 009) */
 .photo-marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; overflow: visible; }
 .photo-marker-layer [data-photo-marker] { pointer-events: auto; }
-.photo-marker-circle { fill: rgba(0, 0, 0, 0.001); stroke-width: 2.5; cursor: grab; touch-action: none; }
+.photo-marker-circle { fill: none; stroke-width: 2.5; pointer-events: none; }
+.photo-marker-grip { fill: rgba(0, 0, 0, 0.001); stroke: none; cursor: grab; touch-action: none; }
 .photo-marker-arrow { cursor: grab; touch-action: none; }
 .photo-marker-text { font-weight: 700; pointer-events: none; user-select: none; -webkit-user-select: none; }
 .photo-marker-ring { fill: none; stroke: #ffd23f; stroke-width: 3; pointer-events: none; }
@@ -38,6 +39,9 @@
 .camera-stage { position: relative; flex: 1; min-height: 0; }
 .camera-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 .camera-overlay { position: absolute; touch-action: none; }
+/* back to the drawing, always on top-left of the camera (用戶 2026-11-22：拍完照沒有返回) */
+.camera-back { position: absolute; z-index: 2; left: 12px; top: calc(12px + var(--safe-top, 0px)); min-height: 44px; padding: 0 14px 0 8px; display: inline-flex; align-items: center; gap: 4px; border-radius: 22px; border: 1.5px solid rgba(255, 255, 255, 0.7); background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-weight: 700; }
+.camera-back svg { width: 22px; height: 22px; }
 .camera-denied { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
 .camera-controls { flex: none; padding: 10px 16px calc(14px + var(--safe-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; background: rgba(0, 0, 0, 0.85); }
 .camera-size { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: #ccc; }
@@ -54,7 +58,7 @@
 .camera-sign button { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); font: inherit; }
 .camera-check { display: flex; align-items: center; gap: 10px; min-height: 44px; } .camera-check input { width: 24px; height: 24px; }
 .camera-stage .camera-sample { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
-.camera-test-note { position: absolute; left: 12px; right: 12px; top: calc(10px + var(--safe-top, 0px)); margin: 0; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.6); color: #ffd23f; text-align: center; pointer-events: none; }
+.camera-test-note { position: absolute; left: 12px; right: 12px; top: calc(64px + var(--safe-top, 0px)); margin: 0; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.6); color: #ffd23f; text-align: center; pointer-events: none; }
 .camera-scale { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; color: var(--muted); } .camera-scale input { width: 100%; min-height: 32px; }
 /* pull-down grip: the panel slides down until only the grip and title show (用戶 2026-11-22) */
 .camera-sheet { transition: transform 0.22s ease, max-height 0.22s ease; }

@@ -75,7 +75,17 @@ export function arrowPath(cx: number, cy: number, angle: number, scale = 1): str
     .map((piece) => piece.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join("") + "Z").join("");
 }
 
-type Drag = { id: string; kind: "move" | "turn"; pointerId: number; start: number; moved: boolean; free: boolean };
+/** Finger grips in px: a fingertip is about 44 px across. Moving takes the circle plus a margin (at least 22 px
+ * radius); turning takes the ring around it out past the arrow tip (at least 22 px beyond the move grip). */
+export function moveGripRadius(scale = 1): number {
+  return Math.max(MARKER_RADIUS_PX * scale + 4, 22);
+}
+export function turnGripRadius(scale = 1): number {
+  return Math.max(MARKER_RADIUS_PX * scale * ARROW_TIP + 8, moveGripRadius(scale) + 22);
+}
+
+/** ox / oy: finger minus marker centre at the start, so a moved point keeps its place under the finger */
+type Drag = { id: string; kind: "move" | "turn"; pointerId: number; start: number; moved: boolean; free: boolean; ox: number; oy: number };
 
 export function PhotoMarkerLayer(props: Props) {
   const { t } = useI18n();
@@ -122,9 +132,12 @@ export function PhotoMarkerLayer(props: Props) {
 
   const begin = (e: ReactPointerEvent, id: string, kind: Drag["kind"]) => {
     e.stopPropagation(); e.preventDefault();
-    (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
+    try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* pointer already gone: the drag still works without capture */ }
     props.onSelect(id);
-    setDrag({ id, kind, pointerId: e.pointerId, start: performance.now(), moved: false, free: false });
+    const r = svg.current?.getBoundingClientRect(), pt = props.points.find((q) => q.id === id);
+    const [c] = pt ? props.project([{ x: pt.x, y: pt.y }]) : [{ x: NaN, y: NaN }];
+    const ox = r && Number.isFinite(c.x) ? e.clientX - r.left - c.x : 0, oy = r && Number.isFinite(c.y) ? e.clientY - r.top - c.y : 0;
+    setDrag({ id, kind, pointerId: e.pointerId, start: performance.now(), moved: false, free: false, ox, oy });
   };
   const moveDrag = (e: ReactPointerEvent) => {
     if (!drag || drag.pointerId !== e.pointerId) return;
@@ -133,7 +146,7 @@ export function PhotoMarkerLayer(props: Props) {
     if (!point) return;
     const free = drag.moved ? drag.free : performance.now() - drag.start >= HOLD_FOR_FREE_MS;
     if (!drag.moved) setDrag({ ...drag, moved: true, free });
-    if (drag.kind === "move") { const at = props.unproject(x, y); setGhost({ id: drag.id, x: at.x, y: at.y }); return; }
+    if (drag.kind === "move") { const at = props.unproject(x - drag.ox, y - drag.oy); setGhost({ id: drag.id, x: at.x, y: at.y }); return; }
     const [c] = props.project([{ x: point.x, y: point.y }]);
     // smooth, follows the finger (用戶 2026-11-22：箭頭要能滑順調整)
     void free;
@@ -152,7 +165,8 @@ export function PhotoMarkerLayer(props: Props) {
   return (
     <svg ref={svg} className={"photo-marker-layer" + (props.placing ? " placing" : "")} aria-label={t("camera.markersLabel")}
       onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
-      {props.points.map((p) => {
+      {/* the selected point last, so its grips are on top of its neighbours */}
+      {[...props.points].sort((a, b) => Number(a.id === props.selectedId) - Number(b.id === props.selectedId)).map((p) => {
         const g = ghost?.id === p.id ? ghost : null;
         const [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
         if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
@@ -161,9 +175,15 @@ export function PhotoMarkerLayer(props: Props) {
         return (
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k + 6} className="photo-marker-ring" /> : null}
+            {/* finger-sized grips (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it;
+                on the selected point anywhere around the circle turns it (only there, so taps between points still
+                add points while placing). Invisible; the drawn arrow and circle are unchanged. */}
+            {selected ? <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip"
+              onPointerDown={(e) => begin(e, p.id, "turn")} /> : null}
             <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
-            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={1.4 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED}
+            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={1.4 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED} />
+            <circle cx={c.x} cy={c.y} r={moveGripRadius(k)} className="photo-marker-grip"
               onPointerDown={(e) => begin(e, p.id, "move")} />
             <text x={c.x} y={c.y} className="photo-marker-text" fill={MARKER_RED} fontSize={(label.length > 3 ? 10.5 : label.length > 2 ? 13 : 16) * k}
               textAnchor="middle" dominantBaseline="central">{label}</text>
