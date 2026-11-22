@@ -42,19 +42,26 @@ export function angleFromScreen(dx: number, dy: number): number {
 }
 
 /**
- * The arrow of the example block 「對位箭頭」 (measured in ZWCAD, 8F-室內隔間對位圖.dwg): the triangle with its tip at
- * r·√2 in the shot direction and its base through the centre (base corners r·√2 to each side), minus the circle. Its
- * sides touch the circle at ±45°, so it is three pieces: the tip, and a fin on each side between the tangent point,
- * the base corner and the circle. Each piece starts with a point it can be fanned from (tip, base corners).
+ * How far the tip reaches, in circle radii. The example block 「對位箭頭」 (measured in ZWCAD, 8F-室內隔間對位圖.dwg)
+ * has it at √2, so the tip sticks out as far as the two side fins and the direction is hard to read on a phone
+ * (用戶 2026-11-22：「箭頭方向太不明顯了」). Same construction, longer tip: at 2.2 the fins shrink to slivers.
+ * The exported LISP still inserts the user's own block, unchanged.
  */
-export function wedgePieces(cx: number, cy: number, dx: number, dy: number, r: number, segments = 12): { x: number; y: number }[][] {
-  const a = Math.atan2(dy, dx), at = (t: number, k: number) => ({ x: cx + Math.cos(t) * r * k, y: cy + Math.sin(t) * r * k });
+export const ARROW_TIP = 2.2;
+
+/**
+ * The arrow: the triangle with its tip at k·r in the shot direction, sides touching the circle and base through the
+ * centre, minus the circle. That is three pieces: the tip, and a fin on each side between the tangent point, the base
+ * corner and the circle. Each piece starts with a point it can be fanned from (tip, base corners).
+ */
+export function wedgePieces(cx: number, cy: number, dx: number, dy: number, r: number, k = ARROW_TIP, segments = 12): { x: number; y: number }[][] {
+  const a = Math.atan2(dy, dx), at = (t: number, m: number) => ({ x: cx + Math.cos(t) * r * m, y: cy + Math.sin(t) * r * m });
   const arc = (from: number, to: number, n: number) => Array.from({ length: n + 1 }, (_, i) => at(from + ((to - from) * i) / n, 1));
-  const q = Math.PI / 4, half = Math.max(2, Math.round(segments / 2));
+  const th = Math.acos(1 / k), base = 1 / Math.sqrt(1 - 1 / (k * k)), p = Math.PI / 2, half = Math.max(2, Math.round(segments / 2));
   return [
-    [at(a, Math.SQRT2), ...arc(a + q, a - q, segments)],
-    [at(a + 2 * q, Math.SQRT2), ...arc(a + 2 * q, a + q, half)],
-    [at(a - 2 * q, Math.SQRT2), ...arc(a - 2 * q, a - q, half)],
+    [at(a, k), ...arc(a + th, a - th, segments)],
+    [at(a + p, base), ...arc(a + p, a + th, half)],
+    [at(a - p, base), ...arc(a - p, a - th, half)],
   ];
 }
 
