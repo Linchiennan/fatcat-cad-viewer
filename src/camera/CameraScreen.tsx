@@ -3,7 +3,7 @@
 // (ImageCapture at the camera's full resolution when the phone offers it); the board stays data until export.
 // Without camera access (refused, or no getUserMedia) the system camera is offered instead. A computer uses a
 // built-in test photo instead of its webcam (testPhoto.ts), so the flow can be tried on a PC.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { useI18n } from "../i18n/translations";
@@ -184,10 +184,30 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
     try { localStorage.setItem(FLASH_KEY, next); } catch { /* private mode */ }
   };
 
+  // The photo just taken shrinks into a thumbnail at the top left (用戶 2026-11-22：「拍完照片，要有個縮圖縮進左上角的
+  // 特效」). It flies from where the picture shows on screen; the thumbnail stays until the next photo.
+  const [thumb, setThumb] = useState<{ url: string; n: number; from: { left: number; top: number; width: number; height: number } | null } | null>(null);
+  const thumbEl = useRef<HTMLImageElement>(null);
+  useEffect(() => () => { if (thumb) URL.revokeObjectURL(thumb.url); }, [thumb]);
+  useLayoutEffect(() => {
+    const el = thumbEl.current, from = thumb?.from;
+    if (!el || !from || typeof el.animate !== "function") return;
+    try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch { /* no matchMedia */ }
+    const to = el.getBoundingClientRect(), host = el.offsetParent?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    const box = (b: { left: number; top: number; width: number; height: number }, radius: string) =>
+      ({ left: `${b.left - host.left}px`, top: `${b.top - host.top}px`, width: `${b.width}px`, height: `${b.height}px`, borderRadius: radius });
+    el.animate([box(from, "0px"), box(to, "10px")], { duration: 480, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" });
+  }, [thumb?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  const flyThumb = (photo: Blob) => {
+    const v = testMode ? sample.current : video.current, area = shown(), r = v?.getBoundingClientRect();
+    const from = r && area ? { left: r.left + area.left, top: r.top + area.top, width: area.w, height: area.h } : null;
+    setThumb((old) => ({ url: URL.createObjectURL(photo), n: (old?.n ?? 0) + 1, from }));
+  };
+
   const shoot = async () => {
     if (busy) return;
     setBusy(true);
-    try { await onShot(await takePicture(), pos); setShots((n) => n + 1); } finally { setBusy(false); }
+    try { const photo = await takePicture(); flyThumb(photo); await onShot(photo, pos); setShots((n) => n + 1); } finally { setBusy(false); }
   };
 
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -227,6 +247,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
         <span>{t("camera.back")}{shots ? ` (${shots})` : ""}</span>
       </button>
+      {thumb ? <img key={thumb.n} ref={thumbEl} src={thumb.url} alt="" className="camera-thumb" /> : null}
       <div className="camera-controls">
         <label className="camera-size">{t("camera.boardSize")}
           <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />

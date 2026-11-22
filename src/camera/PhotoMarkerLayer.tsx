@@ -97,8 +97,10 @@ export function arrowPath(cx: number, cy: number, angle: number, scale = 1): str
 export function moveGripRadius(scale = 1): number {
   return Math.max(MARKER_RADIUS_PX * scale + 4, 22);
 }
+/** 用戶 2026-11-22：「要加大定點時箭頭的轉圈範圍，現在過小」: at least 80 px (was 44), always well past the arrow tip. */
+export const TURN_GRIP_MIN_PX = 80;
 export function turnGripRadius(scale = 1): number {
-  return Math.max(MARKER_RADIUS_PX * scale * ARROW_TIP + 8, moveGripRadius(scale) + 22);
+  return Math.max(MARKER_RADIUS_PX * scale * ARROW_TIP + 30, moveGripRadius(scale) + 50, TURN_GRIP_MIN_PX);
 }
 
 /** ox / oy: finger minus marker centre at the start, so a moved point keeps its place under the finger */
@@ -206,7 +208,7 @@ export function PhotoMarkerLayer(props: Props) {
             {/* finger-sized grips (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it;
                 on the selected point anywhere around the circle turns it (only there, so taps between points still
                 add points while placing). Invisible; the drawn arrow and circle are unchanged. */}
-            {selected && !props.placing ? <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip"
+            {selected && !props.placing ? <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip photo-marker-turn"
               onPointerDown={(e) => begin(e, p.id, "turn")} /> : null}
             <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
