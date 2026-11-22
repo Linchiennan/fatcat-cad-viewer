@@ -42,6 +42,8 @@ export type CameraBatch = {
   signerId?: string;
   /** date printed on the 照片保存卡 heading, ROC form; empty = the day it is made */
   cardDate: string;
+  /** size of the photo markers on screen and on the 對位圖 (1 = normal) */
+  markerScale?: number;
   createdAt: number;
   updatedAt: number;
 };

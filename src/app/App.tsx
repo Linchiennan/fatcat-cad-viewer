@@ -806,7 +806,8 @@ export function App() {
             {measureSaveFailed ? <p className="save-failed" role="status">{t("measure.saveFailed")}</p> : null}
 
             {/* One cat-paw bar on phone and desktop alike (用戶 2026-10-27：電腦版與手機版統一貓咪風格). */}
-            {exportStage === "box" ? null : <GloveBar {...toolbarProps} />}
+            {/* the engineering camera panel takes the bottom of the screen: the five tool buttons hide (用戶 2026-11-22) */}
+            {exportStage === "box" || cameraOpen ? null : <GloveBar {...toolbarProps} />}
 
             {camera.panel}
             {exportStage === "sheet" ? (

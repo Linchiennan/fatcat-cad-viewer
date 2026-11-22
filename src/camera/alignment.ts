@@ -6,19 +6,20 @@ import type { ShotPoint } from "./types";
 
 /** Paint the points on an export picture (`project` gives picture units; `scale` = output pixels per unit). */
 export function paintPhotoMarkers(ctx: CanvasRenderingContext2D, points: readonly ShotPoint[], labels: ReadonlyMap<string, string>,
-  project: (pts: readonly DrawingPoint[]) => DrawingPoint[], scale: number): void {
+  project: (pts: readonly DrawingPoint[]) => DrawingPoint[], scale: number, markerScale = 1): void {
+  const k = markerScale;
   ctx.save();
   ctx.scale(scale, scale);
   for (const p of points) {
     const [c] = project([{ x: p.x, y: p.y }]);
     if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) continue;
-    const tri = arrowTriangle(c.x, c.y, p.angle).split(" ").map((s) => s.split(",").map(Number));
+    const tri = arrowTriangle(c.x, c.y, p.angle, k).split(" ").map((s) => s.split(",").map(Number));
     ctx.fillStyle = MARKER_RED;
     ctx.beginPath(); ctx.moveTo(tri[0][0], tri[0][1]); ctx.lineTo(tri[1][0], tri[1][1]); ctx.lineTo(tri[2][0], tri[2][1]); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = MARKER_RED; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(c.x, c.y, MARKER_RADIUS_PX, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = MARKER_RED; ctx.lineWidth = 2.5 * Math.max(0.7, k);
+    ctx.beginPath(); ctx.arc(c.x, c.y, MARKER_RADIUS_PX * k, 0, Math.PI * 2); ctx.stroke();
     const label = labels.get(p.id) ?? String(p.no);
-    ctx.font = `700 ${label.length > 3 ? 11 : 14}px "FatCat Sans", sans-serif`;
+    ctx.font = `700 ${(label.length > 3 ? 11 : 14) * k}px "FatCat Sans", sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(label, c.x, c.y);
   }
@@ -58,6 +59,6 @@ export function markerDxf(points: readonly ShotPoint[], labels: ReadonlyMap<stri
 }
 
 /** Circle radius in drawing units for the DXF: about the size the circles have on the exported sheet. */
-export function dxfRadius(sheetWidth: number): number {
-  return Math.max(sheetWidth * (MARKER_RADIUS_PX / 2000), 1e-6);
+export function dxfRadius(sheetWidth: number, markerScale = 1): number {
+  return Math.max(sheetWidth * (MARKER_RADIUS_PX / 2000) * markerScale, 1e-6);
 }

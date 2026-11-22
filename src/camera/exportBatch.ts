@@ -61,7 +61,7 @@ export async function exportBatch(input: ExportInput): Promise<{ blob: Blob; fil
   const sheet = safe(batch.drawingName.replace(/\.[^.]+$/, ""));
   const markerLabels = new Map(points.map((p) => [p.id, markerText(p, photos)]));
   if (input.sheetPdf) files[`對位圖/${sheet}.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
-  files[`對位圖/${sheet}-標記.dxf`] = strToU8(markerDxf(points, markerLabels, dxfRadius(input.sheetWidth)));
+  files[`對位圖/${sheet}-標記.dxf`] = strToU8(markerDxf(points, markerLabels, dxfRadius(input.sheetWidth, batch.markerScale ?? 1)));
   const data = await new Promise<Uint8Array>((resolve, reject) => zip(files, (err, out) => (err ? reject(err) : resolve(out))));
   input.onProgress?.(total, total);
   return { blob: new Blob([data as BlobPart], { type: "application/zip" }), fileName: `${base}.zip` };

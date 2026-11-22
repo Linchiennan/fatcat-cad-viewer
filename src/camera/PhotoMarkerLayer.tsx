@@ -27,6 +27,8 @@ type Props = {
   onSelect(id: string | null): void;
   onMove(id: string, at: DrawingPoint): void;
   onTurn(id: string, angle: number): void;
+  /** size of every marker (1 = normal), set with the panel slider */
+  scale?: number;
 };
 
 /** Screen direction of a drawing angle (degrees CCW from +X); screen y grows downward. */
@@ -41,11 +43,11 @@ export function angleFromScreen(dx: number, dy: number): number {
 }
 
 /** The triangle outside the circle, in screen pixels around the centre (cx, cy). */
-export function arrowTriangle(cx: number, cy: number, angle: number, r = MARKER_RADIUS_PX): string {
-  const d = screenDirection(angle), n = { x: -d.y, y: d.x };
-  const tip = { x: cx + d.x * (r + 13), y: cy + d.y * (r + 13) };
-  const b = { x: cx + d.x * (r - 2), y: cy + d.y * (r - 2) };
-  const w = 9;
+export function arrowTriangle(cx: number, cy: number, angle: number, scale = 1): string {
+  const r = MARKER_RADIUS_PX * scale, d = screenDirection(angle), n = { x: -d.y, y: d.x };
+  const tip = { x: cx + d.x * (r + 13 * scale), y: cy + d.y * (r + 13 * scale) };
+  const b = { x: cx + d.x * (r - 2 * scale), y: cy + d.y * (r - 2 * scale) };
+  const w = 9 * scale;
   return [tip, { x: b.x + n.x * w, y: b.y + n.y * w }, { x: b.x - n.x * w, y: b.y - n.y * w }].map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 }
 
@@ -129,15 +131,15 @@ export function PhotoMarkerLayer(props: Props) {
         const [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
         if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
         const angle = g?.angle ?? p.angle, selected = props.selectedId === p.id;
-        const label = props.labels.get(p.id) ?? String(p.no);
+        const label = props.labels.get(p.id) ?? String(p.no), k = props.scale ?? 1;
         return (
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
-            {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX + 6} className="photo-marker-ring" /> : null}
-            <polygon points={arrowTriangle(c.x, c.y, angle)} fill={MARKER_RED} className="photo-marker-arrow"
+            {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k + 6} className="photo-marker-ring" /> : null}
+            <polygon points={arrowTriangle(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
               onPointerDown={(e) => begin(e, p.id, "turn")} />
-            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX} className="photo-marker-circle" stroke={MARKER_RED}
+            <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={2.5 * Math.max(0.7, k)} className="photo-marker-circle" stroke={MARKER_RED}
               onPointerDown={(e) => begin(e, p.id, "move")} />
-            <text x={c.x} y={c.y} className="photo-marker-text" fill={MARKER_RED} fontSize={label.length > 3 ? 11 : 14}
+            <text x={c.x} y={c.y} className="photo-marker-text" fill={MARKER_RED} fontSize={(label.length > 3 ? 11 : 14) * k}
               textAnchor="middle" dominantBaseline="central">{label}</text>
           </g>
         );

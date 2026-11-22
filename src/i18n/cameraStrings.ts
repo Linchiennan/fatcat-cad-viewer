@@ -64,5 +64,8 @@ export const CAMERA_STRINGS = {
   "camera.exportEmpty": { zh: "還沒有已定位的照片。", en: "No placed photos yet." },
   "camera.exported": { zh: "已匯出 {name}", en: "Exported {name}" },
   "camera.testPhoto": { zh: "電腦版沒有後鏡頭：按快門會拍這張內建測試照片", en: "No back camera on a computer: the shutter takes this built-in test photo" },
+  "camera.markerSize": { zh: "位置符號大小 {pct}%（全部一起調，對位圖也跟著變）", en: "Spot marker size {pct}% (all at once, also on the alignment sheet)" },
+  "camera.gripHide": { zh: "往下拉收起視窗，看清楚對位圖", en: "Pull down to hide the panel and see the drawing" },
+  "camera.gripOpen": { zh: "往上拉或點一下打開視窗", en: "Pull up or tap to open the panel" },
   "camera.failed": { zh: "動作沒有完成：{why}", en: "That did not work: {why}" },
 } as const;

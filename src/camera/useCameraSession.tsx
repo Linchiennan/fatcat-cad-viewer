@@ -1,6 +1,6 @@
 // Engineering camera session (spec 009): the open batch of the drawing on screen, its points and photos, and the
 // panel to work them. The App renders `panel` and hands `photoMarkers` to the canvas.
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { ConfirmDialog, type ConfirmRequest } from "../components/ConfirmDialog";
 import { useI18n } from "../i18n/translations";
 import type { MeasurementIndex } from "../viewer/measurementGeometry";
@@ -59,8 +59,44 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [message, setMessage] = useState("");
   const [renumbering, setRenumbering] = useState(false);
   const [shooting, setShooting] = useState(false);
+  /** pulled down out of the way to see the drawing (用戶 2026-11-22：上方橫桿往下拉讓視窗隱藏) */
+  const [collapsed, setCollapsed] = useState(false);
+  const [pull, setPull] = useState(0);
+  const pullFrom = useRef<{ id: number; y: number; moved: boolean } | null>(null);
+  useEffect(() => { if (!open) { setCollapsed(false); setPull(0); } }, [open]);
+  const grip = {
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); pullFrom.current = { id: e.pointerId, y: e.clientY, moved: false }; },
+    onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+      const f = pullFrom.current;
+      if (!f || f.id !== e.pointerId) return;
+      const dy = e.clientY - f.y;
+      if (Math.abs(dy) > 6) f.moved = true;
+      setPull(collapsed ? Math.min(0, dy) : Math.max(0, dy));
+    },
+    onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => {
+      const f = pullFrom.current;
+      pullFrom.current = null;
+      if (!f || f.id !== e.pointerId) return;
+      const dy = e.clientY - f.y;
+      if (!f.moved) setCollapsed((c) => !c); // a tap toggles
+      else if (!collapsed && dy > 40) setCollapsed(true);
+      else if (collapsed && dy < -30) setCollapsed(false);
+      setPull(0);
+    },
+    onPointerCancel: () => { pullFrom.current = null; setPull(0); },
+  };
   const [withOriginals, setWithOriginals] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  /** size of every marker (slider); saved to the batch a moment after the slider stops */
+  const [markerScale, setMarkerScale] = useState(1);
+  const saveScale = useRef<number | undefined>(undefined);
+  useEffect(() => { setMarkerScale(batch?.markerScale ?? 1); }, [batch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changeScale = (v: number) => {
+    setMarkerScale(v);
+    window.clearTimeout(saveScale.current);
+    const id = batch?.id;
+    if (id) saveScale.current = window.setTimeout(() => { void updateBatch(id, { markerScale: v }).then((b) => setBatch(b)).catch(fail); }, 400);
+  };
 
   const fail = useCallback((e: unknown) => {
     const code = (e as { code?: string } | null)?.code;
@@ -151,7 +187,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   };
 
   const markers = open && batch ? {
-    points, labels, selectedId, placing,
+    points, labels, selectedId, placing, scale: markerScale,
     onAdd: async (at: { x: number; y: number }) => {
       try {
         const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts) });
@@ -208,8 +244,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     const run = async () => {
       setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
       try {
-        const sheet = ctx.exportSheet ? await ctx.exportSheet((c, project, _ppu, scale) => paintPhotoMarkers(c, points, labels, project, scale)).catch(() => null) : null;
-        const out = await exportBatch({ batch, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth ?? 0, withOriginals, onProgress: (done, total) => setProgress({ done, total }) });
+        const sheet = ctx.exportSheet ? await ctx.exportSheet((c, project, _ppu, scale) => paintPhotoMarkers(c, points, labels, project, scale, markerScale)).catch(() => null) : null;
+        const out = await exportBatch({ batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth ?? 0, withOriginals, onProgress: (done, total) => setProgress({ done, total }) });
         await shareFile(out.blob, out.fileName, "application/zip");
         setMessage(t("camera.exported", { name: out.fileName }));
       } catch (e) { fail(e); } finally { setProgress(null); }
@@ -243,6 +279,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
           <button type="button" onClick={() => setView("settings")}>{t("camera.settings")}</button>
           <button type="button" onClick={() => { setMessage(""); setView("export"); }}>{t("camera.export")}</button>
         </div>
+        <label className="camera-scale">{t("camera.markerSize", { pct: Math.round(markerScale * 100) })}
+          <input type="range" min={0.5} max={3} step={0.1} value={markerScale} onChange={(e) => changeScale(Number(e.target.value))} />
+        </label>
         {placing ? <p className="camera-hint">{t("camera.placeTip")}</p> : null}
         {selected ? (
           <div className="camera-selected">
@@ -265,7 +304,10 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   }
 
   const panel = open ? (
-    <section className="camera-sheet" aria-label={t("camera.title")}>
+    <section className={"camera-sheet" + (collapsed ? " collapsed" : "")} aria-label={t("camera.title")}
+      style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
+      <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
       <header><strong>{t("camera.title")}</strong><button type="button" onClick={() => { setPlacing(false); onClose(); }}>{t("camera.close")}</button></header>
       {body}
       {message ? <p className="camera-message" role="status">{message}</p> : null}
