@@ -12,6 +12,7 @@ export const MAX_HANDOFF_BYTES = 64 * 1024 * 1024;
 interface FileHandoffPlugin {
   share(options: { data: string; fileName: string; mimeType: string }): Promise<void>;
   open(options: { data: string; fileName: string; mimeType: string }): Promise<void>;
+  shareMany(options: { files: { data: string; fileName: string; mimeType: string }[] }): Promise<void>;
 }
 
 export const fileHandoffPlugin = registerPlugin<FileHandoffPlugin>("FileHandoff");
@@ -97,6 +98,33 @@ export async function shareFile(blob: Blob, fileName: string, mime: string): Pro
     }
   }
   return download(blob, name);
+}
+
+/**
+ * Offer several files at once (工程相機匯出「不包 ZIP」): one share sheet with all of them (Android native, or Web
+ * Share when the browser can share these files); otherwise each file is downloaded.
+ */
+export async function shareFiles(files: readonly { blob: Blob; fileName: string; mime: string }[]): Promise<HandoffOutcome> {
+  const named = files.map((f) => ({ ...f, name: safeHandoffName(f.fileName) }));
+  if (Capacitor.isNativePlatform()) {
+    const total = named.reduce((n, f) => n + f.blob.size, 0);
+    if (total > MAX_HANDOFF_BYTES) throw new HandoffError("HANDOFF_TOO_LARGE", `Over ${MAX_HANDOFF_BYTES} bytes`);
+    const payload = [];
+    for (const f of named) payload.push({ data: await toBase64(f.blob), fileName: f.name, mimeType: f.mime });
+    try { await fileHandoffPlugin.shareMany({ files: payload }); } catch (error) { throw nativeError(error); }
+    return "shared";
+  }
+  const list = named.map((f) => new File([f.blob], f.name, { type: f.mime }));
+  if (typeof navigator !== "undefined" && navigator.canShare?.({ files: list })) {
+    try {
+      await navigator.share({ files: list });
+      return "shared";
+    } catch (error) {
+      if (isAbort(error)) return "cancelled";
+    }
+  }
+  for (const f of named) { download(f.blob, f.name); await new Promise((r) => setTimeout(r, 250)); }
+  return "downloaded";
 }
 
 /** Open the file in another app (Android: the system "open with"; web: a new tab, or a download when blocked). */

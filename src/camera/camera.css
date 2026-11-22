@@ -27,6 +27,8 @@
 .camera-danger { color: #ff8a80 !important; }
 .camera-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .camera-actions > * { flex: 1 0 auto; }
+/* 一鍵壓縮打包: second main action, outlined in the accent colour */
+.camera-sheet .camera-zip { border-color: var(--accent-hi); color: var(--accent); font-weight: 700; }
 .camera-batches, .camera-photos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .camera-batches button { width: 100%; flex-direction: column; align-items: flex-start; padding: 8px 12px; text-align: left; }
 .camera-batches small, .camera-photo small { color: var(--muted); overflow-wrap: anywhere; }

@@ -36,7 +36,45 @@ export type ExportInput = {
 
 const safe = (s: string) => s.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").trim() || "照片";
 
+/** One ZIP of everything (「一鍵壓縮打包」). */
 export async function exportBatch(input: ExportInput): Promise<{ blob: Blob; fileName: string }> {
+  const { files, base, done } = await collectFiles(input);
+  const data = await new Promise<Uint8Array>((resolve, reject) => zip(files, (err, out) => (err ? reject(err) : resolve(out))));
+  done();
+  return { blob: new Blob([data as BlobPart], { type: "application/zip" }), fileName: `${base}.zip` };
+}
+
+const MIME: Record<string, string> = {
+  jpg: "image/jpeg", pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  // DXF and LISP are text: as text/plain the phone's share sheet takes them
+  dxf: "text/plain", lsp: "text/plain",
+};
+
+/** The file name of a ZIP path when the files go out one by one: its own name, or with its folder when that name is taken. */
+export function looseNames(paths: readonly string[]): string[] {
+  const last = paths.map((p) => p.split("/").pop()!);
+  const count = new Map<string, number>();
+  for (const n of last) count.set(n, (count.get(n) ?? 0) + 1);
+  return paths.map((p, i) => {
+    if (count.get(last[i]) === 1) return last[i];
+    const parts = p.split("/");
+    return parts.length > 2 ? `${parts.at(-2)}-${last[i]}` : `${parts[0]}-${last[i]}`;
+  });
+}
+
+/** The same files without a ZIP (用戶 2026-11-22：匯出時可不包 ZIP), for sharing or saving one by one. */
+export async function exportBatchFiles(input: ExportInput): Promise<{ fileName: string; blob: Blob; mime: string }[]> {
+  const { files, done } = await collectFiles(input);
+  const paths = Object.keys(files), names = looseNames(paths);
+  done();
+  return paths.map((p, i) => {
+    const v = files[p] as Uint8Array | [Uint8Array, unknown];
+    const data = Array.isArray(v) ? v[0] : v, mime = MIME[p.split(".").pop()!.toLowerCase()] ?? "application/octet-stream";
+    return { fileName: names[i], blob: new Blob([data as BlobPart], { type: mime }), mime };
+  });
+}
+
+async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base: string; done(): void }> {
   const { batch, points, photos } = input;
   const labels = photoLabels(points, photos);
   const placed = cardOrder(points, photos);
@@ -72,7 +110,5 @@ export async function exportBatch(input: ExportInput): Promise<{ blob: Blob; fil
   if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
   if (parts.arrowLisp) files[`對位圖/${sheet}-插入對位箭頭.lsp`] = [strToU8(arrowBlockLisp(points, markerLabels, { scale: batch.markerScale ?? 1, title: batch.name })), { level: 0 }];
   if (parts.markerDxf) files[`對位圖/${sheet}-標記.dxf`] = strToU8(markerDxf(points, markerLabels, dxfRadius(input.sheetWidth, batch.markerScale ?? 1)));
-  const data = await new Promise<Uint8Array>((resolve, reject) => zip(files, (err, out) => (err ? reject(err) : resolve(out))));
-  input.onProgress?.(total, total);
-  return { blob: new Blob([data as BlobPart], { type: "application/zip" }), fileName: `${base}.zip` };
+  return { files, base, done: () => input.onProgress?.(total, total) };
 }

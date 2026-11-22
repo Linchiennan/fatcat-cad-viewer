@@ -13,9 +13,9 @@ import { markerText, photoLabels, plainLabel, rocDate } from "./numbering";
 import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
-import { ALL_PARTS, exportBatch, type ExportParts } from "./exportBatch";
+import { ALL_PARTS, exportBatch, exportBatchFiles, type ExportParts } from "./exportBatch";
 import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
-import { shareFile } from "../native/fileHandoff";
+import { shareFile, shareFiles } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
 import { boardTitle } from "./whiteboard";
@@ -260,13 +260,21 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       onBack={() => setView("work")} />;
   } else if (view === "export" && batch) {
     const placedCount = photos.filter((p) => p.pointId).length;
-    const run = async () => {
+    /** zip: 「一鍵壓縮打包」 one ZIP; otherwise the files one by one (用戶 2026-11-22：可不包 ZIP) */
+    const run = async (asZip: boolean) => {
       setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
       try {
         const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet((c, project, ppu, scale, sheetWidth) => paintPhotoMarkers(c, points, labels, project, scale, markerUnitRadius(sheetWidth || indexWidth, markerScale) * ppu)).catch(() => null) : null;
-        const out = await exportBatch({ batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth || indexWidth, parts, onProgress: (done, total) => setProgress({ done, total }) });
-        await shareFile(out.blob, out.fileName, "application/zip");
-        setMessage(t("camera.exported", { name: out.fileName }));
+        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth || indexWidth, parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
+        if (asZip) {
+          const out = await exportBatch(input);
+          await shareFile(out.blob, out.fileName, "application/zip");
+          setMessage(t("camera.exported", { name: out.fileName }));
+        } else {
+          const files = await exportBatchFiles(input);
+          await shareFiles(files);
+          setMessage(t("camera.exportedFiles", { N: files.length }));
+        }
       } catch (e) { fail(e); } finally { setProgress(null); }
     };
     body = (
@@ -281,7 +289,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         </fieldset>
         {progress ? <p role="status">{t("camera.exporting", { done: progress.done, total: progress.total })}</p> : null}
         <div className="camera-actions">
-          <button type="button" className="camera-primary" disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run()}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
+          <button type="button" className="camera-primary" disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(false)}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
+          <button type="button" className="camera-zip" title={t("camera.exportZipTip")} disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(true)}>{t("camera.exportZip")}</button>
           <button type="button" disabled={!!progress} onClick={() => setView("work")}>{t("camera.cancel")}</button>
         </div>
       </div>
