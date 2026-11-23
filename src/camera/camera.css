@@ -217,3 +217,6 @@ html[lang="en"] .camera-sheet .camera-sel button { max-width: 76px; padding: 0 8
 
 /* the demo project (用戶 2026-11-23) */
 .camera-demo-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; background: var(--accent, #ffb347); color: #1b1b1b; font-style: normal; font-weight: 700; font-size: 0.75em; line-height: 1.5; vertical-align: 1px; }
+
+/* projects are held to delete: no text selection or callout while holding (用戶 2026-11-23) */
+.camera-home .camera-batches button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }

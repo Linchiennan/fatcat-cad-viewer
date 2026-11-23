@@ -26,6 +26,7 @@ export const CAMERA_STRINGS = {
   "camera.save": { zh: "儲存", en: "Save" },
   "camera.cancel": { zh: "取消", en: "Cancel" },
   "camera.deleteBatch": { zh: "刪除批次", en: "Delete batch" },
+  "camera.deletedBatch": { zh: "已刪除「{name}」", en: "Deleted \"{name}\"" },
   "camera.deleteBatchAsk": { zh: "刪除「{name}」和裡面 {photos} 張照片？刪除後無法復原。", en: "Delete \"{name}\" and its {photos} photos? This cannot be undone." },
   "camera.place": { zh: "放位置", en: "Add spot" },
   "camera.placeTip": { zh: "連續放點：點圖面一下放一個位置，可一直點；再按一次「放點」結束。拖紅圈移動、拖紅圈外圍轉方向", en: "Add spots: each tap on the drawing adds one, keep tapping; press Spot again to stop. Drag the circle to move, around it to turn" },
