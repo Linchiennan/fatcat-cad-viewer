@@ -6,6 +6,7 @@ import { useI18n } from "../i18n/translations";
 import { readPhotoOriginal } from "./batchStore";
 import { cardLabel, cardOrder, photoLabels } from "./numbering";
 import { StageTicks } from "./StageTicks";
+import { useLongPress } from "./longPress";
 import type { CameraBatch, PhotoRecord, ShotPoint, Whiteboard } from "./types";
 
 const thumbs = new Map<string, string>();
@@ -31,13 +32,15 @@ function Thumb({ id }: { id: string }) {
   return src ? <img className="camera-thumb" src={src} alt="" /> : <span className="camera-thumb" />;
 }
 
-export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete }: {
+export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete, onDeleteAll }: {
   batch: CameraBatch; points: readonly ShotPoint[]; photos: readonly PhotoRecord[];
   /** the spot picked on the drawing: its photos are marked and scrolled to */
   current?: string | null;
   /** a photo tapped: show its spot on the drawing */
   onFocus?(photo: PhotoRecord): void;
   onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void;
+  /** a photo held: offer to delete them all (用戶 2026-11-23：「清單內長按照片，出現全部刪除的選項」) */
+  onDeleteAll?(): void;
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState<string | null>(null);
@@ -46,6 +49,7 @@ export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete }
     if (!current) return;
     document.querySelector(`.camera-photos li[data-point="${current}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [current]);
+  const hold = useLongPress<PhotoRecord>(() => onDeleteAll?.());
   const labels = photoLabels(points, photos);
   const placed = cardOrder(points, photos), loose = photos.filter((p) => !p.pointId);
   const row = (ph: PhotoRecord) => {
@@ -54,7 +58,7 @@ export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete }
       // a card: the number on the top-left corner of the photo, place in bold, item and date below
       // (用戶 2026-11-23 白板 #5：「去美化，並把數字改到最左上」)
       <li key={ph.id} data-point={ph.pointId ?? ""} className={"camera-photo" + (l ? "" : " loose") + (current && ph.pointId === current ? " current" : "")}
-        onClick={() => { if (ph.pointId) onFocus?.(ph); }}>
+        {...hold.bind(ph)} onClick={() => { if (hold.consumed()) return; if (ph.pointId) onFocus?.(ph); }}>
         <div className="camera-photo-pic">
           <Thumb id={ph.id} />
           <b className="camera-photo-no">{l ? cardLabel(l) : t("camera.unplacedTag")}</b>

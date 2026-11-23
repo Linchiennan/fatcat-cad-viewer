@@ -6,7 +6,7 @@ import { useI18n } from "../i18n/translations";
 import type { MeasurementIndex } from "../viewer/measurementGeometry";
 import { plainCadText } from "../viewer/textSearch";
 import {
-  addPhoto, addPoint, createBatch, deleteBatch, deletePhoto, deletePoint, listBatches, listPhotos, listPoints, listSigners,
+  addPhoto, addPoint, createBatch, deleteAllPhotos, deleteAllPoints, deleteBatch, deletePhoto, deletePoint, listBatches, listPhotos, listPoints, listSigners,
   renumberPoint, updateBatch, updatePhoto, updatePoint, type NewBatch,
 } from "./batchStore";
 import { batchName, cardNo, markerText, MAX_POINTS, photoLabels, plainLabel, rocDate } from "./numbering";
@@ -14,6 +14,7 @@ import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
 import { ALL_PARTS, exportBatch, exportBatchFiles, type ExportParts } from "./exportBatch";
+import { useLongPress } from "./longPress";
 import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile, shareFiles } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
@@ -297,6 +298,17 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(), font: batch?.boardFont ?? "hand", weight: batch?.boardWeight ?? DEFAULT_WEIGHT, ...(batch && loadStage(batch.id) ? { stage: loadStage(batch.id) } : {}),
   });
 
+  // 放點 held: offer 刪除全部定點, and ask once more before anything goes (用戶 2026-11-23：「長按放點，出現刪除全部點位的
+  // 選項，要有再度確認」); a spot takes its photos with it
+  const placeHold = useLongPress<null>(() => {
+    if (!batch) return;
+    if (!points.length) { setMessage(t("camera.noPointsToDelete")); return; }
+    const n = points.length, m = photos.filter((p) => p.pointId).length, b = batch;
+    setConfirm({ message: t("camera.deleteAllPointsOffer", { N: n }), okLabel: t("camera.deleteAllPoints"),
+      onOk: () => setConfirm({ message: t("camera.deleteAllPointsAsk", { N: n, M: m }), okLabel: t("camera.deleteAllPoints"),
+        onOk: () => void deleteAllPoints(b.id).then(async (r) => { setSelectedId(null); setPlacing(false); await reload(b); setMessage(t("camera.deletedAllPoints", { N: r.points, M: r.photos })); }).catch(fail) }) });
+  });
+
   /** Keep photos (from the camera or the gallery) for the selected point, or unplaced. */
   const keepPhotos = async (files: readonly Blob[], takenAt: number[] = [], pos?: Pick<Whiteboard, "x" | "y" | "width">) => {
     if (!batch) return;
@@ -379,6 +391,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       onDelete={batch && !batch.demo ? () => askDeleteBatch(batch, photos.length) : undefined} />;
   } else if (view === "photos" && batch) {
     body = <PhotoList batch={batch} points={points} photos={photos} current={selectedId}
+      onDeleteAll={() => setConfirm({ message: t("camera.deleteAllPhotosAsk", { N: photos.length }), okLabel: t("camera.deleteAllPhotos"),
+        onOk: () => void deleteAllPhotos(batch.id).then(async (n) => { await reload(batch); noteForPage.current = t("camera.deletedAllPhotos", { N: n }); setView("work"); }).catch(fail) })}
       onFocus={(ph) => {
         // a photo tapped: its spot picked and shown on the drawing (用戶 2026-11-23：「有開啟清單時，點箭頭跟底下的照片，要做雙向跳」)
         const pt = points.find((q) => q.id === ph.pointId);
@@ -444,7 +458,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       <div className="camera-body camera-compact">
         {/* compact tool row (用戶 2026-11-22 白板 #2：精簡美化，太佔空間) */}
         <div className="camera-tools">
-          <button type="button" aria-pressed={placing} title={t("camera.placeTip")} onClick={() => setPlacing((v) => !v)}>{I("M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21zM12 8.2v4.6M9.7 10.5h4.6")}<span>{t("camera.tool.place")}</span></button>
+          <button type="button" aria-pressed={placing} title={t("camera.placeTip")} {...placeHold.bind(null)} onClick={() => { if (placeHold.consumed()) return; setPlacing((v) => !v); }}>{I("M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21zM12 8.2v4.6M9.7 10.5h4.6")}<span>{t("camera.tool.place")}</span></button>
           <label title={t("camera.fromGallery")}>{I("M4 5h16v14H4zM4 15l4.5-4.5 4 4 3-3L20 15M15.5 9.2h.01")}<span>{t("camera.tool.gallery")}</span>
             <input type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; void keepPhotos(fs); }} />
           </label>

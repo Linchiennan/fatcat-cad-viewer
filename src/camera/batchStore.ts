@@ -194,6 +194,28 @@ export async function deletePoint(id: string): Promise<number> {
   });
 }
 
+/** Delete every point of a batch with their photos (用戶 2026-11-23：長按放點→刪除全部定點). */
+export async function deleteAllPoints(batchId: string): Promise<{ points: number; photos: number }> {
+  return tx("readwrite", async (s) => {
+    const pts = await inBatch<ShotPoint>(s.points, batchId), ids = new Set(pts.map((p) => p.id));
+    let photos = 0;
+    for (const ph of await inBatch<PhotoRecord>(s.photos, batchId)) if (ph.pointId && ids.has(ph.pointId)) { await req(s.photos.delete(ph.id)); await req(s.blobs.delete(ph.id)); photos++; }
+    for (const p of pts) await req(s.points.delete(p.id));
+    await touch(s, batchId);
+    return { points: pts.length, photos };
+  });
+}
+
+/** Delete every photo of a batch, placed or not (用戶 2026-11-23：清單長按照片→全部刪除). */
+export async function deleteAllPhotos(batchId: string): Promise<number> {
+  return tx("readwrite", async (s) => {
+    const all = await inBatch<PhotoRecord>(s.photos, batchId);
+    for (const ph of all) { await req(s.photos.delete(ph.id)); await req(s.blobs.delete(ph.id)); }
+    await touch(s, batchId);
+    return all.length;
+  });
+}
+
 /** Give a point another number; the ones in between shift so numbers stay 1..n. */
 export async function renumberPoint(id: string, target: number): Promise<void> {
   await tx("readwrite", async (s) => {
