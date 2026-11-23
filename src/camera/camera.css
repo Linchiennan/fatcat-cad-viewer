@@ -268,3 +268,10 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
 
 /* a long press must not select text or open the callout on the photo cards (用戶 2026-11-23) */
 .camera-photo { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* project menu on a long press: 修改名稱 / 刪除專案 / 取消, and the name box (用戶 2026-11-23) */
+.camera-home-menu h2 { overflow-wrap: anywhere; }
+.camera-home-menu-choices { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.camera-home-menu-choices button { min-height: 48px; border-radius: 10px; font: inherit; font-size: 1rem; }
+.camera-home-menu-cancel { border: 1.5px solid var(--tile-line); background: transparent; color: var(--muted); }
+.camera-home-name { width: 100%; box-sizing: border-box; min-height: 46px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--accent); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; -webkit-user-select: text; user-select: text; }

@@ -6,7 +6,7 @@ import { useI18n } from "../i18n/translations";
 import type { MeasurementIndex } from "../viewer/measurementGeometry";
 import { plainCadText } from "../viewer/textSearch";
 import {
-  addPhoto, addPoint, createBatch, deleteAllPhotos, deleteAllPoints, deleteBatch, deletePhoto, deletePoint, listBatches, listPhotos, listPoints, listSigners,
+  addPhoto, addPoint, createBatch, deleteAllPhotos, deleteAllPoints, deleteBatch, deletePhoto, deletePoint, getBatch, listBatches, listPhotos, listPoints, listSigners,
   renumberPoint, updateBatch, updatePhoto, updatePoint, type NewBatch,
 } from "./batchStore";
 import { batchName, cardNo, markerText, MAX_POINTS, photoLabels, plainLabel, rocDate } from "./numbering";
@@ -266,8 +266,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     if (!open || !go || loadedFor !== ctx.viewKey) return;
     ctx.onLaunched?.();
     if (go.newBatch) { setBatch(null); setView("settings"); return; }
-    const b = batches.find((x) => x.id === go.batchId);
-    if (b) void openBatch(b);
+    // read it again: the list here may predate a rename on the home page (用戶 2026-11-23：長按專案→修改名稱)
+    if (go.batchId) void getBatch(go.batchId).then((b) => { if (b) return openBatch(b); }).catch(fail);
   }, [open, ctx.launch, loadedFor, ctx.viewKey, batches]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const newBatchDraft = (): NewBatch => {
@@ -555,12 +555,13 @@ function BatchSettings({ initial, createdAt, signers: initialSigners, onSave, on
   const bound = inspector ? signers.find((s) => s.name.trim() === inspector) : undefined;
   // the name is made, not typed: the day the batch was made (now for a new one) and the 施工項目
   const [made] = useState(() => createdAt ?? Date.now());
-  const name = batchName(made, d.item);
+  // made from the date and 施工項目, unless the project was renamed by hand
+  const name = d.nameEdited && d.name.trim() ? d.name : batchName(made, d.item);
   const ready = !!inspector;
   return (
     <form className="camera-body camera-settings" onSubmit={(e) => { e.preventDefault(); if (ready) onSave({ ...d, name, inspector, signerId: bound?.id }); }}>
       <h3>{t("camera.settings")}</h3>
-      <p className="camera-batch-name"><span>{t("camera.field.name")}</span><strong>{name}</strong></p>
+      <p className="camera-batch-name"><span>{t(d.nameEdited ? "camera.field.nameOwn" : "camera.field.name")}</span><strong>{name}</strong></p>
       {field("company", t("camera.field.company"))}
       {field("project", t("camera.field.project"))}
       {field("trade", t("camera.field.trade"))}

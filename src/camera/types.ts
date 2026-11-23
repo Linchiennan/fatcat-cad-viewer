@@ -32,6 +32,8 @@ export type CameraBatch = {
   id: string;
   /** shown in lists and used as the ZIP / file base name, e.g. "8F室內隔間配管完成" */
   name: string;
+  /** named by hand (用戶 2026-11-23：長按專案→修改名稱): 設定 keeps it instead of making it from date ＋ 施工項目 */
+  nameEdited?: boolean;
   /** library entry of the drawing, when it came from the library */
   drawingId?: string;
   drawingName: string;

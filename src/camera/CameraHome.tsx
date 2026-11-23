@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog, type ConfirmRequest } from "../components/ConfirmDialog";
 import { useI18n } from "../i18n/translations";
-import { deleteBatch, listBatches, listPhotos } from "./batchStore";
+import { deleteBatch, listBatches, listPhotos, updateBatch } from "./batchStore";
 import type { CameraBatch } from "./types";
 import "./camera.css";
 
@@ -19,10 +19,20 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
   const [batches, setBatches] = useState<CameraBatch[] | null>(null);
   const reload = () => listBatches().then(setBatches).catch(() => setBatches([]));
   useEffect(() => { void reload(); }, []);
-  // hold a project to delete it (用戶 2026-11-23：「按住專案不放，出現刪除的選項」); the demo is never deleted (「範例都不讓刪除」)
+  // hold a project for its menu, delete among it (用戶 2026-11-23：「按住專案不放，出現刪除的選項」); the demo is never
+  // deleted (「範例都不讓刪除」)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [note, setNote] = useState("");
   const hold = useRef<{ timer: number; x: number; y: number; fired: boolean } | null>(null);
+  // hold → a menu: 修改名稱 or 刪除專案 (用戶 2026-11-23：「長按這個專案，新增修改名稱」)
+  const [menu, setMenu] = useState<CameraBatch | null>(null);
+  const [renaming, setRenaming] = useState<{ batch: CameraBatch; name: string } | null>(null);
+  const saveName = (b: CameraBatch, name: string) => {
+    const v = name.trim();
+    setRenaming(null);
+    if (!v || v === b.name) return;
+    void updateBatch(b.id, { name: v, nameEdited: true }).then(() => { setNote(t("camera.renamed", { name: v })); return reload(); }).catch(() => {});
+  };
   const askDelete = async (b: CameraBatch) => {
     if (b.demo) { setNote(t("camera.demoKept")); return; }
     setNote("");
@@ -31,7 +41,7 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
       onOk: () => void deleteBatch(b.id).then(() => { setNote(t("camera.deletedBatch", { name: b.name })); return reload(); }).catch(() => setNote(t("camera.demoKept"))) });
   };
   const down = (b: CameraBatch, e: React.PointerEvent) => {
-    const timer = window.setTimeout(() => { if (hold.current) hold.current.fired = true; void askDelete(b); }, HOLD_MS);
+    const timer = window.setTimeout(() => { if (hold.current) hold.current.fired = true; setNote(""); setMenu(b); }, HOLD_MS);
     hold.current = { timer, x: e.clientX, y: e.clientY, fired: false };
   };
   const move = (e: React.PointerEvent) => {
@@ -67,6 +77,32 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
           </ul>
         ) : <p className="camera-hint">{t("camera.homeEmpty")}</p>}
       </div>
+      {/* the backdrop does not close the menu: the finger lifting off the long press lands there and closed it at once */}
+      {menu ? (
+        <div className="confirm-backdrop">
+          <section role="dialog" aria-modal="true" aria-label={menu.name} className="confirm-box camera-home-menu" onClick={(e) => e.stopPropagation()}>
+            <h2>{menu.name || t("camera.homeUnnamed")}</h2>
+            <div className="camera-home-menu-choices">
+              <button type="button" className="close-keep" onClick={() => { const b = menu; setMenu(null); setRenaming({ batch: b, name: b.name }); }}>{t("camera.renameBatch")}</button>
+              <button type="button" className="close-go" onClick={() => { const b = menu; setMenu(null); void askDelete(b); }}>{t("camera.deleteBatch")}</button>
+              <button type="button" className="camera-home-menu-cancel" onClick={() => setMenu(null)}>{t("confirm.cancel")}</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {renaming ? (
+        <div className="confirm-backdrop">
+          <form role="dialog" aria-modal="true" aria-label={t("camera.renameBatch")} className="confirm-box camera-home-menu" onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => { e.preventDefault(); saveName(renaming.batch, renaming.name); }}>
+            <h2>{t("camera.renameBatch")}</h2>
+            <input className="camera-home-name" autoFocus value={renaming.name} aria-label={t("camera.renameBatch")} onChange={(e) => setRenaming({ ...renaming, name: e.target.value })} />
+            <div className="camera-home-menu-choices">
+              <button type="submit" className="close-keep" disabled={!renaming.name.trim()}>{t("camera.renameSave")}</button>
+              <button type="button" className="camera-home-menu-cancel" onClick={() => setRenaming(null)}>{t("confirm.cancel")}</button>
+            </div>
+          </form>
+        </div>
+      ) : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
     </section>
   );
