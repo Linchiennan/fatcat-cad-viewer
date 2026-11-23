@@ -5,9 +5,18 @@ import { PDFDocument } from "pdf-lib";
 import { A4, CARD, CARD_TITLE, infoLine, pages, photoCell, type CardEntry, type CardHeading } from "./photoCard";
 
 const FONT = '"DFKai-SB", "標楷體", "BiauKai", "FatCat Sans", serif';
-const PX_PER_PT = 2; // 144 dpi pages: sharp text, photos still small
+// 用戶 2026-11-23：「這產出的PDF畫質很差」: the whole page used to be one 144 dpi JPEG, text included (soft, with JPEG
+// smudges round the letters). Now the text and lines are a lossless 300 dpi layer and each photo goes on top as its own
+// JPEG at 300 dpi of its printed size: sharp in print, and a long card stays a reasonable size.
+const PX_PER_PT = 300 / 72;
+const PHOTO_PX_PER_PT = 300 / 72;
+const PHOTO_QUALITY = 0.9;
 
-async function drawPage(heading: CardHeading, page: readonly CardEntry[], photos: ReadonlyMap<string, Blob>): Promise<Blob> {
+type Cell = { x: number; y: number; w: number; h: number };
+
+/** The text and lines of a page (photo cells left white), as a PNG; and where each photo goes. */
+async function drawPage(heading: CardHeading, page: readonly CardEntry[], photos: ReadonlyMap<string, Blob>): Promise<{ base: Blob; cells: { cell: Cell; blob: Blob }[] }> {
+  const cells: { cell: Cell; blob: Blob }[] = [];
   const c = document.createElement("canvas");
   c.width = Math.round(A4.w * PX_PER_PT); c.height = Math.round(A4.h * PX_PER_PT);
   const ctx = c.getContext("2d")!;
@@ -23,7 +32,7 @@ async function drawPage(heading: CardHeading, page: readonly CardEntry[], photos
     const e = page[i], top = CARD.boxTops[i];
     const cell = photoCell(top);
     const blob = photos.get(e.photoId);
-    if (blob) { const bmp = await createImageBitmap(blob); ctx.drawImage(bmp, cell.x, cell.y, cell.w, cell.h); bmp.close(); }
+    if (blob) cells.push({ cell, blob });
     // label column rows and lines
     ctx.lineWidth = 0.8; ctx.strokeStyle = "#000";
     let y = top;
@@ -45,7 +54,25 @@ async function drawPage(heading: CardHeading, page: readonly CardEntry[], photos
     ctx.beginPath(); ctx.moveTo(CARD.labelRight, top); ctx.lineTo(CARD.labelRight, top + CARD.boxH); ctx.stroke();
     ctx.lineWidth = 2.2; ctx.strokeRect(CARD.left, top, CARD.right - CARD.left, CARD.boxH);
   }
-  return new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error("page encoding failed"))), "image/jpeg", 0.85));
+  const base = await new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error("page encoding failed"))), "image/png"));
+  c.width = c.height = 0; // free the pixels on phones
+  return { base, cells };
+}
+
+/** A photo resampled to 300 dpi of its cell (never enlarged), as JPEG. */
+async function cellPhoto(blob: Blob, cell: Cell): Promise<Blob> {
+  const bmp = await createImageBitmap(blob);
+  try {
+    const k = Math.min(1, (cell.w * PHOTO_PX_PER_PT) / bmp.width, (cell.h * PHOTO_PX_PER_PT) / bmp.height);
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(bmp.width * k)); c.height = Math.max(1, Math.round(bmp.height * k));
+    const ctx = c.getContext("2d")!;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    const out = await new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error("photo encoding failed"))), "image/jpeg", PHOTO_QUALITY));
+    c.width = c.height = 0;
+    return out;
+  } finally { bmp.close(); }
 }
 
 /** Break a description line to the label column width (CJK breaks anywhere). */
@@ -64,9 +91,14 @@ export async function buildCardPdf(heading: CardHeading, entries: readonly CardE
   pdf.setTitle(title);
   pdf.setCreator("大肥貓CAD看圖");
   for (const page of pages(entries)) {
-    const jpg = await pdf.embedJpg(new Uint8Array(await (await drawPage(heading, page, photos)).arrayBuffer()));
+    const { base, cells } = await drawPage(heading, page, photos);
     const p = pdf.addPage([A4.w, A4.h]);
-    p.drawImage(jpg, { x: 0, y: 0, width: A4.w, height: A4.h });
+    p.drawImage(await pdf.embedPng(new Uint8Array(await base.arrayBuffer())), { x: 0, y: 0, width: A4.w, height: A4.h });
+    // PDF y runs upward from the bottom of the page
+    for (const { cell, blob } of cells) {
+      const jpg = await pdf.embedJpg(new Uint8Array(await (await cellPhoto(blob, cell)).arrayBuffer()));
+      p.drawImage(jpg, { x: cell.x, y: A4.h - cell.y - cell.h, width: cell.w, height: cell.h });
+    }
   }
   return pdf.save();
 }
