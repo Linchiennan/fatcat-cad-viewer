@@ -291,27 +291,28 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
   .camera-sheet.listing header.camera-head { position: static; height: auto; padding: 6px 10px 0; justify-content: flex-end; }
 }
 
-/* sideways, the camera page: one narrow column on the right, everything in its usual order top to bottom (用戶
-   2026-11-23：橫向選 A「右側直排」、「排列順序跟種類都不動」); the lower part scrolls when it runs out of height */
+/* sideways, the camera page (用戶 2026-11-23：橫向選 A「右側直排」、「排列順序跟種類都不動」，再「右邊最上面的拉桿移除，
+   整個選單重新優化排列」): no 符號 slider; the paw and the five tools are one grid of three, in their usual order
+   (拍照 放點 相簿 / 清單 設定 匯出), each an icon over its name; the spot row, its buttons and the note run full width
+   under it, so a selected spot fits without scrolling */
 @media (orientation: landscape) and (max-height: 600px) {
-  .camera-sheet.working { width: 150px; }
-  .camera-sheet.working header.camera-head { display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 6px 10px 4px; }
-  .camera-sheet.working header.camera-head > .camera-head-space { display: none; }
-  .camera-sheet.working .camera-paw { align-self: center; width: 56px; height: 56px; margin: 0; padding-top: 10px; }
+  .camera-sheet.working { width: 236px; bottom: auto; max-height: calc(100% - 16px - var(--safe-bottom, 0px)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px;
+    align-content: start; padding: 8px 10px; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; }
+  .camera-sheet.working > header.camera-head, .camera-sheet.working > .camera-compact, .camera-sheet.working .camera-tools { display: contents; }
+  .camera-sheet.working .camera-head-scale, .camera-sheet.working .camera-head-space { display: none; }
+  .camera-sheet.working .camera-paw { width: auto; height: 60px; margin: 0; padding-top: 12px; align-self: stretch; justify-self: center; aspect-ratio: 1; }
   .camera-sheet.working .camera-paw-icon { width: 18px; height: 18px; }
   .camera-sheet.working .camera-paw > span { font-size: 0.7rem; }
-  /* a column that does not fit scrolls; its items keep their height (squeezed, they overlapped) */
-  .camera-sheet.working .camera-compact > *, .camera-sheet.working .camera-sel > * { flex-shrink: 0; }
-  .camera-sheet.working .camera-sel { height: auto; min-height: 0; flex: none; gap: 6px; }
-  .camera-sheet.working .camera-compact { padding: 0 10px 8px; }
-  .camera-sheet.working .camera-tools { grid-template-columns: 1fr; gap: 4px; }
-  .camera-sheet.working .camera-tools > button, .camera-sheet.working .camera-tools > label { flex-direction: row; justify-content: flex-start; gap: 8px; height: 32px; min-height: 32px; padding: 0 10px; font-size: 0.85rem; }
+  .camera-sheet.working .camera-tools > button, .camera-sheet.working .camera-tools > label { flex-direction: column; justify-content: center; gap: 2px;
+    height: 60px; min-height: 0; padding: 0 2px; font-size: 0.78rem; }
   .camera-sheet.working .camera-tools svg { width: 20px; height: 20px; }
-  .camera-sheet.working button.camera-place { flex-wrap: wrap; row-gap: 0; padding: 4px 10px; min-height: 40px; }
-  .camera-sheet.working .camera-sel { flex-direction: column; align-items: stretch; }
-  .camera-sheet.working .camera-sel .camera-message-box { height: auto; min-height: 36px; }
-  .camera-sheet.working .camera-sel button { max-width: none; }
-  .camera-sheet.working > .camera-message-bottom { margin: 0 10px 8px; padding: 4px 8px; min-height: 0; font-size: 0.72rem; line-height: 1.25; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: clip; overflow-clip-margin: content-box; height: auto; max-height: none; box-sizing: content-box; }
+  .camera-sheet.working button.camera-place, .camera-sheet.working .camera-sel, .camera-sheet.working > .camera-message-bottom { grid-column: 1 / -1; margin: 0; }
+  .camera-sheet.working button.camera-place { min-height: 38px; padding: 2px 10px; }
+  .camera-sheet.working .camera-sel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; height: auto; min-height: 0; }
+  .camera-sheet.working .camera-sel .camera-message-box { grid-column: 1 / -1; height: auto; min-height: 0; padding: 4px 8px; }
+  .camera-sheet.working .camera-sel button { max-width: none; min-height: 44px; height: auto; padding: 2px; font-size: 0.78rem; }
+  .camera-sheet.working > .camera-message-bottom { padding: 4px 8px; min-height: 0; font-size: 0.72rem; line-height: 1.25; display: -webkit-box;
+    -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: clip; overflow-clip-margin: content-box; height: auto; max-height: none; box-sizing: content-box; }
 }
 
 /* sideways: the file bar is only the folder icon over the X, a small column at the top left, so the drawing keeps

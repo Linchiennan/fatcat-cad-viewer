@@ -51,7 +51,7 @@ try {
   await p.goto(mock.url+'?debug=1&private=NEVER_SEND_THIS_FILENAME');await p.getByRole('button',{name:'使用 Google 登入',exact:true}).waitFor();
   const auth=await p.locator('.auth-card').boundingBox(); assert.ok(auth.x>=0&&auth.x+auth.width<=width); assert.equal(await p.locator('.app').count(),0);
   await p.getByRole('button',{name:'使用 Google 登入',exact:true}).click();await p.locator('.home-library').waitFor();
-  const account=await p.locator('.web-account').boundingBox(), app=await p.locator('.app').boundingBox();assert.ok(app.y>=account.y+account.height);assert.ok(app.x+app.width<=width);
+  const app=await p.locator('.app').boundingBox();assert.ok(app.y<=1);assert.ok(app.x+app.width<=width); // no top bar since 2026-11-23: 登出 sits bottom left on the home page
   report.layout.push({width,auth,account,app,overlap:false});
   await p.locator('.usage-frame').waitFor({state:'attached'});
   await p.locator('.home-library').click();

@@ -14,3 +14,12 @@
 .auth-note { font-size: 13px; color: #a3b7bf; }
 .usage-frame { display: none; }
 @media (max-width: 390px) { .auth-card { padding: 18px; } }
+/* signed in (用戶 2026-11-23：「授權文字拿掉，登出改到最左下角」): no top bar; 登出 (and 新版 when there is one) sits in
+   the bottom left corner of the home page only, never over the drawing tools. The access status stays for screen
+   readers and the tests, not on screen. */
+.web-access:not(.is-guest) .web-account { inset: auto auto calc(12px + env(safe-area-inset-bottom, 0px)) calc(12px + env(safe-area-inset-left, 0px)); height: auto; display: none; justify-content: flex-start; padding: 0; background: none; border: 0; }
+:root:has(.home-page):not(:has(.library-screen, .camera-home, .legal-page)) .web-access:not(.is-guest) .web-account { display: flex; }
+.web-access:not(.is-guest) .access-summary { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.web-access:not(.is-guest) .web-account button { background: #101a24; color: #cdd9df; }
+.web-access:not(.is-guest) .web-cad { inset: 0; }
+.web-access:not(.is-guest) .home-main { padding-bottom: calc(72px + var(--safe-bottom)); }
