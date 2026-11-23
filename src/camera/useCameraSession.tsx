@@ -71,6 +71,9 @@ export function saveBoardPos(p: BoardPos): void {
 export type CameraLaunch = { batchId?: string; space?: string; newBatch?: boolean };
 
 export type CameraContext = {
+  /** the X on the camera's own page: leave the drawing for the 工程相機 project list (用戶 2026-11-23：「按X返回專案，不是到
+   * 看圖模式」); without it the X only closes the panel */
+  onProjects?: () => void;
   /** file name of the drawing (floor and batch name come from it) */
   drawingName: string;
   /** its 我的圖面 entry, kept on the batch so the home page can open the drawing again */
@@ -436,8 +439,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         ) : <span />}
         {/* on 設定 / 清單 / 匯出 the X goes back to the camera, only there it closes the panel (用戶 2026-11-23：「設定的X是要
             返回工程相機，不是整個關閉」) */}
-        <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : "camera.close")} title={t(subView ? "camera.backToCamera" : "camera.close")}
-          onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></header>
+        <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")} title={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")}
+          onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); if (ctx.onProjects) ctx.onProjects(); else onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></header>
       {body}
       {message && !(view === "work" && selected && !renumbering) ? <p className="camera-message camera-message-box camera-message-bottom" role="status" title={message}>{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
