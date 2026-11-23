@@ -128,3 +128,15 @@
 .camera-sheet button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* a point with photos cannot be moved (用戶 2026-11-23) */
 .photo-marker-grip.locked, .photo-marker-arrow.locked { cursor: not-allowed; }
+/* Phone held sideways in the camera (用戶 2026-11-23：拍照模式支援橫向): the picture takes the left, the controls a
+   column on the right (back, shutter, flash; board size above), so the photo keeps its full height. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .camera-screen { flex-direction: row; }
+  .camera-stage { flex: 1; min-width: 0; }
+  .camera-controls { width: 168px; flex: none; justify-content: center; padding: calc(10px + var(--safe-top, 0px)) calc(12px + var(--safe-right, 0px)) calc(10px + var(--safe-bottom, 0px)) 12px; }
+  .camera-size { font-size: 0.75rem; }
+  .camera-buttons { grid-template-columns: 1fr !important; grid-template-rows: auto auto auto; justify-items: center; gap: 12px; }
+  .camera-buttons > button:first-child { grid-column: 1; grid-row: 3; justify-self: stretch; min-height: 40px; }
+  .camera-shutter { grid-column: 1; grid-row: 2; width: 72px; height: 72px; }
+  .camera-flash, .camera-flash-space { grid-column: 1; grid-row: 1; justify-self: stretch; min-height: 40px; justify-content: center; }
+}

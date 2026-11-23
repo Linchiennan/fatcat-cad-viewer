@@ -4,6 +4,7 @@
 // Phone = touch screen whose shorter side is under 600 px (tablets are 600 or more, like Android's sw600dp).
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/translations";
+import { ROTATE_ALLOW_EVENT, rotationAllowed } from "../native/screenRotation";
 
 export type ScreenInfo = { coarse: boolean; screenW: number; screenH: number; orientation?: string; innerW: number; innerH: number };
 
@@ -22,12 +23,14 @@ const read = (): ScreenInfo => ({
 
 export function RotateNotice() {
   const { t } = useI18n();
-  const [sideways, setSideways] = useState(() => isPhoneSideways(read()));
+  // not while the camera is open: sideways is fine for taking photos (用戶 2026-11-23)
+  const [sideways, setSideways] = useState(() => isPhoneSideways(read()) && !rotationAllowed());
   useEffect(() => {
-    const update = () => setSideways(isPhoneSideways(read()));
+    const update = () => setSideways(isPhoneSideways(read()) && !rotationAllowed());
     addEventListener("resize", update);
+    addEventListener(ROTATE_ALLOW_EVENT, update);
     screen.orientation?.addEventListener?.("change", update);
-    return () => { removeEventListener("resize", update); screen.orientation?.removeEventListener?.("change", update); };
+    return () => { removeEventListener("resize", update); removeEventListener(ROTATE_ALLOW_EVENT, update); screen.orientation?.removeEventListener?.("change", update); };
   }, []);
   if (!sideways) return null;
   return (

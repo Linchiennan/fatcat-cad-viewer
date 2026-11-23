@@ -8,6 +8,7 @@ import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { useI18n } from "../i18n/translations";
 import { testPhoto, usesTestPhoto } from "./testPhoto";
+import { allowRotation } from "../native/screenRotation";
 import type { Signer, Whiteboard } from "./types";
 import { boardRect, drawBoard, type BoardText } from "./whiteboard";
 
@@ -74,6 +75,8 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   // The phone's back gesture / key closes the camera and returns to the drawing, instead of leaving the page
   // (用戶 2026-11-22：「拍完照片，回不去改定位，沒有返回」). One history entry while the camera is open; closing with
   // the button takes it off again. The back is deferred a tick so React's dev double-mount does not pop the new entry.
+  // the phone may turn sideways while the camera is open (用戶 2026-11-23：拍照模式支援橫向自動轉向)
+  useEffect(() => { allowRotation(true); return () => allowRotation(false); }, []);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
