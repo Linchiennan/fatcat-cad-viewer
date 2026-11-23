@@ -1,5 +1,5 @@
 // The electronic whiteboard (spec 009 定案 5/6), drawn like the white board held up in the user's site photos:
-// a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 查驗日期 / □施工前 □施工中 □施工後 / 查驗人員 / 照片編號. The same function draws
+// a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 查驗日期 / 查驗現況：□施工前 □施工中 □施工後 / 查驗人員 / 照片編號. The same function draws
 // the live camera preview and the exported photo, so what is seen is what is saved.
 import { drawPenSignature } from "./penInk";
 import type { BoardFont, BoardStage, Signer, Whiteboard } from "./types";
@@ -52,14 +52,17 @@ function drawValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont }, s
 }
 
 export type BoardText = { title: string; no: string };
-export type BoardRow = { label: string; value: string; signature?: Signer; checks?: { label: string; on: boolean }[] };
+export type BoardRow = { label: string; value: string; signature?: Signer; checks?: { key: BoardStage; label: string; on: boolean }[] };
+/** Where a 查驗現況 box and its words sit, in canvas pixels: tapping there ticks it on the camera screen. */
+export type CheckHit = { key: BoardStage; x: number; y: number; w: number; h: number };
 
 export function boardRows(board: Whiteboard, text: BoardText, signer?: Signer | null): BoardRow[] {
   return [
     { label: "施工項目", value: board.item },
     { label: "施工位置", value: board.place },
     { label: "查驗日期", value: board.date },
-    { label: "", value: "", checks: STAGES.map(([k, label]) => ({ label, on: board.stage === k })) },
+    // 用戶 2026-11-23：「施工前中後，左邊要增加查驗現況」
+    { label: "查驗現況", value: "", checks: STAGES.map(([k, label]) => ({ key: k, label, on: board.stage === k })) },
     { label: "查驗人員", value: board.inspector, ...(signer ? { signature: signer } : {}) },
     { label: "照片編號", value: text.no },
   ];
@@ -154,8 +157,9 @@ function aluminiumFrame(ctx: CanvasRenderingContext2D, r: { x: number; y: number
   return f;
 }
 
-/** Draw the board on a picture of w × h pixels. */
-export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, board: Whiteboard, text: BoardText, signer?: Signer | null): void {
+/** Draw the board on a picture of w × h pixels; returns where the 查驗現況 boxes are. */
+export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, board: Whiteboard, text: BoardText, signer?: Signer | null): CheckHit[] {
+  let hits: CheckHit[] = [];
   const outer = boardRect(board, w, h);
   // aluminium frame round a white surface, like a real site whiteboard (用戶 2026-11-23：「電子白板的邊框增加真實白板的鋁框
   // 的效果」); the writing sits on the surface inside it
@@ -184,27 +188,41 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
     ctx.beginPath(); ctx.moveTo(r.x + pad, top + rowH * (i + 1)); ctx.lineTo(r.x + r.w - pad, top + rowH * (i + 1)); ctx.stroke();
     ctx.textAlign = "left";
     ctx.fillStyle = "#444"; ctx.font = `${px}px ${FONT}`;
-    if (row.checks) { drawChecks(ctx, row.checks, r.x + pad, cy, r.w - pad * 2, px, line); return; }
     ctx.fillText(row.label + "：", r.x + pad, cy);
     const vx = r.x + pad + labelW, vw = r.w - pad * 2 - labelW;
+    if (row.checks) { hits = drawChecks(ctx, row.checks, vx, cy, vw, px, line).map((c) => ({ ...c, y: cy - rowH / 2, h: rowH })); return; }
     if (row.signature) drawSignature(ctx, row.signature, vx, cy - rowH * 0.45, vw, rowH * 0.9);
     else { ctx.fillStyle = "#0a0a78"; ctx.font = valueFont(board, px); drawValue(ctx, board, fit(ctx, row.value, vw), vx, cy, px); }
   });
   ctx.restore();
+  return hits;
 }
 
-/** □施工前 □施工中 □施工後 across the row; the ticked one gets a pen tick in the value ink. */
-function drawChecks(ctx: CanvasRenderingContext2D, checks: readonly { label: string; on: boolean }[], x: number, cy: number, w: number, px: number, line: number): void {
-  const cell = w / checks.length, s = px * 0.9;
+/** □施工前 □施工中 □施工後 in the value column, spread evenly by their measured widths (shrunk to fit if ever too
+ * wide); the ticked one gets a pen tick in the value ink. */
+function drawChecks(ctx: CanvasRenderingContext2D, checks: NonNullable<BoardRow["checks"]>, x: number, cy: number, w: number, px: number, line: number): { key: BoardStage; x: number; w: number }[] {
+  const minGap = px * 0.6;
+  const size = (p: number) => { ctx.font = `${p}px ${FONT}`; return checks.map((c) => p * 0.85 + p * 0.25 + ctx.measureText(c.label).width); };
+  let widths = size(px);
+  const need = widths.reduce((a, b) => a + b, 0) + minGap * (checks.length - 1);
+  if (need > w) { px *= w / need; widths = size(px); }
+  const gap = checks.length > 1 ? (w - widths.reduce((a, b) => a + b, 0)) / (checks.length - 1) : 0;
+  const s = px * 0.85;
+  let bx = x;
+  const out: { key: BoardStage; x: number; w: number }[] = [];
   checks.forEach((c, i) => {
-    const bx = x + cell * i, by = cy - s / 2;
+    if (i) bx += widths[i - 1] + gap;
+    // the tap area reaches half way into the gaps on either side
+    out.push({ key: c.key, x: bx - (i ? gap / 2 : 0), w: widths[i] + (i ? gap / 2 : 0) + (i < checks.length - 1 ? gap / 2 : 0) });
+    const by = cy - s / 2;
     ctx.strokeStyle = "#444"; ctx.lineWidth = line * 1.6; ctx.strokeRect(bx, by, s, s);
-    ctx.fillStyle = "#444"; ctx.fillText(c.label, bx + s + px * 0.3, cy);
+    ctx.fillStyle = "#444"; ctx.fillText(c.label, bx + s + px * 0.25, cy);
     if (!c.on) return;
     ctx.save(); ctx.strokeStyle = "#0a0a78"; ctx.lineWidth = px * 0.15; ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.beginPath(); ctx.moveTo(bx + s * 0.15, by + s * 0.5); ctx.lineTo(bx + s * 0.42, by + s * 0.82); ctx.lineTo(bx + s * 1.05, by - s * 0.1); ctx.stroke();
     ctx.restore();
   });
+  return out;
 }
 
 /** 工程名稱 + 工種, as on the board title ("PARK 23 水電工程"). */

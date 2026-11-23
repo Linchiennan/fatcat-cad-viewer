@@ -1,5 +1,6 @@
 // 施工前／施工中／施工後 ticks (用戶 2026-11-23：「下方增加一排 施工前 施工中 施工後，這三個選項前有口能打勾用」): one at
-// most, pressing the ticked one again clears it.
+// most, pressing the ticked one again clears it. Used in the list's 改白板 form; in the camera the boxes on the board are
+// tapped instead (用戶 2026-11-23：「拍照模式不要出現施工前中後，只有白板有」).
 import { useI18n } from "../i18n/translations";
 import type { BoardStage } from "./types";
 import { STAGES } from "./whiteboard";

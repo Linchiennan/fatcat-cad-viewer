@@ -11,14 +11,17 @@ import { guestPhoto, testPhoto, usesTestPhoto } from "./testPhoto";
 import { IS_GUEST } from "../auth/guestMode";
 import { allowRotation } from "../native/screenRotation";
 import type { Signer, Whiteboard } from "./types";
-import { boardRect, drawBoard, ensureHandFont, HAND_FONT, loadBoardFont, saveBoardFont, type BoardText } from "./whiteboard";
+import { boardRect, drawBoard, ensureHandFont, HAND_FONT, loadBoardFont, saveBoardFont, type BoardText, type CheckHit } from "./whiteboard";
 import type { BoardFont, BoardStage } from "./types";
-import { StageTicks } from "./StageTicks";
 
 type Pos = Pick<Whiteboard, "x" | "y" | "width">;
 type FlashMode = "off" | "auto" | "flash" | "torch";
 type Capture = { takePhoto(settings?: { fillLightMode?: string }): Promise<Blob>; getPhotoCapabilities?(): Promise<{ fillLightMode?: string[] }> };
 const FLASH_KEY = "fatcat.camera.flash";
+/** CSS pixels a finger may wander and still count as a tap on the board */
+const TAP_SLOP = 10;
+/** a 查驗現況 box is only one board row tall (about 11 px on a phone): its tap area reaches this tall */
+const TAP_MIN_H = 36;
 const FLASH_ORDER: FlashMode[] = ["off", "auto", "flash", "torch"];
 /**
  * Let the camera go: the torch off first, then every track stopped. Stopping alone left the phone's light on after
@@ -69,7 +72,10 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onSt
   const [state, setState] = useState<"starting" | "ready" | "denied">("starting");
   const [shots, setShots] = useState(0);
   const [busy, setBusy] = useState(false);
-  const drag = useRef<{ id: number; dx: number; dy: number } | null>(null);
+  // a press on the board: it moves once the finger has gone past the slop; a tap on a 查驗現況 box ticks it instead
+  // (用戶 2026-11-23：「拍照模式不要出現施工前中後，只有白板有」)
+  const drag = useRef<{ id: number; dx: number; dy: number; sx: number; sy: number; moving: boolean } | null>(null);
+  const hits = useRef<CheckHit[]>([]);
   /** flash modes this phone offers (用戶 2026-11-22：拍照模式下的閃光燈模式切換); none on computers */
   const [flashModes, setFlashModes] = useState<FlashMode[]>([]);
   const [flash, setFlash] = useState<FlashMode>(loadFlash);
@@ -161,7 +167,9 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onSt
         c.style.left = `${area.left}px`; c.style.top = `${area.top}px`; c.style.width = `${area.w}px`; c.style.height = `${area.h}px`;
         c.width = Math.round(area.w * dpr); c.height = Math.round(area.h * dpr);
         const ctx = c.getContext("2d");
-        if (ctx) { ctx.clearRect(0, 0, c.width, c.height); drawBoard(ctx, c.width, c.height, { ...board, ...pos, font, stage }, text, signer); }
+        if (ctx) { ctx.clearRect(0, 0, c.width, c.height); hits.current = drawBoard(ctx, c.width, c.height, { ...board, ...pos, font, stage }, text, signer).map((h) => { const y = h.y / dpr, hh = h.h / dpr, tall = Math.max(hh, TAP_MIN_H); return { ...h, x: h.x / dpr, y: y - (tall - hh) / 2, w: h.w / dpr, h: tall }; });
+          // for checks: where the boxes are and which is ticked
+          c.dataset.checks = JSON.stringify(hits.current.map((h) => [h.key, Math.round(h.x), Math.round(h.y), Math.round(h.w), Math.round(h.h)])); c.dataset.stage = stage ?? ""; }
       }
       frame = requestAnimationFrame(() => { if (!c || !area) paint(); });
     };
@@ -244,14 +252,22 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onSt
     const r = boardRect(pos, area.w, area.h), x = e.nativeEvent.offsetX, y = e.nativeEvent.offsetY;
     if (x < r.x || x > r.x + r.w || y < r.y || y > r.y + r.h) return;
     e.currentTarget.setPointerCapture(e.pointerId);
-    drag.current = { id: e.pointerId, dx: x - r.x, dy: y - r.y };
+    drag.current = { id: e.pointerId, dx: x - r.x, dy: y - r.y, sx: x, sy: y, moving: false };
   };
   const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const d = drag.current, area = shown();
     if (!d || d.id !== e.pointerId || !area) return;
+    if (!d.moving && Math.hypot(e.nativeEvent.offsetX - d.sx, e.nativeEvent.offsetY - d.sy) < TAP_SLOP) return;
+    d.moving = true;
     setPos((p) => ({ ...p, x: (e.nativeEvent.offsetX - d.dx) / area.w, y: (e.nativeEvent.offsetY - d.dy) / area.h }));
   };
-  const onUp = () => { drag.current = null; };
+  const onUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || d.moving || e.type !== "pointerup") return;
+    const hit = hits.current.find((h) => d.sx >= h.x && d.sx <= h.x + h.w && d.sy >= h.y && d.sy <= h.y + h.h);
+    if (hit) pickStage(stage === hit.key ? undefined : hit.key);
+  };
 
   // On top of the whole page (the panel it opens from sits under the toolbar).
   return createPortal(
@@ -277,7 +293,6 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onSt
       </button>
       {thumb ? <img key={thumb.n} ref={thumbEl} src={thumb.url} alt="" className="camera-shot-thumb" /> : null}
       <div className="camera-controls">
-        <StageTicks value={stage} onChange={pickStage} />
         <div className="camera-size-row">
           <label className="camera-size">{t("camera.boardSize")}
             <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />

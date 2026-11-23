@@ -83,6 +83,7 @@ function BoardForm({ board, onSave, onCancel }: { board: Whiteboard; onSave(b: W
   return (
     <form className="camera-board-form" onSubmit={(e) => { e.preventDefault(); onSave(b); }}>
       {f("item", t("camera.board.item"))}{f("place", t("camera.board.place"))}{f("date", t("camera.board.date"))}
+      <span className="camera-board-form-label">{t("camera.board.stage")}</span>
       <StageTicks value={b.stage} onChange={(stage) => setB(({ stage: _old, ...rest }) => (stage ? { ...rest, stage } : rest))} />
       {f("inspector", t("camera.board.inspector"))}
       <div className="camera-actions"><button type="submit">{t("camera.save")}</button><button type="button" onClick={onCancel}>{t("camera.cancel")}</button></div>

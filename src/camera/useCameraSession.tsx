@@ -34,14 +34,15 @@ function remember(b: Remembered): void {
 /** Default board place and size: flush in the bottom-left corner (用戶 2026-11-23：「預設白板都是靠最左下」). x 0 / y 1 are
  * clamped to the picture by boardRect, so the board sits in the corner whatever the picture's shape (upright or sideways). */
 
-// 施工前／中／後 ticked on the camera screen, kept per batch on this device (用戶 2026-11-23)
+// 施工前／中／後 ticked on the board in the camera, kept per batch on this device (用戶 2026-11-23); a new batch starts
+// with 施工後 ticked (用戶 2026-11-23：「預設是施工後打勾」), and an untick is kept as "none"
 const STAGE_KEY = (batchId: string) => `fatcat.camera.stage.${batchId}`;
 const isStage = (v: string | null): v is BoardStage => v === "before" || v === "during" || v === "after";
 function loadStage(batchId: string): BoardStage | undefined {
-  try { const v = localStorage.getItem(STAGE_KEY(batchId)); return isStage(v) ? v : undefined; } catch { return undefined; }
+  try { const v = localStorage.getItem(STAGE_KEY(batchId)); return v === null ? "after" : isStage(v) ? v : undefined; } catch { return "after"; }
 }
 function saveStage(batchId: string, stage: BoardStage | undefined): void {
-  try { if (stage) localStorage.setItem(STAGE_KEY(batchId), stage); else localStorage.removeItem(STAGE_KEY(batchId)); } catch { /* private mode */ }
+  try { localStorage.setItem(STAGE_KEY(batchId), stage ?? "none"); } catch { /* private mode */ }
 }
 export const DEFAULT_BOARD = { x: 0, y: 1, width: 0.3 } as const;
 const BOARD_KEY = "fatcat.camera.board";
