@@ -3,9 +3,12 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "../i18n/translations";
 import { saveSigner } from "./batchStore";
+import { drawPenSignature } from "./penInk";
 import type { Signer } from "./types";
 
 const ASPECT = 3;
+/** pen size on the pad in CSS px (the line swells to 1.3× and thins to 0.5× of it) */
+const PAD_PEN_PX = 4.2;
 
 export function SignaturePad({ initialName, signer, onSaved, onCancel }: {
   initialName: string; signer?: Signer; onSaved(s: Signer): void; onCancel(): void;
@@ -27,14 +30,8 @@ export function SignaturePad({ initialName, signer, onSaved, onCancel }: {
     c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
     const ctx = c.getContext("2d")!;
     ctx.fillStyle = "#fbfbf8"; ctx.fillRect(0, 0, c.width, c.height);
-    ctx.strokeStyle = "#10105a"; ctx.lineWidth = 3 * dpr; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    for (const s of list) {
-      if (s.length < 2) continue;
-      ctx.beginPath(); ctx.moveTo(s[0] * c.width, s[1] * c.height);
-      for (let i = 2; i + 1 < s.length; i += 2) ctx.lineTo(s[i] * c.width, s[i + 1] * c.height);
-      if (s.length === 2) ctx.lineTo(s[0] * c.width + 0.5, s[1] * c.height);
-      ctx.stroke();
-    }
+    // fountain-pen ink, the same as on the whiteboard and in the exports (用戶 2026-11-23)
+    drawPenSignature(ctx, list, 0, 0, c.width, c.height, PAD_PEN_PX * dpr);
   };
 
   return createPortal(

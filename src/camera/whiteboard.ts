@@ -1,6 +1,7 @@
 // The electronic whiteboard (spec 009 定案 5/6), drawn like the white board held up in the user's site photos:
 // a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 施工日期 / 查驗人員 / 照片編號. The same function draws
 // the live camera preview and the exported photo, so what is seen is what is saved.
+import { drawPenSignature } from "./penInk";
 import type { Signer, Whiteboard } from "./types";
 
 /** height / width of the board */
@@ -41,18 +42,8 @@ function fit(ctx: CanvasRenderingContext2D, s: string, max: number): string {
 export function drawSignature(ctx: CanvasRenderingContext2D, signer: Signer, x: number, y: number, w: number, h: number): void {
   const sw = Math.min(w, h * signer.aspect), sh = sw / signer.aspect;
   const ox = x, oy = y + (h - sh) / 2;
-  ctx.save();
-  ctx.strokeStyle = "#10105a";
-  ctx.lineWidth = Math.max(1.5, sh * 0.06);
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  for (const s of signer.strokes) {
-    if (s.length < 4) continue;
-    ctx.beginPath();
-    ctx.moveTo(ox + s[0] * sw, oy + s[1] * sh);
-    for (let i = 2; i + 1 < s.length; i += 2) ctx.lineTo(ox + s[i] * sw, oy + s[i + 1] * sh);
-    ctx.stroke();
-  }
-  ctx.restore();
+  // fountain-pen ink (用戶 2026-11-23：「電子簽名的筆觸改成鋼筆」), as on the signature pad
+  drawPenSignature(ctx, signer.strokes, ox, oy, sw, sh, Math.max(1.6, sh * 0.075));
 }
 
 /** Draw the board on a picture of w × h pixels. */

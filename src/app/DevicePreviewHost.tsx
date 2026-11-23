@@ -8,7 +8,11 @@ const clock = () => { const d = new Date(); return `${d.getHours() < 12 ? '上�
 /** One persistent browsing context, one auth gate, one CAD engine. Never change src/key on selection. */
 export default function DevicePreviewHost() {
   const { t, setLocale } = useI18n();
-  const [selected, setSelected] = useState('desktop');
+  // ?device=<preset id> opens straight in that phone (用戶 2026-11-23：測試時「固定每次開起都要用這模式」— the local
+  // test page is opened as ?device=zenfone-11-ultra); without it the desktop view as before.
+  const [selected, setSelected] = useState(() => {
+    try { const d = new URLSearchParams(window.location.search).get('device'); return d && DEVICE_PRESETS.some((p) => p.id === d) ? d : 'desktop'; } catch { return 'desktop'; }
+  });
   const [src] = useState(() => window.location.href);
   const frame = useRef<HTMLIFrameElement>(null);
   const stage = useRef<HTMLDivElement>(null);
