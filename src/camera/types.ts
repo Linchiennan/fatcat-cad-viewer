@@ -18,12 +18,15 @@ export type Whiteboard = {
   width: number;
   /** writing of the values: 落雁體 handwriting (default) or 黑體 (用戶 2026-11-23) */
   font?: BoardFont;
+  /** how much 落雁體 is thickened (用戶 2026-11-23：原字／超細／細); 超細 when unset */
+  weight?: BoardWeight;
   /** the ticked box of 施工前 / 施工中 / 施工後, none when unset (用戶 2026-11-23) */
   stage?: BoardStage;
 };
 
 export type BoardFont = "hand" | "sans";
 export type BoardStage = "before" | "during" | "after";
+export type BoardWeight = "plain" | "hairline" | "fine";
 
 export type CameraBatch = {
   id: string;
@@ -49,6 +52,10 @@ export type CameraBatch = {
   signerId?: string;
   /** date printed on the 照片保存卡 heading, ROC form; empty = the day it is made */
   cardDate: string;
+  /** whiteboard writing, set in 設定 (用戶 2026-11-23：「切換字體也是白板那邊設定就好」「字體粗細也是在白板設定那邊能調整」);
+   * 落雁體 and 超細 when unset */
+  boardFont?: BoardFont;
+  boardWeight?: BoardWeight;
   /** size of the photo markers on screen and on the 對位圖 (1 = normal) */
   markerScale?: number;
   createdAt: number;

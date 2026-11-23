@@ -2,7 +2,7 @@
 // a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 查驗日期 / 查驗現況：□施工前 □施工中 □施工後 / 查驗人員 / 照片編號. The same function draws
 // the live camera preview and the exported photo, so what is seen is what is saved.
 import { drawPenSignature } from "./penInk";
-import type { BoardFont, BoardStage, Signer, Whiteboard } from "./types";
+import type { BoardFont, BoardStage, BoardWeight, Signer, Whiteboard } from "./types";
 
 /** height / width of the board */
 // 0.68 with five rows; the 施工前／中／後 row (用戶 2026-11-23) makes it taller so the rows keep their size
@@ -29,25 +29,24 @@ export function ensureHandFont(): Promise<void> {
   return handLoading;
 }
 
-const FONT_KEY = "fatcat.camera.boardFont";
-/** The board font chosen on this device; 落雁體 handwriting unless 黑體 was picked. */
-export function loadBoardFont(): BoardFont {
-  try { return localStorage.getItem(FONT_KEY) === "sans" ? "sans" : "hand"; } catch { return "hand"; }
-}
-export function saveBoardFont(f: BoardFont): void {
-  try { localStorage.setItem(FONT_KEY, f); } catch { /* private mode */ }
-}
 // photos from before the choice have no font: they were shot with 黑體, so they keep it
 const valueFont = (board: { font?: BoardFont }, px: number) =>
   board.font === "hand" ? `400 ${px * HAND_SCALE}px "${HAND_FONT}", ${FONT}` : `500 ${px * 1.05}px ${FONT}`;
 // 落雁體 comes only in Thin and its glyphs sit small in the em box: at the 黑體 size the values read like pencil
 // (2026-11-23 export check), so it is drawn larger and its strokes thickened like a whiteboard marker
 // 1.4 → ×1.15 (用戶 2026-11-23：「落雁體的字體放大1.15倍」)
-const HAND_SCALE = 1.4 * 1.15, HAND_INK = 0.07;
-function drawValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont }, s: string, x: number, y: number, px: number): void {
+const HAND_SCALE = 1.4 * 1.15;
+/** Outline drawn round 落雁體 strokes, as a share of the value size: 原字 none, 超細, 細 (用戶 2026-11-23：「保留原本跟細兩種」
+ * 「能有介於細跟原字中間的超細嗎」; 0.07 before) */
+export const BOARD_WEIGHTS: readonly (readonly [BoardWeight, number])[] = [["plain", 0], ["hairline", 0.02], ["fine", 0.04]];
+/** 超細 unless another was set (用戶 2026-11-23：「預設超細」) */
+export const DEFAULT_WEIGHT: BoardWeight = "hairline";
+const inkOf = (w: BoardWeight | undefined) => BOARD_WEIGHTS.find(([k]) => k === (w ?? DEFAULT_WEIGHT))?.[1] ?? 0.02;
+function drawValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont; weight?: BoardWeight }, s: string, x: number, y: number, px: number): void {
   ctx.fillText(s, x, y);
-  if (board.font !== "hand") return;
-  ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = px * HAND_INK; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  const ink = inkOf(board.weight);
+  if (board.font !== "hand" || !ink) return;
+  ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = px * ink; ctx.lineJoin = "round"; ctx.lineCap = "round";
   ctx.strokeText(s, x, y); ctx.restore();
 }
 
@@ -223,6 +222,12 @@ function drawChecks(ctx: CanvasRenderingContext2D, checks: NonNullable<BoardRow[
     ctx.restore();
   });
   return out;
+}
+
+/** One value written as on the board (font, size and thickening), for the preview in 設定. */
+export function drawBoardValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont; weight?: BoardWeight }, s: string, x: number, y: number, px: number): void {
+  ctx.save(); ctx.fillStyle = "#0a0a78"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.font = valueFont(board, px);
+  drawValue(ctx, board, s, x, y, px); ctx.restore();
 }
 
 /** 工程名稱 + 工種, as on the board title ("PARK 23 水電工程"). */

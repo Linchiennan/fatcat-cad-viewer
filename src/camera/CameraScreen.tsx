@@ -11,7 +11,7 @@ import { guestPhoto, testPhoto, usesTestPhoto } from "./testPhoto";
 import { IS_GUEST } from "../auth/guestMode";
 import { allowRotation } from "../native/screenRotation";
 import type { Signer, Whiteboard } from "./types";
-import { boardRect, drawBoard, ensureHandFont, HAND_FONT, loadBoardFont, saveBoardFont, type BoardText, type CheckHit } from "./whiteboard";
+import { boardRect, drawBoard, ensureHandFont, type BoardText, type CheckHit } from "./whiteboard";
 import type { BoardFont, BoardStage } from "./types";
 
 type Pos = Pick<Whiteboard, "x" | "y" | "width">;
@@ -61,10 +61,10 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onSt
   const stream = useRef<MediaStream | null>(null);
   const [pos, setPos] = useState<Pos>({ x: board.x, y: board.y, width: board.width });
   // 落雁體 handwriting or 黑體 for the board's values, remembered on this device (用戶 2026-11-23)
-  const [font, setFont] = useState<BoardFont>(() => board.font ?? loadBoardFont());
+  // font and weight come from the batch 設定 (用戶 2026-11-23：「切換字體也是白板那邊設定就好」)
+  const font: BoardFont = board.font ?? "hand";
   const [handReady, setHandReady] = useState(false);
   useEffect(() => { let live = true; void ensureHandFont().then(() => live && setHandReady(true)); return () => { live = false; }; }, []);
-  const pickFont = (f: BoardFont) => { setFont(f); saveBoardFont(f); };
   const [stage, setStage] = useState<BoardStage | undefined>(board.stage);
   const pickStage = (s: BoardStage | undefined) => { setStage(s); onStage?.(s); };
   // remember where the board is left (a moment after it stops moving)
@@ -293,15 +293,9 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onSt
       </button>
       {thumb ? <img key={thumb.n} ref={thumbEl} src={thumb.url} alt="" className="camera-shot-thumb" /> : null}
       <div className="camera-controls">
-        <div className="camera-size-row">
-          <label className="camera-size">{t("camera.boardSize")}
-            <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />
-          </label>
-          <div className="camera-font" role="group" aria-label={t("camera.boardFont")} title={t("camera.boardFont.hint")}>
-            <button type="button" aria-pressed={font === "hand"} className="camera-font-hand" style={{ fontFamily: `"${HAND_FONT}", sans-serif` }} onClick={() => pickFont("hand")}>{t("camera.boardFont.hand")}</button>
-            <button type="button" aria-pressed={font === "sans"} onClick={() => pickFont("sans")}>{t("camera.boardFont.sans")}</button>
-          </div>
-        </div>
+        <label className="camera-size">{t("camera.boardSize")}
+          <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />
+        </label>
         <div className="camera-buttons">
           <button type="button" title={t("camera.backToDrawing")} onClick={onClose}>{t("camera.back")}{shots ? ` (${shots})` : ""}</button>
           {flashModes.length ? <button type="button" className="camera-flash" aria-label={t("camera.flash")} onClick={nextFlash}><span aria-hidden="true">⚡</span>{t(`camera.flash.${flashModes.includes(flash) ? flash : "off"}` as "camera.flash.off")}</button> : <span className="camera-flash-space" />}

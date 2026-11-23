@@ -18,9 +18,9 @@ import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile, shareFiles } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
-import { boardTitle, drawSignature, loadBoardFont } from "./whiteboard";
+import { BOARD_WEIGHTS, boardTitle, DEFAULT_WEIGHT, drawBoardValue, drawSignature, ensureHandFont } from "./whiteboard";
 import { PawShape } from "../components/ViewerToolbar";
-import type { BoardStage, CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
+import type { BoardFont, BoardStage, BoardWeight, CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
 
 const LAST_KEY = "fatcat.camera.last";
 type Remembered = Pick<NewBatch, "company" | "project" | "trade" | "item" | "inspector" | "signerId">;
@@ -34,6 +34,10 @@ function remember(b: Remembered): void {
 /** Default board place and size: flush in the bottom-left corner (用戶 2026-11-23：「預設白板都是靠最左下」). x 0 / y 1 are
  * clamped to the picture by boardRect, so the board sits in the corner whatever the picture's shape (upright or sideways). */
 
+
+/** The demo drawings shipped for trying the app (web/demo, 「示範-…」). */
+const isDemoDrawing = (name: string) => /^示範-/.test(name.replace(/^.*[\\/]/, ""));
+const DEMO_MARKER_SCALE = 2;
 // 施工前／中／後 ticked on the board in the camera, kept per batch on this device (用戶 2026-11-23); a new batch starts
 // with 施工後 ticked (用戶 2026-11-23：「預設是施工後打勾」), and an untick is kept as "none"
 const STAGE_KEY = (batchId: string) => `fatcat.camera.stage.${batchId}`;
@@ -211,6 +215,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       name: "", drawingName: ctx.drawingName, ...(ctx.drawingId ? { drawingId: ctx.drawingId } : {}), viewKey: ctx.viewKey, space: ctx.space,
       company: r.company ?? "", project: r.project ?? "", trade: r.trade ?? "", item: r.item ?? "", inspector: r.inspector ?? "",
       signerId: r.signerId, cardDate: "",
+      // the demo drawings are a bare plan without a title block, so the arrows came out tiny: twice the size there
+      // (用戶 2026-11-23：「你範例的箭頭太小了 放大2倍」)
+      ...(isDemoDrawing(ctx.drawingName) ? { markerScale: DEMO_MARKER_SCALE } : {}),
     };
   };
 
@@ -225,7 +232,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const boardFor = (point: ShotPoint | null, when: Date): Whiteboard => ({
     item: batch?.item ?? "", place: point?.place ?? "", date: rocDate(when), inspector: batch?.inspector ?? "",
-    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(), font: loadBoardFont(), ...(batch && loadStage(batch.id) ? { stage: loadStage(batch.id) } : {}),
+    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(), font: batch?.boardFont ?? "hand", weight: batch?.boardWeight ?? DEFAULT_WEIGHT, ...(batch && loadStage(batch.id) ? { stage: loadStage(batch.id) } : {}),
   });
 
   /** Keep photos (from the camera or the gallery) for the selected point, or unplaced. */
@@ -475,12 +482,45 @@ function BatchSettings({ initial, createdAt, signers: initialSigners, onSave, on
       {signing && inspector ? <SignaturePad initialName={inspector} signer={bound} onCancel={() => setSigning(false)}
         onSaved={(s) => { setSigning(false); setSigners([...signers.filter((x) => x.id !== s.id), s]); }} /> : null}
       {field("cardDate", t("camera.field.cardDate"))}
+      <BoardSetup font={d.boardFont ?? "hand"} weight={d.boardWeight ?? DEFAULT_WEIGHT} sample={d.item.trim() || "輕隔間配管"}
+        onChange={(boardFont, boardWeight) => setD({ ...d, boardFont, boardWeight })} />
       <div className="camera-actions">
         <button type="submit" className="camera-primary" disabled={!ready}>{t("camera.save")}</button>
         <button type="button" onClick={onCancel}>{t("camera.cancel")}</button>
         {onDelete ? <button type="button" className="camera-danger" onClick={onDelete}>{t("camera.deleteBatch")}</button> : null}
       </div>
     </form>
+  );
+}
+
+/** 白板 in 設定: 字體 落雁體／黑體 and, for 落雁體, 粗細 原字／超細／細, with a sample written as on the board. */
+function BoardSetup({ font, weight, sample, onChange }: { font: BoardFont; weight: BoardWeight; sample: string; onChange(font: BoardFont, weight: BoardWeight): void }) {
+  const { t } = useI18n();
+  const ref = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => { let live = true; void ensureHandFont().then(() => live && setReady(true)); return () => { live = false; }; }, []);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1, w = c.clientWidth || 300, h = c.clientHeight || 48;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#fbfbf8"; ctx.fillRect(0, 0, c.width, c.height);
+    drawBoardValue(ctx, { font, weight }, `${sample}  115.11.23  001-1`, 10 * dpr, c.height / 2, 20 * dpr);
+  }, [font, weight, sample, ready]);
+  const seg = <K extends string>(value: K, options: readonly K[], label: (k: K) => string, pick: (k: K) => void, disabled = false) => (
+    <div className="camera-seg" role="group">
+      {options.map((k) => <button key={k} type="button" aria-pressed={value === k} disabled={disabled} onClick={() => pick(k)}>{label(k)}</button>)}
+    </div>
+  );
+  return (
+    <div className="camera-board-setup">
+      <h4>{t("camera.boardSetup")}</h4>
+      <div className="camera-seg-row"><span>{t("camera.boardFont")}</span>{seg<BoardFont>(font, ["hand", "sans"], (k) => t(`camera.boardFont.${k}` as "camera.boardFont.hand"), (k) => onChange(k, weight))}</div>
+      <div className="camera-seg-row"><span>{t("camera.boardWeight")}</span>{seg<BoardWeight>(weight, BOARD_WEIGHTS.map(([k]) => k), (k) => t(`camera.boardWeight.${k}` as "camera.boardWeight.fine"), (k) => onChange(font, k), font !== "hand")}</div>
+      <canvas ref={ref} className="camera-board-sample" aria-hidden="true" />
+    </div>
   );
 }
 
