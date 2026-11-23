@@ -32,6 +32,14 @@ export const pages = <T,>(list: readonly T[], perPage = 2): T[][] => {
   return out;
 };
 
+/** Where a photo of w × h goes in a cell: as large as fits, its own proportions kept, centred — stretched to the 4:3
+ * cell, a 16:9 phone photo squashed its whiteboard (用戶 2026-11-23：「為啥發布的照片，白板會變形?」「白板都要固定尺寸!」). */
+export function fitInCell(cell: { x: number; y: number; w: number; h: number }, w: number, h: number): { x: number; y: number; w: number; h: number } {
+  if (!(w > 0 && h > 0)) return cell;
+  const k = Math.min(cell.w / w, cell.h / h), fw = w * k, fh = h * k;
+  return { x: cell.x + (cell.w - fw) / 2, y: cell.y + (cell.h - fh) / 2, w: fw, h: fh };
+}
+
 /** The photo cell of a box (right of the label column). */
 export function photoCell(boxTop: number): { x: number; y: number; w: number; h: number } {
   const x = CARD.labelRight + 1, y = boxTop + 2;

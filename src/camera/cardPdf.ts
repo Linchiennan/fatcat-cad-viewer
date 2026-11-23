@@ -2,7 +2,7 @@
 // Word to convert it), then put into an A4 PDF with pdf-lib. Text uses 標楷體 when the device has it, else the
 // bundled font; the layout does not change.
 import { PDFDocument } from "pdf-lib";
-import { A4, CARD, CARD_TITLE, infoLine, pages, photoCell, type CardEntry, type CardHeading } from "./photoCard";
+import { A4, CARD, CARD_TITLE, fitInCell, infoLine, pages, photoCell, type CardEntry, type CardHeading } from "./photoCard";
 
 const FONT = '"DFKai-SB", "標楷體", "BiauKai", "FatCat Sans", serif';
 // 用戶 2026-11-23：「這產出的PDF畫質很差」: the whole page used to be one 144 dpi JPEG, text included (soft, with JPEG
@@ -59,8 +59,8 @@ async function drawPage(heading: CardHeading, page: readonly CardEntry[], photos
   return { base, cells };
 }
 
-/** A photo resampled to 300 dpi of its cell (never enlarged), as JPEG. */
-async function cellPhoto(blob: Blob, cell: Cell): Promise<Blob> {
+/** A photo resampled to 300 dpi of its cell (never enlarged), as JPEG, with its size. */
+async function cellPhoto(blob: Blob, cell: Cell): Promise<{ jpg: Blob; w: number; h: number }> {
   const bmp = await createImageBitmap(blob);
   try {
     const k = Math.min(1, (cell.w * PHOTO_PX_PER_PT) / bmp.width, (cell.h * PHOTO_PX_PER_PT) / bmp.height);
@@ -71,7 +71,7 @@ async function cellPhoto(blob: Blob, cell: Cell): Promise<Blob> {
     ctx.drawImage(bmp, 0, 0, c.width, c.height);
     const out = await new Promise<Blob>((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error("photo encoding failed"))), "image/jpeg", PHOTO_QUALITY));
     c.width = c.height = 0;
-    return out;
+    return { jpg: out, w: bmp.width, h: bmp.height };
   } finally { bmp.close(); }
 }
 
@@ -96,8 +96,9 @@ export async function buildCardPdf(heading: CardHeading, entries: readonly CardE
     p.drawImage(await pdf.embedPng(new Uint8Array(await base.arrayBuffer())), { x: 0, y: 0, width: A4.w, height: A4.h });
     // PDF y runs upward from the bottom of the page
     for (const { cell, blob } of cells) {
-      const jpg = await pdf.embedJpg(new Uint8Array(await (await cellPhoto(blob, cell)).arrayBuffer()));
-      p.drawImage(jpg, { x: cell.x, y: A4.h - cell.y - cell.h, width: cell.w, height: cell.h });
+      const photo = await cellPhoto(blob, cell), at = fitInCell(cell, photo.w, photo.h);
+      const jpg = await pdf.embedJpg(new Uint8Array(await photo.jpg.arrayBuffer()));
+      p.drawImage(jpg, { x: at.x, y: A4.h - at.y - at.h, width: at.w, height: at.h });
     }
   }
   return pdf.save();

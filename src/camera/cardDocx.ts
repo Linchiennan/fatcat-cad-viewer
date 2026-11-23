@@ -1,7 +1,7 @@
 // 照片保存卡 as .docx (spec 009 定案 8): plain WordprocessingML zipped with fflate — company, 「照 片 保 存 卡」,
 // 工程名稱 / 日期 heading on every page, then two boxed tables a page (label column + photo merged down the rows).
 import { strToU8, zipSync } from "fflate";
-import { CARD, CARD_TITLE, infoLine, pages, photoCell, type CardEntry, type CardHeading } from "./photoCard";
+import { CARD, CARD_TITLE, infoLine, pages, fitInCell, photoCell, type CardEntry, type CardHeading } from "./photoCard";
 
 const TW = 20; // twips per point
 const EMU = 12700; // EMU per point
@@ -14,7 +14,8 @@ const para = (text: string, pt: number, opts: { center?: boolean; before?: numbe
   `<w:p><w:pPr>${opts.pageBreak ? "<w:pageBreakBefore/>" : ""}<w:spacing w:before="${(opts.before ?? 0) * TW}" w:after="${(opts.after ?? 0) * TW}" w:line="240" w:lineRule="auto"/>${opts.center ? '<w:jc w:val="center"/>' : ""}</w:pPr>${run(text, pt * 2)}</w:p>`;
 
 function imageXml(rid: string, n: number, entry: CardEntry): string {
-  const cell = photoCell(0);
+  // its own proportions in the cell, not stretched to it (用戶 2026-11-23：白板會變形)
+  const cell = fitInCell(photoCell(0), entry.width, entry.height);
   const cx = Math.round(cell.w * EMU), cy = Math.round(cell.h * EMU);
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="照片 ${n}"/>` +
     `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">` +
