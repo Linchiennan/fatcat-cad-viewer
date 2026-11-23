@@ -196,8 +196,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const nextLabel = (p: ShotPoint) => { const n = photos.filter((x) => x.pointId === p.id).length; const no = cardNo(p.no); return n ? `${no}-${n + 1}` : no; };
   const unplaced = photos.filter((p) => !p.pointId).length;
 
-  const openBatch = async (b: CameraBatch) => {
-    setBatch(b); setSelectedId(null); setView("work");
+  /** Open a batch on its work view; `keep` is a point to stay selected (after saving 設定, 用戶 2026-11-23). */
+  const openBatch = async (b: CameraBatch, keep: string | null = null) => {
+    setBatch(b); setSelectedId(keep); setView("work");
     await reload(b);
     // older batches did not keep their 我的圖面 entry: note it now, so the home page can open them
     if (!b.drawingId && ctx.drawingId) void updateBatch(b.id, { drawingId: ctx.drawingId }).then(setBatch).catch(() => {});
@@ -230,7 +231,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       remember({ company: draft.company, project: draft.project, trade: draft.trade, item: draft.item, inspector: draft.inspector, signerId: draft.signerId });
       const b = batch ? await updateBatch(batch.id, draft) : await createBatch(draft);
       await reloadBatches();
-      await openBatch(b);
+      // the spot picked before opening 設定 stays picked, so the next photo is placed there (用戶 2026-11-23：「存完設定仍
+      // 保持原本選中的定點」); before, it was dropped and the photo landed unplaced
+      await openBatch(b, batch && selected ? selected.id : null);
     } catch (e) { fail(e); }
   };
 
