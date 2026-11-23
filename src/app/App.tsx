@@ -118,6 +118,10 @@ type SearchState = { query: string; hits: TextHit[]; index: number };
 type TextDialog = { kind: "new"; at: { x: number; y: number }; width?: number } | { kind: "edit"; index: number; initial: string; multiline: boolean };
 type ShareNote = { text: string; error: boolean };
 
+
+/** 對位圖 PDF (工程相機): 250 dpi on A3, sharper than the 200 of a drawing output (用戶 2026-11-23：「這產出的PDF畫質很差」
+ * 「也要改」). 300 dpi on A3 is about 17 million pixels, over what an iPhone browser can draw. */
+const SHEET_PDF_DPI = 250;
 export function App() {
   const { t, locale } = useI18n();
   const localeRef = useRef(locale);
@@ -677,7 +681,7 @@ export function App() {
     if (go.space && go.space !== space && spaces.some((x) => x.name === go.space)) { setSwitching(true); canvasRef.current?.switchSpace(go.space); return; }
     setSearchOpen(false); endMeasure(); endMarkup(); setCadTab(null); setCameraOpen(true);
   }, [cameraLaunch, screen, report, switching, isPdf, space, spaces]); // eslint-disable-line react-hooks/exhaustive-deps
-  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await h.exportWithOverlay({ range: "sheet", format: "pdf", paper: "A3", title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
+  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await h.exportWithOverlay({ range: "sheet", format: "pdf", paper: "A3", dpi: SHEET_PDF_DPI, title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
 

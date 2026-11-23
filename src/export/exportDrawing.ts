@@ -38,7 +38,7 @@ function plan(engine: ExportEngine, request: ExportRequest): OutputPlan {
   else {
     const bounds = request.range === "box" ? (request.box ? boxBounds(request.box, (x, y) => engine.screenToDrawing(x, y)) : null)
       : request.range === "sheet" ? engine.sheetBounds() : engine.viewBounds();
-    p = planOutput("paper", bounds, ppu, request.paper ?? "A4");
+    p = planOutput("paper", bounds, ppu, request.paper ?? "A4", request.dpi);
   }
   if (!p) throw new ExportError(engine.viewBounds() ? "EXPORT_EMPTY_RANGE" : "EXPORT_NOT_READY");
   return p;

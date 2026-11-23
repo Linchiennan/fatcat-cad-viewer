@@ -20,6 +20,8 @@ export type ExportRequest = {
   title: string;
   /** Sheet name ("模型" for model space, or the layout name). */
   sheet: string;
+  /** dots per inch for a paper output; 200 when unset (the 工程相機 對位圖 asks for more, 用戶 2026-11-23) */
+  dpi?: number;
 };
 
 export type ExportResult = {

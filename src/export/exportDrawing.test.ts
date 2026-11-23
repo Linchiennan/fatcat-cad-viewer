@@ -48,6 +48,10 @@ describe("output sizes (005 技術決定 1)", () => {
     const a3 = planOutput("paper", { minX: 0, minY: 0, maxX: 100, maxY: 1000 }, 2, "A3")!;
     expect(a3.landscape).toBe(false);
     expect(a3.heightPx).toBe(3307); // 420 mm
+    // the 工程相機 對位圖 asks for 250 dpi (用戶 2026-11-23); unset stays 200
+    const sheet = planOutput("paper", { minX: 0, minY: 0, maxX: 1000, maxY: 500 }, 2, "A3", 250)!;
+    expect([sheet.widthPx, sheet.dpi]).toEqual([4134, 250]); // 420 mm at 250 dpi
+    expect(planOutput("paper", { minX: 0, minY: 0, maxX: 1000, maxY: 500 }, 2, "A3")!.dpi).toBe(200);
     expect(planOutput("paper", { minX: 0, minY: 0, maxX: 0, maxY: 5 }, 2)).toBeNull();
   });
 

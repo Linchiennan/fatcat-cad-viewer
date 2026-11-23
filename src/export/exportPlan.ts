@@ -44,7 +44,7 @@ export type OutputPlan = {
 };
 
 /** View: twice its screen size. Sheet / box: fitted into the paper at 200 dpi, keeping its shape. */
-export function planOutput(kind: "view" | "paper", bounds: DrawingBounds | null, pixelsPerUnit: number, paper: PaperSize = "A4"): OutputPlan | null {
+export function planOutput(kind: "view" | "paper", bounds: DrawingBounds | null, pixelsPerUnit: number, paper: PaperSize = "A4", dpi = OUTPUT_DPI): OutputPlan | null {
   if (!validBounds(bounds)) return null;
   const w = bounds.maxX - bounds.minX, h = bounds.maxY - bounds.minY, landscape = w >= h;
   if (kind === "view") {
@@ -52,9 +52,9 @@ export function planOutput(kind: "view" | "paper", bounds: DrawingBounds | null,
     return { bounds, widthPx: Math.max(1, Math.round(w * pixelsPerUnit * VIEW_SCALE)), heightPx: Math.max(1, Math.round(h * pixelsPerUnit * VIEW_SCALE)),
       dpi: CSS_DPI * VIEW_SCALE, markScale: VIEW_SCALE, landscape };
   }
-  const page = paperPoints(paper, landscape), pagePx = { w: (page.width / PT_PER_INCH) * OUTPUT_DPI, h: (page.height / PT_PER_INCH) * OUTPUT_DPI };
+  const page = paperPoints(paper, landscape), pagePx = { w: (page.width / PT_PER_INCH) * dpi, h: (page.height / PT_PER_INCH) * dpi };
   const fit = Math.min(pagePx.w / w, pagePx.h / h);
-  return { bounds, widthPx: Math.max(1, Math.round(w * fit)), heightPx: Math.max(1, Math.round(h * fit)), dpi: OUTPUT_DPI, markScale: OUTPUT_DPI / CSS_DPI, landscape };
+  return { bounds, widthPx: Math.max(1, Math.round(w * fit)), heightPx: Math.max(1, Math.round(h * fit)), dpi, markScale: dpi / CSS_DPI, landscape };
 }
 
 /** Next smaller size after a "too large" refusal, or null below the floor. */
