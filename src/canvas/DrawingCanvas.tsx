@@ -234,7 +234,9 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const e = engine.current as (CadEngine & Partial<ExportEngine>) | null;
       if (!e || !readyRef.current || typeof e.renderRegion !== "function" || !e.sheetBounds || !e.viewBounds || !e.screenToDrawing) throw new ExportError("EXPORT_NOT_READY");
       const b = e.sheetBounds(), sheetWidth = b ? b.maxX - b.minX : 0;
-      const result = await exportDrawing(e as CadEngine & ExportEngine, request, [], { paintMeasures: (ctx, project, ppu, scale) => paint(ctx, project, ppu, scale, sheetWidth) });
+      const make = () => exportDrawing(e as CadEngine & ExportEngine, request, [], { paintMeasures: (ctx, project, ppu, scale) => paint(ctx, project, ppu, scale, sheetWidth) });
+      const paper = (e as { withPaperColors?: <T>(run: () => Promise<T>, mode?: "color" | "mono") => Promise<T> }).withPaperColors;
+      const result = request.whitePaper && paper ? await paper.call(e, make, request.whitePaper) as Awaited<ReturnType<typeof make>> : await make();
       return { ...result, sheetWidth };
     },
     showSearchHit(bounds, textHeight, at) {

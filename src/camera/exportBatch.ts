@@ -17,16 +17,18 @@ import type { CameraBatch, PhotoRecord, ShotPoint, Signer } from "./types";
 import { boardTitle } from "./whiteboard";
 
 /** What goes into the ZIP (用戶 2026-11-22：匯出的資料要能勾選). */
-export type ExportParts = { sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
-export const ALL_PARTS: ExportParts = { sheetPdf: true, markerDxf: true, photos: true, originals: false, cardDocx: true, cardPdf: true, arrowLisp: true };
+export type ExportParts = { sheetMono: boolean; sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
+// 對位圖: 黑白 (only the arrows in colour) by default, 彩色白底 on request (用戶 2026-11-23)
+export const ALL_PARTS: ExportParts = { sheetMono: true, sheetPdf: false, markerDxf: true, photos: true, originals: false, cardDocx: true, cardPdf: true, arrowLisp: true };
 
 export type ExportInput = {
   batch: CameraBatch;
   points: readonly ShotPoint[];
   photos: readonly PhotoRecord[];
   signers: readonly Signer[];
-  /** the sheet with the photo points painted on (PDF), or null when it could not be made */
+  /** the sheet on white paper with the photo points painted on (PDF), 彩色 and 黑白; null when not wanted or not made */
   sheetPdf: Blob | null;
+  sheetMonoPdf?: Blob | null;
   /** sheet width in drawing units (sizes the DXF circles) */
   sheetWidth: number;
   parts: ExportParts;
@@ -62,16 +64,25 @@ export function looseNames(paths: readonly string[]): string[] {
   });
 }
 
-/** The same files without a ZIP (用戶 2026-11-22：匯出時可不包 ZIP), for sharing or saving one by one. */
+/** The files without one big ZIP (用戶 2026-11-22：匯出時可不包 ZIP), for sharing or saving one by one — except the photos
+ * (with board) and originals: those go in one ZIP of their own, 照片/… inside (用戶 2026-11-23：「照片(含白板)跟原圖(沒白板)
+ * 改成一大個壓縮檔，不要一張一張存」). */
 export async function exportBatchFiles(input: ExportInput): Promise<{ fileName: string; blob: Blob; mime: string }[]> {
-  const { files, done } = await collectFiles(input);
+  const { files: all, base, done } = await collectFiles(input);
+  const files: Zippable = {}, pictures: Zippable = {};
+  for (const [p, v] of Object.entries(all)) (p.startsWith("照片/") ? pictures : files)[p] = v;
   const paths = Object.keys(files), names = looseNames(paths);
+  const out: { fileName: string; blob: Blob; mime: string }[] = [];
+  if (Object.keys(pictures).length) {
+    const data = await new Promise<Uint8Array>((resolve, reject) => zip(pictures, (err, z) => (err ? reject(err) : resolve(z))));
+    out.push({ fileName: `${base}-照片.zip`, blob: new Blob([data as BlobPart], { type: "application/zip" }), mime: "application/zip" });
+  }
   done();
-  return paths.map((p, i) => {
+  return out.concat(paths.map((p, i) => {
     const v = files[p] as Uint8Array | [Uint8Array, unknown];
     const data = Array.isArray(v) ? v[0] : v, mime = MIME[p.split(".").pop()!.toLowerCase()] ?? "application/octet-stream";
     return { fileName: names[i], blob: new Blob([data as BlobPart], { type: mime }), mime };
-  });
+  }));
 }
 
 async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base: string; done(): void }> {
@@ -107,7 +118,8 @@ async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base
   input.onProgress?.(placed.length + 1, total);
   const sheet = safe(batch.drawingName.replace(/\.[^.]+$/, ""));
   const markerLabels = new Map(points.map((p) => [p.id, markerText(p, photos)]));
-  if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
+  if (parts.sheetMono && input.sheetMonoPdf) files[`對位圖/${sheet}-黑白.pdf`] = [new Uint8Array(await input.sheetMonoPdf.arrayBuffer()), { level: 0 }];
+  if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}-彩色.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
   if (parts.arrowLisp) files[`對位圖/${sheet}-插入對位箭頭.lsp`] = [strToU8(arrowBlockLisp(points, markerLabels, { scale: batch.markerScale ?? 1, title: batch.name })), { level: 0 }];
   if (parts.markerDxf) files[`對位圖/${sheet}-標記.dxf`] = strToU8(markerDxf(points, markerLabels, dxfRadius(input.sheetWidth, batch.markerScale ?? 1)));
   return { files, base, done: () => input.onProgress?.(total, total) };

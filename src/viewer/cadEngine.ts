@@ -2,7 +2,8 @@
 // It puts our modules together in the fixed order of T14 3.3 / 8.1, owns the camera, the viewer worker,
 // reading position and layer memory, and reports picks for measuring. One engine per canvas element.
 import { DxfViewer } from "dxf-viewer";
-import { Color, MOUSE } from "three";
+import { Color, LinearSRGBColorSpace, MOUSE } from "three";
+import { PAPER_BACKGROUND, paperColor, type PaperMode } from "../export/paperColors";
 import { AppError, LOAD_TIMEOUT_MESSAGE } from "../types/errors";
 import { MODEL_SPACE, type CadSpace, type DiagnosticCapture, type DrawingBounds, type DrawingPoint, type EngineReport, type LoadProgress, type LoadStage, type ViewCommand } from "../types/drawing";
 import type { CadEngine, MeasurePick, MeasurePreview } from "../types/engine";
@@ -80,6 +81,8 @@ export type FatcatCadEngine = CadEngine & {
   isReady(): boolean;
   /** Draw `bounds` (drawing coordinates) into a new widthPx x heightPx canvas without moving the view (005 export). Rejects with ExportTooLargeError (code EXPORT_TOO_LARGE). */
   renderRegion(bounds: DrawingBounds, widthPx: number, heightPx: number): Promise<HTMLCanvasElement>;
+  /** Run an output on white paper (彩色: white lines black, yellows orange; 黑白: all black), then put the colours back. */
+  withPaperColors?<T>(run: () => Promise<T>, mode?: PaperMode): Promise<T>;
   /** Full extent of the sheet on screen, or null when it has nothing drawable. */
   sheetBounds(): DrawingBounds | null;
   /** What the canvas shows now, in drawing coordinates, or null before a drawing is shown. */
@@ -834,6 +837,44 @@ export class DxfCadEngine implements FatcatCadEngine {
   }
 
   screenToDrawing(x: number, y: number): DrawingPoint { return this.unproject(x, y); }
+
+  /**
+   * Run an output on white paper: the background white, white lines black, yellows orange (export/paperColors), then
+   * everything back as it was, so the screen does not change (用戶 2026-11-23：對位圖白底、黃改橘).
+   */
+  /** Colours of the drawing's materials as "#rrggbb" (debug hook). */
+  materialColors(): string[] {
+    const out: string[] = [];
+    const materials = (this.viewer as unknown as { materials?: { each(f: (e: { material: { uniforms?: { color?: { value?: unknown } } } }) => void): void } }).materials;
+    materials?.each((e) => { const c = e.material.uniforms?.color?.value; if (c instanceof Color) out.push("#" + c.getHex(LinearSRGBColorSpace).toString(16).padStart(6, "0")); });
+    return out;
+  }
+
+  async withPaperColors<T>(run: () => Promise<T>, mode: PaperMode = "color"): Promise<T> {
+    const renderer = this.viewer.GetRenderer();
+    const clear = new Color(), alpha = renderer.getClearAlpha();
+    renderer.getClearColor(clear);
+    // every colour in use: the material table and every object drawn — thick lines, clipped xrefs and hatch patterns
+    // draw with clones that carry their own copy (the frame of an xref stayed white and vanished on white paper)
+    const colors = new Set<Color>();
+    type WithColor = { uniforms?: { color?: { value?: unknown } } };
+    const take = (m: WithColor | undefined) => { const c = m?.uniforms?.color?.value; if (c instanceof Color) colors.add(c); };
+    (this.viewer as unknown as { materials?: { each(f: (e: { material: WithColor }) => void): void } }).materials?.each((e) => take(e.material));
+    this.viewer.GetScene().traverse((o: unknown) => { const m = (o as unknown as { material?: WithColor | WithColor[] }).material; if (Array.isArray(m)) m.forEach(take); else take(m); });
+    const saved: [Color, number][] = [];
+    for (const c of colors) {
+      const hex = c.getHex(LinearSRGBColorSpace), next = paperColor(hex, mode);
+      if (next !== hex) { saved.push([c, hex]); c.setHex(next, LinearSRGBColorSpace); }
+    }
+    renderer.setClearColor(PAPER_BACKGROUND, 1);
+    try {
+      return await run();
+    } finally {
+      for (const [c, hex] of saved) c.setHex(hex, LinearSRGBColorSpace);
+      renderer.setClearColor(clear, alpha);
+      this.render();
+    }
+  }
 
   async renderRegion(bounds: DrawingBounds, widthPx: number, heightPx: number): Promise<HTMLCanvasElement> {
     if (!this.ready || this.disposed) throw new Error("The drawing is not ready for output.");

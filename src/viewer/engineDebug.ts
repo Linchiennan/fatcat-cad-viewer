@@ -11,6 +11,8 @@ export type DebugSource = {
   sceneStats(): { meshes: number; verts: number };
   camera(): { center: { x: number; y: number }; width: number } | null;
   renderRegion?(bounds: { minX: number; minY: number; maxX: number; maxY: number }, widthPx: number, heightPx: number): Promise<HTMLCanvasElement>;
+  withPaperColors?<T>(run: () => Promise<T>, mode?: "color" | "mono"): Promise<T>;
+  materialColors?(): string[];
 };
 
 export type FatcatDebug = {
@@ -28,6 +30,10 @@ export type FatcatDebug = {
   entityBoxes(): Record<string, [number, number, number, number]> | null;
   /** hatches drawn as their boundary only because the pattern was too dense ("handle|pattern|scale") */
   denseHatches(): string[] | null;
+  /** every colour the drawing's materials use ("#rrggbb"), to check the white-paper output */
+  materialColors(): string[];
+  /** regionPng on white paper (白底、黃改橘), with the material colours while it was drawn */
+  paperPng(minX: number, minY: number, maxX: number, maxY: number, widthPx: number, heightPx: number, mode?: "color" | "mono"): Promise<{ png: string; colors: string[] } | null>;
   /** PNG data URL of a drawing region as the export draws it (image comparison with a ZWCAD plot of the same region). */
   regionPng(minX: number, minY: number, maxX: number, maxY: number, widthPx: number, heightPx: number): Promise<string | null>;
 };
@@ -63,6 +69,12 @@ export function makeDebugApi(): FatcatDebug {
     layers: () => ((current?.report() as { layers?: unknown[] } | null)?.layers) ?? null,
     entityBoxes: () => ((current?.report() as { entityBoxes?: Record<string, [number, number, number, number]> } | null)?.entityBoxes) ?? null,
     denseHatches: () => ((current?.report() as { denseHatches?: string[] } | null)?.denseHatches) ?? null,
+    materialColors: () => current?.materialColors?.() ?? [],
+    paperPng: async (minX, minY, maxX, maxY, widthPx, heightPx, mode = "color") => {
+      const e = current;
+      if (!e?.renderRegion || !e.withPaperColors) return null;
+      return e.withPaperColors(async () => ({ png: (await e.renderRegion!({ minX, minY, maxX, maxY }, widthPx, heightPx)).toDataURL("image/png"), colors: e.materialColors?.() ?? [] }), mode);
+    },
     regionPng: async (minX, minY, maxX, maxY, widthPx, heightPx) => {
       const e = current;
       if (!e?.renderRegion) return null;

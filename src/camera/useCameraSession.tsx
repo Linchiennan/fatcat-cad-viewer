@@ -85,7 +85,7 @@ export type CameraContext = {
   space: string;
   index: MeasurementIndex | null;
   /** the sheet as PDF with `paint` drawn on (photo points), and its width in drawing units */
-  exportSheet?(paint: Parameters<NonNullable<ExportCapable["exportWithOverlay"]>>[1]): Promise<{ blob: Blob; sheetWidth: number }>;
+  exportSheet?(paint: Parameters<NonNullable<ExportCapable["exportWithOverlay"]>>[1], mode: "color" | "mono"): Promise<{ blob: Blob; sheetWidth: number }>;
 };
 
 type View = "batches" | "settings" | "work" | "photos" | "export";
@@ -349,8 +349,11 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     const run = async (asZip: boolean) => {
       setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
       try {
-        const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet((c, project, ppu, scale, sheetWidth) => paintPhotoMarkers(c, points, labels, project, scale, markerUnitRadius(sheetWidth || indexWidth, markerScale) * ppu)).catch(() => null) : null;
-        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetWidth: sheet?.sheetWidth || indexWidth, parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
+        const paint: Parameters<NonNullable<CameraContext["exportSheet"]>>[0] = (c, project, ppu, scale, sheetWidth) => paintPhotoMarkers(c, points, labels, project, scale, markerUnitRadius(sheetWidth || indexWidth, markerScale) * ppu);
+        // 黑白 and 彩色 白底 對位圖, each when ticked (用戶 2026-11-23)
+        const mono = parts.sheetMono && ctx.exportSheet ? await ctx.exportSheet(paint, "mono").catch(() => null) : null;
+        const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet(paint, "color").catch(() => null) : null;
+        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetMonoPdf: mono?.blob ?? null, sheetWidth: mono?.sheetWidth || sheet?.sheetWidth || indexWidth, parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
         if (asZip) {
           const out = await exportBatch(input);
           await shareFile(out.blob, out.fileName, "application/zip");
@@ -368,8 +371,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <p className="camera-hint">{t("camera.exportWhat")}</p>
         {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
         <fieldset className="camera-parts">
-          {(["sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
-            <label key={k} className="camera-check"><input type="checkbox" checked={parts[k]} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
+          {(["sheetMono", "sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
+            <label key={k} className="camera-check" title={k === "sheetMono" || k === "sheetPdf" ? t(`camera.part.${k}.tip`) : undefined}><input type="checkbox" checked={parts[k]} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
           ))}
         </fieldset>
         {progress ? <p role="status">{t("camera.exporting", { done: progress.done, total: progress.total })}</p> : null}

@@ -22,6 +22,8 @@ export type ExportRequest = {
   sheet: string;
   /** dots per inch for a paper output; 200 when unset (the 工程相機 對位圖 asks for more, 用戶 2026-11-23) */
   dpi?: number;
+  /** on white paper (the 工程相機 對位圖, 用戶 2026-11-23): "color" white lines black and yellows orange, "mono" all black */
+  whitePaper?: "color" | "mono";
 };
 
 export type ExportResult = {
