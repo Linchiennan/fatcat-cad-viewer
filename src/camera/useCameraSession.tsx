@@ -118,6 +118,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [collapsed, setCollapsed] = useState(false);
   const [pull, setPull] = useState(0);
   const pullFrom = useRef<{ id: number; y: number; moved: boolean } | null>(null);
+  /** how far a hidden panel is pulled up before it opens */
+  const OPEN_PULL = 30;
   useEffect(() => { if (!open) { setCollapsed(false); setPull(0); } }, [open]);
   const grip = {
     onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); pullFrom.current = { id: e.pointerId, y: e.clientY, moved: false }; },
@@ -126,7 +128,10 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       if (!f || f.id !== e.pointerId) return;
       const dy = e.clientY - f.y;
       if (Math.abs(dy) > 6) f.moved = true;
-      setPull(collapsed ? Math.min(0, dy) : Math.max(0, dy));
+      // pulled up while hidden: open it at once and stop there — following the finger carried the empty strip up the
+      // whole screen (用戶 2026-11-23：「清單的橫桿拉動，動作錯誤，拉到最上會變空的」)
+      if (collapsed && dy < -OPEN_PULL) { setCollapsed(false); f.y = e.clientY; setPull(0); return; }
+      setPull(collapsed ? Math.max(-OPEN_PULL, Math.min(0, dy)) : Math.max(0, dy));
     },
     onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => {
       const f = pullFrom.current;
