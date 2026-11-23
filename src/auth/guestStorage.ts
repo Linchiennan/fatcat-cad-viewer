@@ -3,7 +3,6 @@
 // settings, and a closed tab leaves nothing behind. Picking the guest's own files is blocked here as well, behind the
 // hidden buttons, so no other path (a label, a drop) can bring one in.
 import * as fake from "fake-indexeddb";
-import { DEMO_FILES } from "./guestMode";
 
 /** Settings a guest keeps from this browser: the language and the interface style only. */
 const KEPT_SETTINGS = ["fatcat.locale", "fatcat-ui-style"];
@@ -39,18 +38,8 @@ export function installGuestStorage(): void {
   for (const type of ["dragover", "drop"]) window.addEventListener(type, (e) => { e.preventDefault(); e.stopPropagation(); }, true);
 }
 
-/** Put the demo drawings into the (empty, in-memory) library. A missing file is skipped, not fatal. */
+/** Put the demo drawings into the (empty, in-memory) library, in 最近開啟. A missing file is skipped, not fatal. */
 export async function seedDemoLibrary(): Promise<number> {
-  const { importDrawingToLibrary, ROOT_ID } = await import("../library/drawingLibrary");
-  let n = 0;
-  for (const name of [...DEMO_FILES].reverse()) { // the plan last, so it heads 最近開啟
-    try {
-      const res = await fetch(`./demo/${encodeURIComponent(name)}`);
-      if (!res.ok) continue;
-      const blob = await res.blob();
-      await importDrawingToLibrary(new File([blob], name, { type: blob.type, lastModified: Date.UTC(2026, 9, 29) }), ROOT_ID);
-      n++;
-    } catch { /* the guest still gets the other demos */ }
-  }
-  return n;
+  const { seedDemoDrawings } = await import("../library/demoSeed");
+  return seedDemoDrawings(true);
 }

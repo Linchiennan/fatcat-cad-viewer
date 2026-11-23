@@ -28,6 +28,9 @@ export type LibraryDrawingEntry = EntryBase & {
   originalSourcePath?: string;
   /** 0 = never opened (not in the recent list). */
   lastOpenedAt: number;
+  /** A demo drawing shipped with the app: kept in every library and never deleted or replaced (用戶 2026-11-23：「有登入的
+   * 正式版，依樣保留範例，而且不讓客戶刪除」). */
+  demo?: true;
 };
 export type LibraryEntry = LibraryFolderEntry | LibraryDrawingEntry;
 
@@ -325,8 +328,8 @@ export async function importDrawingWithDecision(file: File, parentId: string, de
   return { status: "saved", entry: await importDrawingToLibrary(frozen, parentId, guard) };
 }
 
-/** Add a file (name de-duplicated as "name (2).ext"); lastOpenedAt = now. */
-export async function importDrawingToLibrary(file: File, parentId: string = ROOT_ID, guard?: ImportGuard): Promise<LibraryDrawingEntry> {
+/** Add a file (name de-duplicated as "name (2).ext"); lastOpenedAt = now. `demo` marks a shipped demo drawing, dated `at`. */
+export async function importDrawingToLibrary(file: File, parentId: string = ROOT_ID, guard?: ImportGuard, demo?: { at: number; opened: boolean }): Promise<LibraryDrawingEntry> {
   if (!isValidLibraryName(file.name)) throw fail("INVALID_NAME", "invalid name");
   const format = checkIncomingFile(file);
   const mimeType = file.type || "application/octet-stream";
@@ -334,12 +337,12 @@ export async function importDrawingToLibrary(file: File, parentId: string = ROOT
   return transact("readwrite", ["entries", "contents"], async (tx) => {
     await assertFolder(tx, parentId);
     if (guard) await assertImportGuard(tx, guard);
-    const now = Date.now();
+    const now = Date.now(), at = demo ? demo.at : now;
     const entry: LibraryDrawingEntry = {
       id: newId(), kind: "drawing", parentId, name: uniqueLibraryName(file.name, await takenNames(tx, parentId), true),
-      createdAt: now, updatedAt: now, format, mimeType, size: file.size,
-      lastModified: sourceDate(file.lastModified), lastOpenedAt: now, contentRevision: newId(),
-      originalSourcePath: fileSource(file).path,
+      createdAt: at, updatedAt: at, format, mimeType, size: file.size,
+      lastModified: sourceDate(file.lastModified), lastOpenedAt: demo && !demo.opened ? 0 : now, contentRevision: newId(),
+      originalSourcePath: fileSource(file).path, ...(demo ? { demo: true as const } : {}),
     };
     await req(entriesOf(tx).add(entry));
     await req(contentsOf(tx).add({ id: entry.id, blob } satisfies ContentRecord));
@@ -498,12 +501,17 @@ export async function copyLibraryEntry(id: string, destinationId: string): Promi
   });
 }
 
-/** Delete an entry and its whole subtree. */
+/** A shipped demo drawing (never deleted or replaced). */
+export const isDemoEntry = (e: LibraryEntry): boolean => e.kind === "drawing" && e.demo === true;
+
+/** Delete an entry and its whole subtree; a demo drawing, or a folder holding one, is refused (PROTECTED). */
 export async function deleteLibraryEntry(id: string): Promise<void> {
   await transact("readwrite", ["entries", "contents"], async (tx) => {
     const entry = await getEntry(tx, id);
     if (!entry) throw fail("NOT_FOUND", "no such entry");
-    for (const e of await subtree(tx, entry)) {
+    const tree = await subtree(tx, entry);
+    if (tree.some(isDemoEntry)) throw fail("PROTECTED", "demo drawing");
+    for (const e of tree) {
       await req(entriesOf(tx).delete(e.id));
       if (e.kind === "drawing") await req(contentsOf(tx).delete(e.id));
     }
@@ -533,6 +541,7 @@ export async function replaceLibraryDrawing(id: string, file: File, guard?: Impo
       if (guard) await assertImportGuard(tx, guard);
       const entry = await getEntry(tx, id);
       if (!entry || entry.kind !== "drawing") throw fail("NOT_FOUND", "no such drawing");
+      if (isDemoEntry(entry)) throw fail("PROTECTED", "demo drawing");
       if ((isArchiveFormat(entry.format) && !guard) || entry.format !== format) throw fail("INVALID_FILE", "format differs");
       const now = Date.now();
       const next: LibraryDrawingEntry = {

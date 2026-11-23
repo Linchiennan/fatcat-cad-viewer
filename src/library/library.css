@@ -419,3 +419,6 @@
 /* 上限 · 共幾個 · 已用空間 on one row, wrapping on a narrow phone (用戶 2026-10-29). */
 .lib-exports-stats { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; }
 .lib-exports-stats .is-missing { color: var(--lib-danger); }
+
+/* demo drawings, kept and not deletable (用戶 2026-11-23) */
+.lib-demo-tag { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 6px; background: var(--accent, #ffb347); color: #1b1b1b; font-style: normal; font-weight: 700; font-size: 0.75em; line-height: 1.5; }

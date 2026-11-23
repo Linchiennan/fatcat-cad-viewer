@@ -4,6 +4,8 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNod
 import { clampTextPx, loadTextPx, saveTextPx } from "../viewer/markup";
 import { Capacitor } from "@capacitor/core";
 import { phonePreview, PREVIEW_CHANGE } from './devicePreview';
+import { IS_WEB_BUILD } from "./platform";
+import { IS_GUEST } from "../auth/guestMode";
 import { MODEL_SPACE, type CadSpace, type EngineReport, type LoadStage } from "../types/drawing";
 import { AppError, type AppErrorCode } from "../types/errors";
 import type { DrawingCanvasHandle, MeasurePick, MeasurePreview, ViewerHandle } from "../types/engine";
@@ -609,7 +611,11 @@ export function App() {
   }, []);
 
   // ---- start-up: old library, Android back key and incoming files (T10 3.1-3) ---------------------------------
-  useEffect(() => { void migrateLegacyLibrary().catch(() => {}); }, []);
+  // the signed-in web version keeps the demo drawings too (用戶 2026-11-23); the seeding runs the old-library move first
+  useEffect(() => {
+    if (IS_WEB_BUILD && !IS_GUEST) void import("../library/demoSeed").then((m) => m.seedDemoDrawings()).catch(() => {});
+    else void migrateLegacyLibrary().catch(() => {});
+  }, []);
   // The exports list shares / opens through group E's hand-off.
   useEffect(() => {
     setExportFileActions({

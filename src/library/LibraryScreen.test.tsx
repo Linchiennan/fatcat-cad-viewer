@@ -39,7 +39,7 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     return { host, root, onClose, onOpen, lib, view, settle };
   }
 
-  it("shows the empty folder, then items with folders first, and recent cards at the root", async () => {
+  it("shows the empty folder, then items newest first, and recent cards at the root", async () => {
     const m = await mount();
     expect(m.host.textContent).toContain("這個資料夾是空的");
     await m.lib.createLibraryFolder("root", "Floor");
@@ -47,8 +47,9 @@ describe.skipIf(!hasDom)("LibraryScreen (needs jsdom)", () => {
     m.root.unmount();
     const n = await mount();
     const rows = Array.from(n.host.querySelectorAll(".lib-row")).map((r) => r.textContent ?? "");
-    expect(rows[0]).toContain("Floor");
-    expect(rows[1]).toContain("DWG");
+    // 最新優先 by default: the drawing added last is on top (用戶 2026-11-23)
+    expect(rows[0]).toContain("DWG");
+    expect(rows[1]).toContain("Floor");
     expect(n.host.querySelectorAll(".recent-card")).toHaveLength(1);
   });
 

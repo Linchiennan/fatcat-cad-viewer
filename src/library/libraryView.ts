@@ -7,13 +7,15 @@ import type { LibraryEntry } from "./drawingLibrary";
 
 export type LibrarySort = "name" | "newest" | "largest";
 
-/** Folders first; then name (natural, case-insensitive), newest updatedAt, or largest size (T11 3.6-2, 待決 B-15). */
+/** Folders first, then name (natural, case-insensitive) or largest size (T11 3.6-2, 待決 B-15). 最新優先 puts the newest
+ * of everything at the top, folders and drawings together, so a file just added is first (用戶 2026-11-23：「當客戶新建檔案，
+ * 新的自動排序在最上方」). */
 export function sortLibraryEntries(entries: readonly LibraryEntry[], sort: LibrarySort, locale: Locale): LibraryEntry[] {
   const collator = new Intl.Collator(locale, { numeric: true, sensitivity: "base" });
   const byName = (a: LibraryEntry, b: LibraryEntry) => collator.compare(a.name, b.name);
   return [...entries].sort((a, b) => {
-    if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
     if (sort === "newest") return b.updatedAt - a.updatedAt || byName(a, b);
+    if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
     if (sort === "largest" && a.kind === "drawing" && b.kind === "drawing") return b.size - a.size || byName(a, b);
     return byName(a, b);
   });
@@ -72,6 +74,7 @@ export function libraryErrorMessage(error: unknown): LibraryMessage {
     case "FILE_TOO_LARGE": return tooLargeLimit(error) === MAX_ARCHIVE_BYTES ? { own: "archiveTooLarge" } : { key: "library.err.tooLarge" };
     case "UNAVAILABLE": return { key: "library.err.unavailable" };
     case "NOT_FOUND": return { key: "library.err.notFound" };
+    case "PROTECTED": return { key: "library.err.protected" };
     case "ARCHIVE_ENCRYPTED": return { key: "archive.err.encrypted" };
     case "ARCHIVE_LIMIT": return { key: "archive.err.limit" };
     case "ARCHIVE_INVALID_PATH": return { key: "archive.err.invalidPath" };

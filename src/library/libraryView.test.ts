@@ -14,9 +14,9 @@ const drawing = (name: string, size: number, updatedAt = 0): LibraryEntry => ({
 
 describe("sorting and search (T11 3.6-3.7)", () => {
   const list = [drawing("b10.dwg", 5, 3), folder("Z", 1), drawing("B2.dwg", 50, 1), folder("a", 9), drawing("c.dwg", 50, 2)];
-  it("always lists folders first", () => {
+  it("lists folders first by name or size; newest first mixes them, newest on top (用戶 2026-11-23)", () => {
     expect(sortLibraryEntries(list, "name", "zh-TW").map((e) => e.name)).toEqual(["a", "Z", "B2.dwg", "b10.dwg", "c.dwg"]);
-    expect(sortLibraryEntries(list, "newest", "en").map((e) => e.name)).toEqual(["a", "Z", "b10.dwg", "c.dwg", "B2.dwg"]);
+    expect(sortLibraryEntries(list, "newest", "en").map((e) => e.name)).toEqual(["a", "b10.dwg", "c.dwg", "B2.dwg", "Z"]);
     expect(sortLibraryEntries(list, "largest", "en").map((e) => e.name)).toEqual(["a", "Z", "B2.dwg", "c.dwg", "b10.dwg"]);
   });
   it("matches full-width and half-width letters alike", () => {

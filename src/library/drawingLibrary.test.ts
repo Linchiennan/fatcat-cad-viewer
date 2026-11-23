@@ -60,6 +60,23 @@ describe("names (T11 3.2)", () => {
   });
 });
 
+describe("demo drawings (用戶 2026-11-23：保留範例、不讓客戶刪除)", () => {
+  it("keeps a demo drawing: no delete, no replace, no deleting the folder holding it", async () => {
+    const demo = await lib.importDrawingToLibrary(file("示範-住宅平面.dwg"), "root", undefined, { at: 1000, opened: false });
+    expect(demo.demo).toBe(true);
+    expect([demo.createdAt, demo.updatedAt, demo.lastOpenedAt]).toEqual([1000, 1000, 0]);
+    expect(await code(lib.deleteLibraryEntry(demo.id))).toBe("PROTECTED");
+    expect(await code(lib.replaceLibraryDrawing(demo.id, file("x.dwg", "other")))).toBe("PROTECTED");
+    const folder = await lib.createLibraryFolder("root", "F");
+    await lib.moveLibraryEntry(demo.id, folder.id);
+    expect(await code(lib.deleteLibraryEntry(folder.id))).toBe("PROTECTED");
+    expect(await names(folder.id)).toEqual(["示範-住宅平面.dwg"]);
+    const own = await lib.importDrawingToLibrary(file("示範-我的.dwg"));
+    expect(own.demo).toBeUndefined();
+    expect(await code(lib.deleteLibraryEntry(own.id))).toBe("ok");
+  });
+});
+
 describe("adding drawings (T11 3.3)", () => {
   it("keeps same-name imports apart with their own contents", async () => {
     const a = await lib.importDrawingToLibrary(file("plan.dwg", "AAAA"));

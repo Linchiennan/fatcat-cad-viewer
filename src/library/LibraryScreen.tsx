@@ -72,7 +72,8 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
   const [popup, setPopup] = useState<Overlay>(null);
   const [searchText, setSearchText] = useState("");
   const [notice, setNotice] = useState<Toast | null>(null);
-  const [sortMode, setSortMode] = useState<LibrarySort>("name");
+  // newest first by default: a file just added shows at the top (用戶 2026-11-23)
+  const [sortMode, setSortMode] = useState<LibrarySort>("newest");
   const [archive, setArchive] = useState<ArchiveState | null>(null);
   const [reload, setReload] = useState(0);
   // Hold a row to select several and delete them together, as 歷史輸出 does (用戶 2026-10-27：長按出現全選刪除).
@@ -574,7 +575,7 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
                     <span className="lib-row-icon">{entry.kind === "folder" ? <FolderIcon /> : <FileIcon />}</span>
                     <span className="lib-row-text">
                       <MarqueeText text={entry.name} />
-                      <small>{describe(entry)}</small>
+                      <small>{entry.kind === "drawing" && entry.demo ? <em className="lib-demo-tag">{t("library.demoTag")}</em> : null}{describe(entry)}</small>
                     </span>
                     {entry.kind === "folder" ? <ChevronRightIcon className="lib-row-chevron" /> : null}
                   </button>
@@ -684,9 +685,11 @@ export function LibraryScreen({ onOpen, onClose, incomingArchive, onArchiveTaken
                   const ids = deleteIds;
                   setDeleteIds(null);
                   void runBusy(async () => {
-                    try { for (const id of ids) await deleteLibraryEntry(id); }
+                    // demo drawings (and folders holding one) stay; the rest go
+                    let kept = 0;
+                    try { for (const id of ids) { try { await deleteLibraryEntry(id); } catch (e) { if ((e as { code?: string }).code === "PROTECTED") kept++; else throw e; } } }
                     finally { exitSelection(); refresh(); }
-                    setNotice({ text: t("library.toast.deletedN", { N: ids.length }), error: false });
+                    setNotice({ text: kept ? t("library.toast.deletedKept", { N: ids.length - kept, M: kept }) : t("library.toast.deletedN", { N: ids.length }), error: false });
                   });
                 }}
               >
@@ -767,11 +770,13 @@ function ActionSheet({ entry, onCancel, onReplace, onPick }: {
   entry: LibraryEntry; onCancel(): void; onReplace?(): void; onPick(kind: "rename" | "delete"): void;
 }) {
   const { t } = useI18n();
-  const canReplace = !!onReplace && entry.kind === "drawing" && !isArchiveFormat(entry.format);
+  // a demo drawing cannot be deleted or replaced (用戶 2026-11-23)
+  const demo = entry.kind === "drawing" && entry.demo === true;
+  const canReplace = !demo && !!onReplace && entry.kind === "drawing" && !isArchiveFormat(entry.format);
   // 複製／移動 removed (user request): a drawing sheet only renames or deletes.
   const tiles: { kind: "rename" | "delete"; icon: ReactNode; label: string }[] = [
     { kind: "rename", icon: <RenameIcon />, label: t("action.rename") },
-    { kind: "delete", icon: <TrashIcon />, label: t("action.delete") },
+    ...(demo ? [] : [{ kind: "delete" as const, icon: <TrashIcon />, label: t("action.delete") }]),
   ];
   return (
     <Dialog className="lib-sheet" label={entry.name} onCancel={onCancel}>

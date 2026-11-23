@@ -37,6 +37,9 @@ export const OWN_STRINGS = {
   },
   // 圖面庫多選刪除：同歷史輸出的選擇列字樣（用戶 2026-10-27：用一樣模式）
   "library.select": { zh: "選取", en: "Select" },
+  "library.err.protected": { zh: "示範圖不能刪除或取代", en: "Demo drawings cannot be deleted or replaced" },
+  "library.demoTag": { zh: "示範", en: "Demo" },
+  "library.toast.deletedKept": { zh: "已刪除 {N} 項；示範圖不能刪除，保留 {M} 項", en: "{N} deleted; {M} demo item(s) kept (demos cannot be deleted)" },
   "library.selection": { zh: "圖面選擇", en: "Drawing selection" },
   "library.selectedCount": { zh: "已選 {N} 項", en: "{N} selected" },
   "library.selectAll": { zh: "全部選擇", en: "Select all" },

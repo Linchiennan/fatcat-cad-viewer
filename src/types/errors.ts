@@ -40,7 +40,7 @@ export class AppError extends Error {
 /** Drawing library errors (T11 5.1) and archive errors (T12 3.8.2). */
 export type LibraryErrorCode =
   | "INVALID_NAME" | "DUPLICATE_NAME" | "INVALID_DESTINATION" | "STORAGE_FULL" | "INVALID_FILE" | "FILE_TOO_LARGE"
-  | "UNAVAILABLE" | "NOT_FOUND" | "UNKNOWN"
+  | "UNAVAILABLE" | "NOT_FOUND" | "UNKNOWN" | "PROTECTED"
   | "ARCHIVE_ENCRYPTED" | "ARCHIVE_LIMIT" | "ARCHIVE_INVALID_PATH" | "ARCHIVE_UNREADABLE";
 
 export class LibraryError extends Error {
