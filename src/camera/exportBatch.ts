@@ -18,9 +18,9 @@ import { boardTitle } from "./whiteboard";
 import { canvasHeader, linkSheetToPhotos, type PhotoPage, type SheetMark } from "./sheetLinks";
 
 /** What goes into the ZIP (用戶 2026-11-22：匯出的資料要能勾選). */
-export type ExportParts = { sheetMono: boolean; sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
+export type ExportParts = { sheetMono: boolean; sheetPdf: boolean; sheetLinks: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
 // all ticked by default (用戶 2026-11-23：對位圖黑白為預設；「右邊這幾樣預設打勾」= 彩色對位圖、LISP、原圖、保存卡 PDF)
-export const ALL_PARTS: ExportParts = { sheetMono: true, sheetPdf: true, markerDxf: true, photos: true, originals: true, cardDocx: true, cardPdf: true, arrowLisp: true };
+export const ALL_PARTS: ExportParts = { sheetMono: true, sheetPdf: true, sheetLinks: true, markerDxf: true, photos: true, originals: true, cardDocx: true, cardPdf: true, arrowLisp: true };
 
 export type ExportInput = {
   batch: CameraBatch;
@@ -96,7 +96,8 @@ async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base
   const files: Zippable = {};
   const composed = new Map<string, Blob>(), bytes = new Map<string, Uint8Array>();
   const { parts } = input;
-  const linking = (parts.sheetMono || parts.sheetPdf) && !!input.sheetMarks?.length;
+  // ticked by default; untick for the one-page sheet (用戶 2026-11-24：「加勾選項」)
+  const linking = parts.sheetLinks && (parts.sheetMono || parts.sheetPdf) && !!input.sheetMarks?.length;
   const needComposed = parts.photos || parts.cardDocx || parts.cardPdf || linking;
   const total = placed.length + 2;
   for (let i = 0; i < placed.length; i++) {

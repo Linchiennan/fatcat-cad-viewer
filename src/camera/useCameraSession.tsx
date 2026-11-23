@@ -469,8 +469,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
         <fieldset className="camera-parts">
           {/* a PDF base has no CAD coordinates to line the DXF / LISP up with (用戶 2026-11-23 選 B) */}
-          {(["sheetMono", "sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).filter((k) => !(ctx.pdf && (k === "markerDxf" || k === "arrowLisp"))).map((k) => (
-            <label key={k} className="camera-check" title={k === "sheetMono" || k === "sheetPdf" ? t(`camera.part.${k}.tip`) : undefined}><input type="checkbox" checked={parts[k]} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
+          {(["sheetMono", "sheetPdf", "sheetLinks", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).filter((k) => !(ctx.pdf && (k === "markerDxf" || k === "arrowLisp"))).map((k) => (
+            <label key={k} className={k === "sheetLinks" ? "camera-check camera-check-sub" + (parts.sheetMono || parts.sheetPdf ? "" : " off") : "camera-check"} title={k === "sheetMono" || k === "sheetPdf" || k === "sheetLinks" ? t(`camera.part.${k}.tip`) : undefined}><input type="checkbox" checked={parts[k]} disabled={k === "sheetLinks" && !(parts.sheetMono || parts.sheetPdf)} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
           ))}
         </fieldset>
         {progress ? <p role="status">{t("camera.exporting", { done: progress.done, total: progress.total })}</p> : null}

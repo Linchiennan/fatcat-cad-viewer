@@ -376,3 +376,17 @@ form.camera-row input[type="number"] { flex: 1 1 auto; width: auto; min-width: 0
   .camera-sheet.working button.camera-place { min-height: 32px; }
   .camera-sheet.working .camera-sel button { min-height: 36px; font-size: 0.72rem; }
 }
+
+/* 對位圖附照片: a sub-choice of the two sheet PDFs above it, indented under them with a line, a size smaller; grey when
+   neither sheet is ticked (用戶 2026-11-24：「加勾選項」「排版要美化」) */
+.camera-parts .camera-check-sub { grid-column: 1 / -1; position: relative; margin: -2px 0 4px 15px; padding-left: 22px; min-height: 34px; font-size: 0.82rem; color: var(--accent-hi); }
+/* one bracket under both 黑白 and 彩色 (用戶 2026-11-24：「那彩色的呢?」): from the middle of the left box to the middle of the right
+   box, joined in the middle and down to this row */
+.camera-parts .camera-check-sub { padding-top: 14px; margin-left: 0; padding-left: calc(25% + 4.5px); justify-content: flex-start; }
+.camera-parts .camera-check-sub::before { content: ""; position: absolute; left: 15px; right: calc(50% - 22px); top: -4px; height: 10px; border: 2px solid var(--accent-hi); border-top: 0; border-radius: 0 0 6px 6px; opacity: 0.8; }
+.camera-parts .camera-check-sub::after { content: ""; position: absolute; left: calc(25% + 17.5px); top: 6px; height: 8px; border-left: 2px solid var(--accent-hi); opacity: 0.8; }
+.camera-parts .camera-check-sub.off::after { border-color: var(--muted); }
+.camera-parts .camera-check-sub input { width: 20px; height: 20px; }
+.camera-parts .camera-check-sub.off { color: var(--muted); opacity: 0.55; }
+.camera-parts .camera-check-sub.off::before { border-color: var(--muted); }
+.camera-sheet .camera-parts .camera-check.camera-check-sub { font-size: 0.78rem; }

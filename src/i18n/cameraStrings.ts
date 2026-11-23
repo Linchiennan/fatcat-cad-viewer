@@ -144,6 +144,8 @@ export const CAMERA_STRINGS = {
   "camera.part.sheetPdf": { zh: "對位圖 PDF（彩色）", en: "Sheet PDF (colour)" },
   "camera.part.sheetMono.tip": { zh: "白底，圖面全黑、只有照片箭頭保留原色", en: "White paper, the drawing in black, only the photo arrows in colour" },
   "camera.part.sheetPdf.tip": { zh: "白底，圖面彩色（白線變黑、黃色變橘）", en: "White paper, the drawing in colour (white lines black, yellow orange)" },
+  "camera.part.sheetLinks": { zh: "兩份對位圖都附照片（點箭頭看照片）", en: "Photos in both sheet PDFs (tap an arrow)" },
+  "camera.part.sheetLinks.tip": { zh: "對位圖後面加上每張照片，點圖上的箭頭跳到那張照片；不勾就只有一頁對位圖", en: "Adds each photo after the sheet; tapping an arrow opens its photo. Untick for the one-page sheet" },
   "camera.part.markerDxf": { zh: "對位標記 DXF", en: "Marker DXF" },
   "camera.part.arrowLisp": { zh: "對位箭頭圖塊 LISP", en: "Arrow block LISP" },
   "camera.part.photos": { zh: "照片（含白板）", en: "Photos (with board)" },
