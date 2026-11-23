@@ -9,7 +9,7 @@ import {
   addPhoto, addPoint, createBatch, deleteBatch, deletePhoto, deletePoint, listBatches, listPhotos, listPoints, listSigners,
   renumberPoint, updateBatch, updatePhoto, updatePoint, type NewBatch,
 } from "./batchStore";
-import { batchName, markerText, photoLabels, plainLabel, rocDate } from "./numbering";
+import { batchName, cardNo, markerText, MAX_POINTS, photoLabels, plainLabel, rocDate } from "./numbering";
 import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
@@ -174,7 +174,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const done = useMemo(() => new Set(photos.flatMap((p) => (p.pointId ? [p.pointId] : []))), [photos]);
   const selected = points.find((p) => p.id === selectedId) ?? null;
   /** number the next photo of a point will get, as on the card (01, 01-2 …) */
-  const nextLabel = (p: ShotPoint) => { const n = photos.filter((x) => x.pointId === p.id).length; const no = String(p.no).padStart(2, "0"); return n ? `${no}-${n + 1}` : no; };
+  const nextLabel = (p: ShotPoint) => { const n = photos.filter((x) => x.pointId === p.id).length; const no = cardNo(p.no); return n ? `${no}-${n + 1}` : no; };
   const unplaced = photos.filter((p) => !p.pointId).length;
 
   const openBatch = async (b: CameraBatch) => {
@@ -235,6 +235,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const markers = open && batch ? {
     points, labels, selectedId, placing, scale: markerScale, done,
     onAdd: async (at: { x: number; y: number }) => {
+      // 001–999 in a batch; beyond that a new batch (用戶 2026-11-23)
+      if (points.length >= MAX_POINTS) { setPlacing(false); setMessage(t("camera.batchFull", { N: MAX_POINTS })); return; }
       try {
         const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts) });
         setPoints((list) => [...list, p]); setSelectedId(p.id); // placing stays on: tap after tap (用戶 2026-11-22：放點要能連續放)

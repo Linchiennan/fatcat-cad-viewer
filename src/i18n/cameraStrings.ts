@@ -42,6 +42,7 @@ export const CAMERA_STRINGS = {
   "camera.homeUnnamed": { zh: "（未命名批次）", en: "(unnamed batch)" },
   "camera.homeMissing": { zh: "找不到這個批次的圖「{name}」，請先在我的圖面加回這張圖", en: "The drawing {name} of this batch is not in My drawings any more" },
   "camera.homeButton": { zh: "工程相機", en: "Site camera" },
+  "camera.batchFull": { zh: "這個批次已有 {N} 個定點（001–{N}），請新增批次", en: "This batch has {N} spots (001–{N}); start a new batch" },
   "camera.spotNo": { zh: "位置 {no}", en: "Spot {no}" },
   "camera.placeEditTip": { zh: "點一下修改位置名稱", en: "Tap to rename the place" },
   "camera.placeEditLabel": { zh: "位置名稱", en: "Place name" },

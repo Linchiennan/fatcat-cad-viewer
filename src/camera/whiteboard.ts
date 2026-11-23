@@ -52,51 +52,71 @@ export function drawSignature(ctx: CanvasRenderingContext2D, signer: Signer, x: 
  * Fills the white surface and returns the frame width in pixels.
  */
 function aluminiumFrame(ctx: CanvasRenderingContext2D, r: { x: number; y: number; w: number; h: number }): number {
-  const f = Math.max(3, r.w * 0.035), { x, y, w, h } = r;
+  // 用戶 2026-11-23：「鋁框要寫實的，邊框再瘦1/3」— 2.3 % of the board width (was 3.5 %), a rounded anodised profile
+  const f = Math.max(2, r.w * 0.0233), { x, y, w, h } = r;
   ctx.save();
-  // soft shadow under the whole board
-  ctx.shadowColor = "rgba(0, 0, 0, 0.35)"; ctx.shadowBlur = f * 1.6; ctx.shadowOffsetX = f * 0.25; ctx.shadowOffsetY = f * 0.5;
-  ctx.fillStyle = "#a9aeb3"; ctx.fillRect(x, y, w, h);
+  // soft shadow of the whole board on the photo
+  ctx.shadowColor = "rgba(0, 0, 0, 0.32)"; ctx.shadowBlur = f * 2.2; ctx.shadowOffsetX = f * 0.35; ctx.shadowOffsetY = f * 0.7;
+  ctx.fillStyle = "#9aa1a7"; ctx.fillRect(x, y, w, h);
   ctx.restore();
   ctx.save();
-  // white surface
+  // white surface, with the frame's shadow falling on it along the top and left
   ctx.fillStyle = "#fbfbf8"; ctx.fillRect(x + f, y + f, w - f * 2, h - f * 2);
-  const bar = (pts: [number, number][], from: [number, number], to: [number, number], stops: [number, string][]) => {
-    const g = ctx.createLinearGradient(from[0], from[1], to[0], to[1]);
-    for (const [o, c] of stops) g.addColorStop(o, c);
-    ctx.fillStyle = g;
+  const lip = f * 0.9;
+  let g = ctx.createLinearGradient(0, y + f, 0, y + f + lip);
+  g.addColorStop(0, "rgba(0, 0, 0, 0.16)"); g.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = g; ctx.fillRect(x + f, y + f, w - f * 2, lip);
+  g = ctx.createLinearGradient(x + f, 0, x + f + lip, 0);
+  g.addColorStop(0, "rgba(0, 0, 0, 0.12)"); g.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = g; ctx.fillRect(x + f, y + f, lip, h - f * 2);
+  // a rounded profile across the bar, outer edge → inner lip: dark rim, narrow highlight, satin face, darker lip.
+  // The lit sides (top, left) are brighter than the shaded ones (bottom, right).
+  const profile = (lit: boolean): [number, string][] => lit
+    ? [[0, "#7c838a"], [0.12, "#c9ced3"], [0.26, "#fbfcfd"], [0.4, "#e3e7ea"], [0.72, "#c3c9ce"], [0.9, "#9ba2a8"], [1, "#6c737a"]]
+    : [[0, "#5f666d"], [0.12, "#9fa6ac"], [0.26, "#d5dade"], [0.4, "#b9bfc4"], [0.72, "#9da4aa"], [0.9, "#7f868c"], [1, "#565d64"]];
+  const bar = (pts: [number, number][], from: [number, number], to: [number, number], lit: boolean) => {
+    const gr = ctx.createLinearGradient(from[0], from[1], to[0], to[1]);
+    for (const [o, c] of profile(lit)) gr.addColorStop(o, c);
+    ctx.fillStyle = gr;
     ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fill();
   };
-  const lit: [number, string][] = [[0, "#f4f6f8"], [0.45, "#d3d8dc"], [1, "#a3a9ae"]];
-  const shade: [number, string][] = [[0, "#c5cace"], [0.5, "#9ea4a9"], [1, "#7d8388"]];
-  bar([[x, y], [x + w, y], [x + w - f, y + f], [x + f, y + f]], [0, y], [0, y + f], lit);                 // top
-  bar([[x, y], [x + f, y + f], [x + f, y + h - f], [x, y + h]], [x, 0], [x + f, 0], lit);                 // left
-  bar([[x, y + h], [x + f, y + h - f], [x + w - f, y + h - f], [x + w, y + h]], [0, y + h - f], [0, y + h], shade.slice().reverse() as [number, string][]); // bottom
-  bar([[x + w, y], [x + w, y + h], [x + w - f, y + h - f], [x + w - f, y + f]], [x + w - f, 0], [x + w, 0], shade.slice().reverse() as [number, string][]); // right
-  // brushed grain along the bars
-  ctx.globalAlpha = 0.18; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(0.5, f * 0.05);
-  for (let k = 1; k < 4; k++) {
-    const o = (f * k) / 4;
+  bar([[x, y], [x + w, y], [x + w - f, y + f], [x + f, y + f]], [0, y], [0, y + f], true);                     // top: outer → inner
+  bar([[x, y], [x + f, y + f], [x + f, y + h - f], [x, y + h]], [x, 0], [x + f, 0], true);                     // left
+  bar([[x, y + h], [x + f, y + h - f], [x + w - f, y + h - f], [x + w, y + h]], [0, y + h], [0, y + h - f], false); // bottom
+  bar([[x + w, y], [x + w, y + h], [x + w - f, y + h - f], [x + w - f, y + f]], [x + w, 0], [x + w - f, 0], false); // right
+  // brushed grain: fine, uneven streaks along each bar (seeded, the same on every photo)
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  ctx.lineWidth = Math.max(0.4, f * 0.035);
+  for (let k = 0; k < 14; k++) {
+    const o = f * (0.15 + rnd() * 0.7), a = 0.05 + rnd() * 0.1, light = rnd() > 0.4;
+    ctx.strokeStyle = light ? `rgba(255, 255, 255, ${a})` : `rgba(40, 45, 50, ${a})`;
+    const s0 = rnd() * 0.3, s1 = 0.7 + rnd() * 0.3;
     ctx.beginPath();
-    ctx.moveTo(x + o, y + o); ctx.lineTo(x + w - o, y + o);
-    ctx.moveTo(x + o, y + o); ctx.lineTo(x + o, y + h - o);
+    ctx.moveTo(x + w * s0, y + o); ctx.lineTo(x + w * s1, y + o);                 // top
+    ctx.moveTo(x + w * s0, y + h - o); ctx.lineTo(x + w * s1, y + h - o);         // bottom
+    ctx.moveTo(x + o, y + h * s0); ctx.lineTo(x + o, y + h * s1);                 // left
+    ctx.moveTo(x + w - o, y + h * s0); ctx.lineTo(x + w - o, y + h * s1);         // right
     ctx.stroke();
   }
-  ctx.globalAlpha = 1;
-  // edges: a dark outline outside, a thin shadow where the frame meets the surface
-  ctx.strokeStyle = "rgba(40, 44, 48, 0.85)"; ctx.lineWidth = Math.max(1, f * 0.08);
+  // mitred joints at the corners
+  ctx.strokeStyle = "rgba(30, 34, 38, 0.55)"; ctx.lineWidth = Math.max(0.5, f * 0.06);
+  ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x + f, y + f); ctx.moveTo(x + w, y); ctx.lineTo(x + w - f, y + f);
+  ctx.moveTo(x, y + h); ctx.lineTo(x + f, y + h - f); ctx.moveTo(x + w, y + h); ctx.lineTo(x + w - f, y + h - f);
+  ctx.stroke();
+  // crisp outer edge
+  ctx.strokeStyle = "rgba(35, 39, 43, 0.8)"; ctx.lineWidth = Math.max(0.6, f * 0.07);
   ctx.strokeRect(x + ctx.lineWidth / 2, y + ctx.lineWidth / 2, w - ctx.lineWidth, h - ctx.lineWidth);
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.28)"; ctx.lineWidth = Math.max(1, f * 0.12);
-  ctx.strokeRect(x + f, y + f, w - f * 2, h - f * 2);
-  // grey plastic corner caps
-  const cap = f * 1.5;
+  // small dark-grey plastic corner caps, a touch of shine on the lit corner
+  const cap = f * 1.3;
   for (const [cx, cy] of [[x, y], [x + w - cap, y], [x, y + h - cap], [x + w - cap, y + h - cap]] as [number, number][]) {
-    const g = ctx.createLinearGradient(cx, cy, cx + cap, cy + cap);
-    g.addColorStop(0, "#8b9096"); g.addColorStop(1, "#4f5459");
-    ctx.fillStyle = g;
+    const cg = ctx.createRadialGradient(cx + cap * 0.35, cy + cap * 0.3, cap * 0.05, cx + cap / 2, cy + cap / 2, cap * 0.75);
+    cg.addColorStop(0, "#6e747a"); cg.addColorStop(0.6, "#3f4449"); cg.addColorStop(1, "#2a2e32");
+    ctx.fillStyle = cg;
     ctx.beginPath();
     const round = (ctx as { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void }).roundRect;
-    if (typeof round === "function") round.call(ctx, cx, cy, cap, cap, cap * 0.3);
+    if (typeof round === "function") round.call(ctx, cx, cy, cap, cap, cap * 0.32);
     else ctx.rect(cx, cy, cap, cap);
     ctx.fill();
   }
@@ -119,7 +139,9 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
   // a long project name shrinks to fit (down to 60 %) before it is cut
   ctx.font = `700 ${titlePx}px ${FONT}`;
   const room = r.w - pad * 2, wide = ctx.measureText(text.title).width;
-  if (wide > room) ctx.font = `700 ${Math.max(titlePx * 0.6, (titlePx * room) / wide)}px ${FONT}`;
+  // shrink to 97 % of the room, not exactly 100 %: at exactly the room the measured width rounds a hair over and the
+  // title was cut to "…水電…" (export, 2026-11-23)
+  if (wide > room) ctx.font = `700 ${Math.max(titlePx * 0.6, (titlePx * room * 0.97) / wide)}px ${FONT}`;
   ctx.fillText(fit(ctx, text.title, room), r.x + r.w / 2, r.y + r.h * 0.12);
   const rows = boardRows(board, text, signer);
   const top = r.y + r.h * 0.24, rowH = (r.h * 0.72) / rows.length, labelW = r.w * 0.3;

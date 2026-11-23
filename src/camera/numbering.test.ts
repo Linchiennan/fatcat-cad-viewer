@@ -16,9 +16,10 @@ describe("numbering (照片保存卡 numbers as in the 8F 隔間請款 folder)",
     const labels = photoLabels(points, photos);
     expect([...labels].map(([id, l]) => `${id}:${plainLabel(l)}`)).toEqual(["a1:1-1", "a2:1-2", "b1:2", "c1:3-1", "c2:3-2"]);
     expect(labels.has("u")).toBe(false);
-    expect(cardLabel(labels.get("a1")!)).toBe("01-1");
-    expect(cardLabel(labels.get("b1")!)).toBe("02");
-    expect(cardLabel({ no: 23, seq: null })).toBe("23");
+    expect(cardLabel(labels.get("a1")!)).toBe("001-1");
+    expect(cardLabel(labels.get("b1")!)).toBe("002");
+    expect(cardLabel({ no: 23, seq: null })).toBe("023");
+    expect(cardLabel({ no: 999, seq: 2 })).toBe("999-2");
   });
 
   it("writes Nx2 in the circle when a point has several photos", () => {

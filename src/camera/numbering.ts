@@ -1,11 +1,15 @@
 // Photo numbering (spec 009 定案 4), as in the user's 請款 folders:
 // - points are numbered 1, 2, … in a batch, without gaps;
 // - one photo at a point is "N", several are "N-1", "N-2", … and the drawing says "Nx2";
-// - 照片保存卡 shows two digits ("01", "01-1"); file names do not ("1.jpg", "1-1.jpg").
+// - 照片保存卡 and the whiteboard show three digits ("001", "001-1"; 用戶 2026-11-23：「照片編號從001到999，超過就是要開新
+//   檔案」); file names do not ("1.jpg", "1-1.jpg"). A batch holds at most MAX_POINTS points.
 import type { PhotoRecord, ShotPoint } from "./types";
 
 /** Points sorted by number. */
 export const byNumber = (points: readonly ShotPoint[]): ShotPoint[] => [...points].sort((a, b) => a.no - b.no);
+
+/** Most points in a batch: numbers run 001–999, the next one needs a new batch. */
+export const MAX_POINTS = 999;
 
 /** Number for a new point: one after the last. */
 export const nextNumber = (points: readonly ShotPoint[]): number => points.reduce((m, p) => Math.max(m, p.no), 0) + 1;
@@ -48,9 +52,10 @@ export function photoLabels(points: readonly ShotPoint[], photos: readonly Photo
 /** "1-1" / "12" (file names). */
 export const plainLabel = (l: { no: number; seq: number | null }): string => (l.seq ? `${l.no}-${l.seq}` : `${l.no}`);
 
-/** "01-1" / "12" as on the 照片保存卡 (two-digit point number). */
+/** "001-1" / "012" as on the 照片保存卡 and the whiteboard (three-digit point number). */
+export const cardNo = (no: number): string => String(no).padStart(3, "0");
 export const cardLabel = (l: { no: number; seq: number | null }): string => {
-  const n = String(l.no).padStart(2, "0");
+  const n = cardNo(l.no);
   return l.seq ? `${n}-${l.seq}` : n;
 };
 
