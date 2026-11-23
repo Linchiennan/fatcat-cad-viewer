@@ -1,6 +1,6 @@
 // Photos of a batch (spec 009): the unplaced (未定位) ones first, then the placed ones by number (用戶 2026-11-23：
 // 「排序把未定位的改到最上面」). Each can get its whiteboard
-// text edited, be put on the selected spot, or be deleted.
+// text edited or be deleted (放到選取的位置 removed, 用戶 2026-11-23).
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/translations";
 import { readPhotoOriginal } from "./batchStore";
@@ -31,9 +31,9 @@ function Thumb({ id }: { id: string }) {
   return src ? <img className="camera-thumb" src={src} alt="" /> : <span className="camera-thumb" />;
 }
 
-export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete }: {
-  batch: CameraBatch; points: readonly ShotPoint[]; photos: readonly PhotoRecord[]; selected: ShotPoint | null;
-  onPlace(photo: PhotoRecord): void; onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void;
+export function PhotoList({ points, photos, onEdit, onDelete }: {
+  batch: CameraBatch; points: readonly ShotPoint[]; photos: readonly PhotoRecord[];
+  onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void;
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState<string | null>(null);
@@ -57,7 +57,7 @@ export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete 
           ) : (
             <div className="camera-actions">
               <button type="button" onClick={() => setEditing(ph.id)}>{t("camera.editBoard")}</button>
-              {selected && ph.pointId !== selected.id ? <button type="button" onClick={() => onPlace(ph)}>{t("camera.placeHere")}</button> : null}
+              {/* no 放到選取的位置 (用戶 2026-11-23：「放到選取位置按鈕全部取消」) */}
               <button type="button" className="camera-danger" onClick={() => onDelete(ph)}>{t("camera.deletePhoto")}</button>
             </div>
           )}

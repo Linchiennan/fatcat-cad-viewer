@@ -55,7 +55,6 @@ export const CAMERA_STRINGS = {
   "camera.placeEditTip": { zh: "點一下修改位置名稱", en: "Tap to rename the place" },
   "camera.placeEditLabel": { zh: "位置名稱", en: "Place name" },
   "camera.unplaced": { zh: "未定位 {N} 張", en: "{N} unplaced" },
-  "camera.placeHere": { zh: "放到選取的位置", en: "Put on selected spot" },
   "camera.deletePhoto": { zh: "刪除照片", en: "Delete photo" },
   "camera.deletePhotoAsk": { zh: "刪除這張照片？刪除後無法復原。", en: "Delete this photo? This cannot be undone." },
   "camera.editBoard": { zh: "改白板", en: "Edit board" },

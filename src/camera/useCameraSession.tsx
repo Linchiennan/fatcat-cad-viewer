@@ -339,8 +339,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       onCancel={() => setView(batch ? "work" : "batches")}
       onDelete={batch && !batch.demo ? () => askDeleteBatch(batch, photos.length) : undefined} />;
   } else if (view === "photos" && batch) {
-    body = <PhotoList batch={batch} points={points} photos={photos} selected={selected}
-      onPlace={(ph) => void updatePhoto(ph.id, { pointId: selected?.id ?? null, board: { ...ph.board, place: selected?.place ?? ph.board.place } }).then(() => reload(batch)).catch(fail)}
+    body = <PhotoList batch={batch} points={points} photos={photos}
       onEdit={(ph, board) => void updatePhoto(ph.id, { board }).then(() => reload(batch)).catch(fail)}
       onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(() => reload(batch)).catch(fail) })} />;
   } else if (view === "export" && batch) {
