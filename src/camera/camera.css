@@ -277,3 +277,53 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
 .camera-home-menu-choices button { min-height: 48px; border-radius: 10px; font: inherit; font-size: 1rem; }
 .camera-home-menu-cancel { border: 1.5px solid var(--tile-line); background: transparent; color: var(--muted); }
 .camera-home-name { width: 100%; box-sizing: border-box; min-height: 46px; padding: 0 12px; border-radius: 10px; border: 1.5px solid var(--accent); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; -webkit-user-select: text; user-select: text; }
+
+/* sideways (用戶 2026-11-23：「工程相機增加橫向模式」「橫向模式取消橫桿」): the panel stands on the right, full height,
+   no grip; the drawing is left of it */
+@media (orientation: landscape) and (max-height: 600px) {
+  .camera-sheet, .camera-sheet.full, .camera-sheet.exporting:not(.collapsed) {
+    left: auto; right: calc(8px + var(--safe-right, 0px)); top: 8px; bottom: calc(8px + var(--safe-bottom, 0px));
+    width: 360px; max-width: calc(100% - 16px); height: auto; max-height: none; margin: 0;
+  }
+  .camera-sheet .camera-parts .camera-check { font-size: 0.8rem; }
+  .camera-sheet .camera-grip { display: none; }
+  .camera-sheet header.camera-head { padding-top: 8px; }
+  .camera-sheet.listing header.camera-head { position: static; height: auto; padding: 6px 10px 0; justify-content: flex-end; }
+}
+
+/* sideways, the camera page: one narrow column on the right, everything in its usual order top to bottom (用戶
+   2026-11-23：橫向選 A「右側直排」、「排列順序跟種類都不動」); the lower part scrolls when it runs out of height */
+@media (orientation: landscape) and (max-height: 600px) {
+  .camera-sheet.working { width: 150px; }
+  .camera-sheet.working header.camera-head { display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 6px 10px 4px; }
+  .camera-sheet.working header.camera-head > .camera-head-space { display: none; }
+  .camera-sheet.working .camera-paw { align-self: center; width: 56px; height: 56px; margin: 0; padding-top: 10px; }
+  .camera-sheet.working .camera-paw-icon { width: 18px; height: 18px; }
+  .camera-sheet.working .camera-paw > span { font-size: 0.7rem; }
+  /* a column that does not fit scrolls; its items keep their height (squeezed, they overlapped) */
+  .camera-sheet.working .camera-compact > *, .camera-sheet.working .camera-sel > * { flex-shrink: 0; }
+  .camera-sheet.working .camera-sel { height: auto; min-height: 0; flex: none; gap: 6px; }
+  .camera-sheet.working .camera-compact { padding: 0 10px 8px; }
+  .camera-sheet.working .camera-tools { grid-template-columns: 1fr; gap: 4px; }
+  .camera-sheet.working .camera-tools > button, .camera-sheet.working .camera-tools > label { flex-direction: row; justify-content: flex-start; gap: 8px; height: 32px; min-height: 32px; padding: 0 10px; font-size: 0.85rem; }
+  .camera-sheet.working .camera-tools svg { width: 20px; height: 20px; }
+  .camera-sheet.working button.camera-place { flex-wrap: wrap; row-gap: 0; padding: 4px 10px; min-height: 40px; }
+  .camera-sheet.working .camera-sel { flex-direction: column; align-items: stretch; }
+  .camera-sheet.working .camera-sel .camera-message-box { height: auto; min-height: 36px; }
+  .camera-sheet.working .camera-sel button { max-width: none; }
+  .camera-sheet.working > .camera-message-bottom { margin: 0 10px 8px; padding: 4px 8px; min-height: 0; font-size: 0.72rem; line-height: 1.25; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: clip; overflow-clip-margin: content-box; height: auto; max-height: none; box-sizing: content-box; }
+}
+
+/* sideways: the file bar is only the folder icon over the X, a small column at the top left, so the drawing keeps
+   its height and nothing is under the panel (用戶 2026-11-23 白板：上方檔名列「改到左邊」，再「改直列只保留X跟資料夾圖式」) */
+@media (orientation: landscape) and (max-height: 600px) {
+  :root:has(.camera-sheet) .file-bar {
+    right: auto; min-height: 0; flex-direction: column; align-items: center; gap: 8px;
+    padding: calc(8px + var(--safe-top)) 8px 8px calc(8px + var(--safe-left, 0px));
+    border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); border-bottom-right-radius: 14px;
+  }
+  :root:has(.camera-sheet) .file-bar .file-name { display: none; }
+  :root:has(.camera-sheet) .file-bar .file-actions { flex-direction: column-reverse; gap: 8px; }  /* X on top (用戶：「左邊的X改到最上方」) */
+  :root:has(.camera-sheet) .file-bar .file-library { width: 42px; padding: 0; justify-content: center; }
+  :root:has(.camera-sheet) .file-bar .file-library span { display: none; }
+}

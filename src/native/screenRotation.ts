@@ -11,6 +11,9 @@ interface ScreenRotationPlugin {
 }
 const plugin = registerPlugin<ScreenRotationPlugin>("ScreenRotation");
 
+// counted: the camera panel and the shoot screen both ask (用戶 2026-11-23：「工程相機增加橫向模式」); the phone turns
+// back to upright only when neither is open
+let asks = 0;
 let allowed = false;
 
 /** Whether the phone may be sideways now (the camera is open). */
@@ -20,7 +23,9 @@ export function rotationAllowed(): boolean {
 
 /** Let the phone turn sideways (true) or back to upright only (false). */
 export function allowRotation(on: boolean): void {
-  allowed = on;
+  asks = Math.max(0, asks + (on ? 1 : -1));
+  if (allowed === asks > 0) return;
+  allowed = asks > 0;
   if (typeof dispatchEvent === "function") dispatchEvent(new Event(ROTATE_ALLOW_EVENT));
-  if (Capacitor.isNativePlatform()) void plugin.allow({ on }).catch(() => { /* older APP without the plugin: stays upright */ });
+  if (Capacitor.isNativePlatform()) void plugin.allow({ on: allowed }).catch(() => { /* older APP without the plugin: stays upright */ });
 }

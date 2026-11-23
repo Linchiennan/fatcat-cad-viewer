@@ -15,7 +15,13 @@ export type ShellLayout = { topBar?: Rect | null; toolbar?: Rect | null; corners
 /** Part of the canvas not covered by the file bar, the toolbar and corner overlays (T14 3.5-1 a–c). */
 export function freeArea(canvas: Rect, shell: ShellLayout): Rect {
   let top = canvas.top, bottom = canvas.top + canvas.height, left = canvas.left, right = canvas.left + canvas.width;
-  if (shell.topBar && shell.topBar.height > 0) top = Math.max(top, shell.topBar.top + shell.topBar.height);
+  const head = shell.topBar;
+  if (head && head.height > 0) {
+    // sideways with the camera open the file bar is only a small column of buttons at the top left (用戶 2026-11-23：
+    // 「改直列只保留X跟資料夾圖式」): the drawing goes right of it instead of below it
+    if (head.width < head.height && head.left <= left + 1) left = Math.max(left, head.left + head.width);
+    else top = Math.max(top, head.top + head.height);
+  }
   const bar = shell.toolbar;
   if (bar && bar.width > 0 && bar.height > 0) {
     if (bar.width > bar.height) bottom = Math.min(bottom, bar.top);

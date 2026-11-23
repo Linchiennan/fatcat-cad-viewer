@@ -12,6 +12,11 @@ describe("free area of the canvas (T14 3.5-1)", () => {
     expect(free).toEqual({ left: 0, top: 48, width: 1280, height: 772 });
   });
 
+  it("puts the drawing right of a file bar that is only a column of buttons (sideways, camera open)", () => {
+    const free = freeArea({ left: 0, top: 0, width: 820, height: 360 }, { topBar: { left: 0, top: 0, width: 59, height: 109 } });
+    expect(free).toEqual({ left: 59, top: 0, width: 761, height: 360 });
+  });
+
   it("does not take a vertical desktop dock as the bottom edge", () => {
     const free = freeArea(canvas, { toolbar: { left: 1200, top: 200, width: 80, height: 500 } });
     expect(free).toEqual({ left: 0, top: 0, width: 1200, height: 900 });

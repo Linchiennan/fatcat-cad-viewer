@@ -15,6 +15,7 @@ import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
 import { ALL_PARTS, exportBatch, exportBatchFiles, type ExportParts } from "./exportBatch";
 import { useLongPress } from "./longPress";
+import { allowRotation } from "../native/screenRotation";
 import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile, shareFiles } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
@@ -39,6 +40,9 @@ function remember(b: Remembered): void {
 /** 符號 slider range (用戶 2026-11-23：「符號大小要從10%到200%」; was 50–300 %); older batches above it are capped */
 const MARKER_SCALE_MIN = 0.1, MARKER_SCALE_MAX = 2;
 const clampScale = (v: number) => Math.min(MARKER_SCALE_MAX, Math.max(MARKER_SCALE_MIN, v));
+
+/** a phone held sideways (the same test as the camera screen's landscape layout) */
+const SIDEWAYS = "(orientation: landscape) and (max-height: 600px)";
 
 /** The demo drawings shipped for trying the app (web/demo, 「示範-…」). */
 const isDemoDrawing = (name: string) => /^示範-/.test(name.replace(/^.*[\\/]/, ""));
@@ -131,6 +135,17 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   /** how far the grip goes before letting go switches between normal and full screen */
   const FULL_PULL = 60;
   useEffect(() => { if (!open) { setCollapsed(false); setFull(false); setPull(0); setDragHeight(null); } }, [open]);
+  // sideways: the phone may turn while the panel is open, and the panel stands on the right without a grip, never
+  // hidden or full (用戶 2026-11-23：「工程相機增加橫向模式，下半部這些按鈕全部轉向」「橫向模式取消橫桿」)
+  useEffect(() => { if (!open) return; allowRotation(true); return () => allowRotation(false); }, [open]);
+  const [sideways, setSideways] = useState(() => typeof matchMedia === "function" && matchMedia(SIDEWAYS).matches);
+  useEffect(() => {
+    if (typeof matchMedia !== "function") return;
+    const q = matchMedia(SIDEWAYS), on = () => setSideways(q.matches);
+    q.addEventListener("change", on);
+    return () => q.removeEventListener("change", on);
+  }, []);
+  useEffect(() => { if (sideways) { setCollapsed(false); setFull(false); setPull(0); setDragHeight(null); } }, [sideways]);
   const grip = {
     onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -500,8 +515,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   }
 
   const subView = view === "settings" || view === "photos" || view === "export";
+  // sideways the panel is a column on the right: a fitted drawing stays left of it (用戶 2026-11-23 橫向)
   const panel = open ? (
-    <section ref={sheetRef} className={"camera-sheet" + (collapsed ? " collapsed" : "") + (full && !collapsed ? " full" : "") + (view === "export" ? " exporting" : "") + (view === "photos" ? " listing" : "")} aria-label={t("camera.title")}
+    <section ref={sheetRef} data-fit={sideways ? "corner" : undefined} className={"camera-sheet" + (collapsed ? " collapsed" : "") + (full && !collapsed ? " full" : "") + (view === "export" ? " exporting" : "") + (view === "photos" ? " listing" : "") + (view === "work" ? " working" : "")} aria-label={t("camera.title")}
       style={dragHeight !== null ? { height: dragHeight, maxHeight: "none", transition: "none" } : pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>

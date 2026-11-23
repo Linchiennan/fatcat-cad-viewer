@@ -686,8 +686,11 @@ export function App() {
     const h = canvasRef.current as unknown as { centerOn?(p: { x: number; y: number }, at: { x: number; y: number }): void } | null;
     const el = document.querySelector(".drawing-canvas"), sheet = document.querySelector(".camera-sheet");
     if (!h?.centerOn || !el) return;
-    const r = el.getBoundingClientRect(), bottom = sheet ? Math.min(r.bottom, sheet.getBoundingClientRect().top) : r.bottom;
-    h.centerOn({ x, y }, { x: r.width / 2, y: (Math.max(r.top, 0) + bottom) / 2 - r.top });
+    const r = el.getBoundingClientRect(), sr = sheet?.getBoundingClientRect();
+    // the panel stands on the right when the phone is sideways, at the bottom when upright
+    const side = !!sr && sr.left > r.left + r.width / 2;
+    const right = side ? Math.min(r.right, sr!.left) : r.right, bottom = sr && !side ? Math.min(r.bottom, sr.top) : r.bottom;
+    h.centerOn({ x, y }, { x: (r.left + right) / 2 - r.left, y: (Math.max(r.top, 0) + bottom) / 2 - r.top });
   }, onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint, mode) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await atBestDpi(sheetDpis(isAppleMobile()), (dpi) => h.exportWithOverlay!({ range: "sheet", format: "pdf", paper: "A3", dpi, whitePaper: mode, title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint)); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
