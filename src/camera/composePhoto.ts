@@ -1,7 +1,7 @@
 // Export photo (spec 009 定案 5/10): the original with its whiteboard (and signature) drawn on, as JPEG at quality
 // 0.85 and the original resolution — about half the bytes, the difference only shows when zoomed far in.
 import type { Signer, Whiteboard } from "./types";
-import { drawBoard, type BoardText } from "./whiteboard";
+import { drawBoard, ensureHandFont, type BoardText } from "./whiteboard";
 
 export const EXPORT_JPEG_QUALITY = 0.85;
 
@@ -22,7 +22,7 @@ export async function composePhoto(original: Blob, board: Whiteboard, text: Boar
     ctx.drawImage(bmp, 0, 0);
     // the board's font must be loaded first: a canvas draws with a wider fallback until then, and the title got cut
     // ("…水電…") on a photo exported right after the camera was used
-    if (withBoard) { await boardFontsReady(); drawBoard(ctx, c.width, c.height, board, text, signer); }
+    if (withBoard) { await boardFontsReady(); if (board.font === "hand") await ensureHandFont(); drawBoard(ctx, c.width, c.height, board, text, signer); }
     const out = await new Promise<Blob | null>((resolve) => c.toBlob(resolve, "image/jpeg", EXPORT_JPEG_QUALITY));
     if (!out) throw new Error("JPEG encoding failed");
     c.width = c.height = 0; // free the pixels on phones

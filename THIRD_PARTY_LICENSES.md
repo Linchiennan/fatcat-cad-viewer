@@ -41,6 +41,7 @@
 | Noto Sans CJK TC Light 2.004（notofonts/noto-cjk，未修改；SHX 文字替代用） | SIL OFL 1.1 | licenses/noto-cjk-OFL-1.1.txt |
 | Liberation Sans Regular 2.1.5（未修改） | SIL OFL 1.1 | licenses/liberation-fonts-OFL-1.1.txt |
 | Fatcat Symbols（由 Liberation Sans 的「=」「.」組成 ≒，scripts/make-symbol-font.py；依保留字型名稱規定改名） | SIL OFL 1.1 | public/fonts/LICENSE-FATCAT-SYMBOLS-OFL.txt |
+| 辰宇落雁體 Chenyuluoyan 2.0 Thin（Chenyu-otf/chenyuluoyan_thin v2.0，未修改；工程相機電子白板手寫字） | SIL OFL 1.1 | public/fonts/LICENSE-CHENYULUOYAN-OFL.txt |
 
 ## Android 原生層
 

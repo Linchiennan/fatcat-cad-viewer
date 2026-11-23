@@ -2,11 +2,49 @@
 // a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 施工日期 / 查驗人員 / 照片編號. The same function draws
 // the live camera preview and the exported photo, so what is seen is what is saved.
 import { drawPenSignature } from "./penInk";
-import type { Signer, Whiteboard } from "./types";
+import type { BoardFont, Signer, Whiteboard } from "./types";
 
 /** height / width of the board */
 export const BOARD_ASPECT = 0.68;
 const FONT = '"FatCat Sans", "Noto Sans CJK TC", "Microsoft JhengHei", sans-serif';
+
+/**
+ * Handwriting for the values on the board (用戶 2026-11-23：「白板字體增加落雁體，並改為預設。增加字體切換，另一種是現在的
+ * 黑體」): 辰宇落雁體 2.0 Thin, SIL OFL 1.1, bundled unmodified (public/fonts). Loaded on first use; a character the font
+ * lacks falls back to 黑體.
+ */
+export const HAND_FONT = "Luoyan Hand";
+const HAND_URL = "./fonts/ChenYuluoyan-2.0-Thin.ttf";
+let handLoading: Promise<void> | null = null;
+export function ensureHandFont(): Promise<void> {
+  if (handLoading) return handLoading;
+  handLoading = (async () => {
+    if (typeof FontFace === "undefined" || typeof document === "undefined" || !document.fonts) return;
+    try { const face = new FontFace(HAND_FONT, `url(${HAND_URL})`, { display: "swap" }); document.fonts.add(face); await face.load(); } catch { /* 黑體 then */ }
+  })();
+  return handLoading;
+}
+
+const FONT_KEY = "fatcat.camera.boardFont";
+/** The board font chosen on this device; 落雁體 handwriting unless 黑體 was picked. */
+export function loadBoardFont(): BoardFont {
+  try { return localStorage.getItem(FONT_KEY) === "sans" ? "sans" : "hand"; } catch { return "hand"; }
+}
+export function saveBoardFont(f: BoardFont): void {
+  try { localStorage.setItem(FONT_KEY, f); } catch { /* private mode */ }
+}
+// photos from before the choice have no font: they were shot with 黑體, so they keep it
+const valueFont = (board: { font?: BoardFont }, px: number) =>
+  board.font === "hand" ? `400 ${px * HAND_SCALE}px "${HAND_FONT}", ${FONT}` : `500 ${px * 1.05}px ${FONT}`;
+// 落雁體 comes only in Thin and its glyphs sit small in the em box: at the 黑體 size the values read like pencil
+// (2026-11-23 export check), so it is drawn larger and its strokes thickened like a whiteboard marker
+const HAND_SCALE = 1.4, HAND_INK = 0.07;
+function drawValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont }, s: string, x: number, y: number, px: number): void {
+  ctx.fillText(s, x, y);
+  if (board.font !== "hand") return;
+  ctx.save(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = px * HAND_INK; ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.strokeText(s, x, y); ctx.restore();
+}
 
 export type BoardText = { title: string; no: string };
 export type BoardRow = { label: string; value: string; signature?: Signer };
@@ -141,7 +179,7 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
     ctx.fillText(row.label + "：", r.x + pad, cy);
     const vx = r.x + pad + labelW, vw = r.w - pad * 2 - labelW;
     if (row.signature) drawSignature(ctx, row.signature, vx, cy - rowH * 0.45, vw, rowH * 0.9);
-    else { ctx.fillStyle = "#0a0a78"; ctx.font = `500 ${px * 1.05}px ${FONT}`; ctx.fillText(fit(ctx, row.value, vw), vx, cy); }
+    else { ctx.fillStyle = "#0a0a78"; ctx.font = valueFont(board, px); drawValue(ctx, board, fit(ctx, row.value, vw), vx, cy, px); }
   });
   ctx.restore();
 }

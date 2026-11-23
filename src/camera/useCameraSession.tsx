@@ -18,7 +18,7 @@ import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile, shareFiles } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
-import { boardTitle, drawSignature } from "./whiteboard";
+import { boardTitle, drawSignature, loadBoardFont } from "./whiteboard";
 import { PawShape } from "../components/ViewerToolbar";
 import type { CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
 
@@ -214,7 +214,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const boardFor = (point: ShotPoint | null, when: Date): Whiteboard => ({
     item: batch?.item ?? "", place: point?.place ?? "", date: rocDate(when), inspector: batch?.inspector ?? "",
-    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(),
+    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(), font: loadBoardFont(),
   });
 
   /** Keep photos (from the camera or the gallery) for the selected point, or unplaced. */

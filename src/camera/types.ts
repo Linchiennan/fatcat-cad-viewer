@@ -16,7 +16,11 @@ export type Whiteboard = {
   y: number;
   /** board width as a fraction of the photo width */
   width: number;
+  /** writing of the values: 落雁體 handwriting (default) or 黑體 (用戶 2026-11-23) */
+  font?: BoardFont;
 };
+
+export type BoardFont = "hand" | "sans";
 
 export type CameraBatch = {
   id: string;

@@ -70,6 +70,14 @@
 .camera-controls { flex: none; padding: 10px 16px calc(14px + var(--safe-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; background: rgba(0, 0, 0, 0.85); }
 .camera-size { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: #ccc; }
 .camera-size input { width: 100%; }
+/* 白板字體：落雁體／黑體 (用戶 2026-11-23) */
+.camera-size-row { display: flex; align-items: flex-end; gap: 12px; }
+.camera-size-row .camera-size { flex: 1; min-width: 0; }
+.camera-font { flex: none; display: flex; border: 1.5px solid #888; border-radius: 12px; overflow: hidden; }
+.camera-font button { min-height: 40px; padding: 0 12px; border: 0; background: #222; color: #ccc; font-size: 1rem; }
+.camera-font button + button { border-left: 1.5px solid #888; }
+.camera-font button.camera-font-hand { font-size: 1.3rem; -webkit-text-stroke: 0.6px currentColor; }
+.camera-font button[aria-pressed="true"] { background: #ffd23f; color: #1b1b1b; font-weight: 700; }
 .camera-buttons { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .camera-buttons > button:first-child { min-height: 48px; padding: 0 18px; border-radius: 12px; border: 1.5px solid #888; background: #222; color: #fff; font: inherit; }
 .camera-shutter { grid-column: 2; grid-row: 1; width: 76px; height: 76px; border-radius: 50%; border: 5px solid #fff; background: transparent; padding: 6px; }
@@ -124,6 +132,10 @@
 .camera-head-scale { justify-self: stretch; min-width: 0; display: flex; flex-direction: column; gap: 0; font-size: 0.7rem; color: var(--muted); }
 .camera-head-scale input { width: 100%; min-width: 0; min-height: 28px; }
 .camera-sel { justify-content: flex-end; }
+/* English labels are about twice as wide (Renumber / Delete spot / Delete photo) and squeezed the status box to a
+   square (用戶 2026-11-23：「切換成英文版，工程相機底下的按鈕比例就不正常了」): there they wrap to two short lines
+   so the row keeps the same proportions as in Chinese */
+html[lang="en"] .camera-sheet .camera-sel button { max-width: 76px; padding: 0 8px; white-space: normal; font-size: 0.78rem; line-height: 1.05; }
 .camera-sheet .camera-row button { min-height: 36px; height: 36px; padding: 0 12px; font-size: 0.85rem; }
 .camera-row input[type="number"] { width: 64px; min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
 .camera-sheet .camera-paw { width: 64px; height: 64px; margin: 2px 0 4px; }
@@ -150,6 +162,8 @@
   .camera-stage { flex: 1; min-width: 0; }
   .camera-controls { width: 168px; flex: none; justify-content: flex-start; padding: calc(10px + var(--safe-top, 0px)) calc(12px + var(--safe-right, 0px)) calc(10px + var(--safe-bottom, 0px)) 12px; }
   .camera-size { font-size: 0.75rem; }
+  .camera-size-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .camera-font button { flex: 1; min-height: 36px; padding: 0 6px; }
   .camera-buttons { flex: 1; min-height: 0; grid-template-columns: 1fr !important; grid-template-rows: auto 1fr auto; justify-items: center; gap: 10px; }
   .camera-buttons > button:first-child { grid-column: 1; grid-row: 3; justify-self: stretch; align-self: end; min-height: 40px; }
   .camera-shutter { grid-column: 1; grid-row: 2; align-self: center; width: 72px; height: 72px; }
