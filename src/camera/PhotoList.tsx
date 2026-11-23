@@ -1,4 +1,5 @@
-// Photos of a batch (spec 009): placed ones by number, then the unplaced (未定位) ones. Each can get its whiteboard
+// Photos of a batch (spec 009): the unplaced (未定位) ones first, then the placed ones by number (用戶 2026-11-23：
+// 「排序把未定位的改到最上面」). Each can get its whiteboard
 // text edited, be put on the selected spot, or be deleted.
 import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/translations";
@@ -29,9 +30,9 @@ function Thumb({ id }: { id: string }) {
   return src ? <img className="camera-thumb" src={src} alt="" /> : <span className="camera-thumb" />;
 }
 
-export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete, onBack }: {
+export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete }: {
   batch: CameraBatch; points: readonly ShotPoint[]; photos: readonly PhotoRecord[]; selected: ShotPoint | null;
-  onPlace(photo: PhotoRecord): void; onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void; onBack(): void;
+  onPlace(photo: PhotoRecord): void; onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void;
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState<string | null>(null);
@@ -60,9 +61,9 @@ export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete,
   };
   return (
     <div className="camera-body">
-      <div className="camera-actions"><button type="button" onClick={onBack}>{t("camera.cancel")}</button></div>
-      <ul className="camera-photos">{placed.map(row)}</ul>
+      {/* no 取消 button: the X in the head goes back (用戶 2026-11-23：刪除) */}
       {loose.length ? <><h3>{t("camera.unplaced", { N: loose.length })}</h3><ul className="camera-photos">{loose.map(row)}</ul></> : null}
+      <ul className="camera-photos">{placed.map(row)}</ul>
     </div>
   );
 }

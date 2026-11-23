@@ -72,6 +72,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [placing, setPlacing] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState("");
+  // a note belongs to the screen it was said on: switching screens clears it (the 清單 showed the spot-lock note, cut off)
+  useEffect(() => { setMessage(""); }, [view]);
   const [renumbering, setRenumbering] = useState(false);
   const [shooting, setShooting] = useState(false);
   /** pulled down out of the way to see the drawing (用戶 2026-11-22：上方橫桿往下拉讓視窗隱藏) */
@@ -268,8 +270,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     body = <PhotoList batch={batch} points={points} photos={photos} selected={selected}
       onPlace={(ph) => void updatePhoto(ph.id, { pointId: selected?.id ?? null, board: { ...ph.board, place: selected?.place ?? ph.board.place } }).then(() => reload(batch)).catch(fail)}
       onEdit={(ph, board) => void updatePhoto(ph.id, { board }).then(() => reload(batch)).catch(fail)}
-      onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(() => reload(batch)).catch(fail) })}
-      onBack={() => setView("work")} />;
+      onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(() => reload(batch)).catch(fail) })} />;
   } else if (view === "export" && batch) {
     const placedCount = photos.filter((p) => p.pointId).length;
     /** zip: 「一鍵壓縮打包」 one ZIP; otherwise the files one by one (用戶 2026-11-22：可不包 ZIP) */

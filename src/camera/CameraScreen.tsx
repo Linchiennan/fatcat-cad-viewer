@@ -259,7 +259,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
         <span>{t("camera.back")}{shots ? ` (${shots})` : ""}</span>
       </button>
-      {thumb ? <img key={thumb.n} ref={thumbEl} src={thumb.url} alt="" className="camera-thumb" /> : null}
+      {thumb ? <img key={thumb.n} ref={thumbEl} src={thumb.url} alt="" className="camera-shot-thumb" /> : null}
       <div className="camera-controls">
         <label className="camera-size">{t("camera.boardSize")}
           <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />
