@@ -362,7 +362,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : "camera.close")} title={t(subView ? "camera.backToCamera" : "camera.close")}
           onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></header>
       {body}
-      {message ? <p className="camera-message" role="status">{message}</p> : null}
+      {message ? <p className="camera-message" role="status" title={message}>{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
       {shooting && batch ? (
         <CameraScreen board={boardFor(selected, new Date())} signer={signers.find((x) => x.id === batch.signerId) ?? null}

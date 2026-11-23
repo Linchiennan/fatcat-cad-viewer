@@ -5,7 +5,7 @@ export const CAMERA_STRINGS = {
   "camera.title": { zh: "工程相機", en: "Site photos" },
   "camera.close": { zh: "關閉", en: "Close" },
   "camera.backToCamera": { zh: "返回工程相機", en: "Back to the camera" },
-  "camera.pointLocked": { zh: "這個點已經有照片，不能移動或轉方向；要改請先按「刪除照片」", en: "This spot has photos and cannot be moved or turned; press Delete photos first" },
+  "camera.pointLocked": { zh: "已有照片，不能移動或轉向；請先刪除照片", en: "Has photos: delete them to move or turn" },
   "camera.markersLabel": { zh: "拍照位置", en: "Photo spots" },
   "camera.batches": { zh: "這張圖的拍照批次", en: "Photo batches of this drawing" },
   "camera.noBatches": { zh: "還沒有拍照批次。", en: "No photo batch yet." },

@@ -41,7 +41,8 @@
 .camera-photo { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--line); }
 .camera-photo > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .camera-thumb { flex: none; width: 96px; height: 54px; object-fit: cover; border-radius: 6px; background: #0b151d; }
-.camera-message { margin: 0; padding: 6px 14px 10px; color: var(--accent-hi); }
+/* one short line, small (用戶 2026-11-23：「下方的說明改成一行字就好，字體縮小」); the whole text is in the tooltip */
+.camera-message { margin: 0; padding: 4px 14px 8px; color: var(--accent-hi); font-size: 0.78rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .camera-screen { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; background: #000; color: #fff; }
 .camera-stage { position: relative; flex: 1; min-height: 0; }
 .camera-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
