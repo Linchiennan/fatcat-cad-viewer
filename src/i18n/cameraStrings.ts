@@ -4,6 +4,7 @@ export const CAMERA_STRINGS = {
   "camera.buttonTip": { zh: "在圖上點位置拍施工照片，自動編號並產出照片保存卡", en: "Place site photos on the drawing; numbers and photo record cards are made for you" },
   "camera.title": { zh: "工程相機", en: "Site photos" },
   "camera.close": { zh: "關閉", en: "Close" },
+  "camera.backToCamera": { zh: "返回工程相機", en: "Back to the camera" },
   "camera.markersLabel": { zh: "拍照位置", en: "Photo spots" },
   "camera.batches": { zh: "這張圖的拍照批次", en: "Photo batches of this drawing" },
   "camera.noBatches": { zh: "還沒有拍照批次。", en: "No photo batch yet." },
