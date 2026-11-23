@@ -20,7 +20,7 @@ import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
 import { boardTitle, drawSignature, loadBoardFont } from "./whiteboard";
 import { PawShape } from "../components/ViewerToolbar";
-import type { CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
+import type { BoardStage, CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
 
 const LAST_KEY = "fatcat.camera.last";
 type Remembered = Pick<NewBatch, "company" | "project" | "trade" | "item" | "inspector" | "signerId">;
@@ -33,6 +33,16 @@ function remember(b: Remembered): void {
 
 /** Default board place and size: flush in the bottom-left corner (用戶 2026-11-23：「預設白板都是靠最左下」). x 0 / y 1 are
  * clamped to the picture by boardRect, so the board sits in the corner whatever the picture's shape (upright or sideways). */
+
+// 施工前／中／後 ticked on the camera screen, kept per batch on this device (用戶 2026-11-23)
+const STAGE_KEY = (batchId: string) => `fatcat.camera.stage.${batchId}`;
+const isStage = (v: string | null): v is BoardStage => v === "before" || v === "during" || v === "after";
+function loadStage(batchId: string): BoardStage | undefined {
+  try { const v = localStorage.getItem(STAGE_KEY(batchId)); return isStage(v) ? v : undefined; } catch { return undefined; }
+}
+function saveStage(batchId: string, stage: BoardStage | undefined): void {
+  try { if (stage) localStorage.setItem(STAGE_KEY(batchId), stage); else localStorage.removeItem(STAGE_KEY(batchId)); } catch { /* private mode */ }
+}
 export const DEFAULT_BOARD = { x: 0, y: 1, width: 0.3 } as const;
 const BOARD_KEY = "fatcat.camera.board";
 type BoardPos = Pick<Whiteboard, "x" | "y" | "width">;
@@ -214,7 +224,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const boardFor = (point: ShotPoint | null, when: Date): Whiteboard => ({
     item: batch?.item ?? "", place: point?.place ?? "", date: rocDate(when), inspector: batch?.inspector ?? "",
-    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(), font: loadBoardFont(),
+    ...(batch?.signerId ? { signerId: batch.signerId } : {}), ...loadBoardPos(), font: loadBoardFont(), ...(batch && loadStage(batch.id) ? { stage: loadStage(batch.id) } : {}),
   });
 
   /** Keep photos (from the camera or the gallery) for the selected point, or unplaced. */
@@ -419,7 +429,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       {shooting && batch ? (
         <CameraScreen board={boardFor(selected, new Date())} signer={signers.find((x) => x.id === batch.signerId) ?? null}
           text={{ title: boardTitle(batch.project, batch.trade), no: selected ? nextLabel(selected) : "—" }}
-          onShot={(blob, pos) => keepPhotos([blob], [Date.now()], pos)} onPos={saveBoardPos} onClose={() => setShooting(false)} />
+          onShot={(blob, pos) => keepPhotos([blob], [Date.now()], pos)} onPos={saveBoardPos} onClose={() => setShooting(false)} onStage={(s) => saveStage(batch.id, s)} />
       ) : null}
     </section>
   ) : null;

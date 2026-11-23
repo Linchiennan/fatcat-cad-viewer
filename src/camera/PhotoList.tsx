@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useI18n } from "../i18n/translations";
 import { readPhotoOriginal } from "./batchStore";
 import { cardLabel, cardOrder, photoLabels } from "./numbering";
+import { StageTicks } from "./StageTicks";
 import type { CameraBatch, PhotoRecord, ShotPoint, Whiteboard } from "./types";
 
 const thumbs = new Map<string, string>();
@@ -81,7 +82,9 @@ function BoardForm({ board, onSave, onCancel }: { board: Whiteboard; onSave(b: W
   );
   return (
     <form className="camera-board-form" onSubmit={(e) => { e.preventDefault(); onSave(b); }}>
-      {f("item", t("camera.board.item"))}{f("place", t("camera.board.place"))}{f("date", t("camera.board.date"))}{f("inspector", t("camera.board.inspector"))}
+      {f("item", t("camera.board.item"))}{f("place", t("camera.board.place"))}{f("date", t("camera.board.date"))}
+      <StageTicks value={b.stage} onChange={(stage) => setB(({ stage: _old, ...rest }) => (stage ? { ...rest, stage } : rest))} />
+      {f("inspector", t("camera.board.inspector"))}
       <div className="camera-actions"><button type="submit">{t("camera.save")}</button><button type="button" onClick={onCancel}>{t("camera.cancel")}</button></div>
     </form>
   );

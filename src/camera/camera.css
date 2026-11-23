@@ -70,6 +70,16 @@
 .camera-controls { flex: none; padding: 10px 16px calc(14px + var(--safe-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; background: rgba(0, 0, 0, 0.85); }
 .camera-size { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: #ccc; }
 .camera-size input { width: 100%; }
+/* 施工前／中／後 ticks (用戶 2026-11-23) */
+.camera-stage-ticks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.camera-stage-ticks button { min-height: 40px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 10px; border: 1.5px solid #888; background: #222; color: #ddd; font: inherit; font-size: 0.95rem; white-space: nowrap; }
+.camera-tick { flex: none; width: 18px; height: 18px; border: 2px solid currentColor; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; line-height: 1; }
+.camera-stage-ticks button[aria-checked="true"] { background: #ffd23f; border-color: #ffd23f; color: #1b1b1b; font-weight: 700; }
+/* the list form is narrow (about 230 px): tighter so 施工後 is not cut off */
+.camera-board-form .camera-stage-ticks { gap: 4px; }
+.camera-board-form .camera-stage-ticks button { padding: 0 2px; gap: 3px; font-size: 0.85rem; }
+.camera-board-form .camera-stage-ticks button { background: var(--tile-bg); color: var(--text); border-color: var(--tile-line); }
+.camera-board-form .camera-stage-ticks button[aria-checked="true"] { background: var(--accent); border-color: var(--accent-hi); color: #1b1b1b; }
 /* 白板字體：落雁體／黑體 (用戶 2026-11-23) */
 .camera-size-row { display: flex; align-items: flex-end; gap: 12px; }
 .camera-size-row .camera-size { flex: 1; min-width: 0; }
@@ -165,6 +175,9 @@ html[lang="en"] .camera-sheet .camera-sel button { max-width: 76px; padding: 0 8
   .camera-controls { width: 168px; flex: none; justify-content: flex-start; padding: calc(10px + var(--safe-top, 0px)) calc(12px + var(--safe-right, 0px)) calc(10px + var(--safe-bottom, 0px)) 12px; }
   .camera-size { font-size: 0.75rem; }
   .camera-size-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .camera-stage-ticks { gap: 4px; }
+  .camera-stage-ticks button { min-height: 34px; padding: 0 2px; gap: 0; font-size: 0.78rem; }
+  .camera-stage-ticks .camera-tick { display: none; }
   .camera-font button { flex: 1; min-height: 36px; padding: 0 6px; }
   .camera-buttons { flex: 1; min-height: 0; grid-template-columns: 1fr !important; grid-template-rows: auto 1fr auto; justify-items: center; gap: 10px; }
   .camera-buttons > button:first-child { grid-column: 1; grid-row: 3; justify-self: stretch; align-self: end; min-height: 40px; }

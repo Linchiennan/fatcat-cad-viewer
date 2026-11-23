@@ -1,11 +1,15 @@
 // The electronic whiteboard (spec 009 定案 5/6), drawn like the white board held up in the user's site photos:
-// a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 施工日期 / 查驗人員 / 照片編號. The same function draws
+// a title line (工程名稱＋工種) and rows 施工項目 / 施工位置 / 查驗日期 / □施工前 □施工中 □施工後 / 查驗人員 / 照片編號. The same function draws
 // the live camera preview and the exported photo, so what is seen is what is saved.
 import { drawPenSignature } from "./penInk";
-import type { BoardFont, Signer, Whiteboard } from "./types";
+import type { BoardFont, BoardStage, Signer, Whiteboard } from "./types";
 
 /** height / width of the board */
-export const BOARD_ASPECT = 0.68;
+// 0.68 with five rows; the 施工前／中／後 row (用戶 2026-11-23) makes it taller so the rows keep their size
+export const BOARD_ASPECT = 0.77;
+
+/** The three boxes under 查驗日期, in board order. */
+export const STAGES: readonly (readonly [BoardStage, string])[] = [["before", "施工前"], ["during", "施工中"], ["after", "施工後"]];
 const FONT = '"FatCat Sans", "Noto Sans CJK TC", "Microsoft JhengHei", sans-serif';
 
 /**
@@ -48,13 +52,14 @@ function drawValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont }, s
 }
 
 export type BoardText = { title: string; no: string };
-export type BoardRow = { label: string; value: string; signature?: Signer };
+export type BoardRow = { label: string; value: string; signature?: Signer; checks?: { label: string; on: boolean }[] };
 
 export function boardRows(board: Whiteboard, text: BoardText, signer?: Signer | null): BoardRow[] {
   return [
     { label: "施工項目", value: board.item },
     { label: "施工位置", value: board.place },
-    { label: "施工日期", value: board.date },
+    { label: "查驗日期", value: board.date },
+    { label: "", value: "", checks: STAGES.map(([k, label]) => ({ label, on: board.stage === k })) },
     { label: "查驗人員", value: board.inspector, ...(signer ? { signature: signer } : {}) },
     { label: "照片編號", value: text.no },
   ];
@@ -158,7 +163,10 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
   const r = { x: outer.x + frame, y: outer.y + frame, w: outer.w - frame * 2, h: outer.h - frame * 2 };
   const pad = r.w * 0.045, line = Math.max(1, r.w * 0.004);
   ctx.save();
-  const titlePx = r.h * 0.1;
+  const rows = boardRows(board, text, signer);
+  // sizes in units of the five-row board: title band 0.24, rows 0.144 each, 0.04 below
+  const k = r.h / (0.28 + 0.144 * rows.length);
+  const titlePx = k * 0.1;
   ctx.fillStyle = "#111";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   // a long project name shrinks to fit (down to 60 %) before it is cut
@@ -167,9 +175,8 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
   // shrink to 97 % of the room, not exactly 100 %: at exactly the room the measured width rounds a hair over and the
   // title was cut to "…水電…" (export, 2026-11-23)
   if (wide > room) ctx.font = `700 ${Math.max(titlePx * 0.6, (titlePx * room * 0.97) / wide)}px ${FONT}`;
-  ctx.fillText(fit(ctx, text.title, room), r.x + r.w / 2, r.y + r.h * 0.12);
-  const rows = boardRows(board, text, signer);
-  const top = r.y + r.h * 0.24, rowH = (r.h * 0.72) / rows.length, labelW = r.w * 0.3;
+  ctx.fillText(fit(ctx, text.title, room), r.x + r.w / 2, r.y + k * 0.12);
+  const top = r.y + k * 0.24, rowH = k * 0.144, labelW = r.w * 0.3;
   const px = rowH * 0.5;
   rows.forEach((row, i) => {
     const cy = top + rowH * i + rowH / 2;
@@ -177,12 +184,27 @@ export function drawBoard(ctx: CanvasRenderingContext2D, w: number, h: number, b
     ctx.beginPath(); ctx.moveTo(r.x + pad, top + rowH * (i + 1)); ctx.lineTo(r.x + r.w - pad, top + rowH * (i + 1)); ctx.stroke();
     ctx.textAlign = "left";
     ctx.fillStyle = "#444"; ctx.font = `${px}px ${FONT}`;
+    if (row.checks) { drawChecks(ctx, row.checks, r.x + pad, cy, r.w - pad * 2, px, line); return; }
     ctx.fillText(row.label + "：", r.x + pad, cy);
     const vx = r.x + pad + labelW, vw = r.w - pad * 2 - labelW;
     if (row.signature) drawSignature(ctx, row.signature, vx, cy - rowH * 0.45, vw, rowH * 0.9);
     else { ctx.fillStyle = "#0a0a78"; ctx.font = valueFont(board, px); drawValue(ctx, board, fit(ctx, row.value, vw), vx, cy, px); }
   });
   ctx.restore();
+}
+
+/** □施工前 □施工中 □施工後 across the row; the ticked one gets a pen tick in the value ink. */
+function drawChecks(ctx: CanvasRenderingContext2D, checks: readonly { label: string; on: boolean }[], x: number, cy: number, w: number, px: number, line: number): void {
+  const cell = w / checks.length, s = px * 0.9;
+  checks.forEach((c, i) => {
+    const bx = x + cell * i, by = cy - s / 2;
+    ctx.strokeStyle = "#444"; ctx.lineWidth = line * 1.6; ctx.strokeRect(bx, by, s, s);
+    ctx.fillStyle = "#444"; ctx.fillText(c.label, bx + s + px * 0.3, cy);
+    if (!c.on) return;
+    ctx.save(); ctx.strokeStyle = "#0a0a78"; ctx.lineWidth = px * 0.15; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(bx + s * 0.15, by + s * 0.5); ctx.lineTo(bx + s * 0.42, by + s * 0.82); ctx.lineTo(bx + s * 1.05, by - s * 0.1); ctx.stroke();
+    ctx.restore();
+  });
 }
 
 /** 工程名稱 + 工種, as on the board title ("PARK 23 水電工程"). */

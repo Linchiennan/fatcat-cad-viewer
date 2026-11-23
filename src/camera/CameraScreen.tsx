@@ -12,7 +12,8 @@ import { IS_GUEST } from "../auth/guestMode";
 import { allowRotation } from "../native/screenRotation";
 import type { Signer, Whiteboard } from "./types";
 import { boardRect, drawBoard, ensureHandFont, HAND_FONT, loadBoardFont, saveBoardFont, type BoardText } from "./whiteboard";
-import type { BoardFont } from "./types";
+import type { BoardFont, BoardStage } from "./types";
+import { StageTicks } from "./StageTicks";
 
 type Pos = Pick<Whiteboard, "x" | "y" | "width">;
 type FlashMode = "off" | "auto" | "flash" | "torch";
@@ -37,8 +38,10 @@ export function releaseCamera(s: MediaStream | null): void {
 }
 const loadFlash =(): FlashMode => { try { const v = localStorage.getItem(FLASH_KEY); return (FLASH_ORDER as string[]).includes(v ?? "") ? (v as FlashMode) : "off"; } catch { return "off"; } };
 
-export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
+export function CameraScreen({ board, text, signer, onShot, onPos, onClose, onStage }: {
   board: Whiteboard; text: BoardText; signer?: Signer | null;
+  /** 施工前／中／後 picked on this screen; kept for the batch */
+  onStage?: (stage: BoardStage | undefined) => void;
   onShot(photo: Blob, pos: Pos): Promise<void> | void;
   /** the board was moved or resized: remembered for the next photos and the next time */
   onPos?(pos: Pos): void;
@@ -59,6 +62,8 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   const [handReady, setHandReady] = useState(false);
   useEffect(() => { let live = true; void ensureHandFont().then(() => live && setHandReady(true)); return () => { live = false; }; }, []);
   const pickFont = (f: BoardFont) => { setFont(f); saveBoardFont(f); };
+  const [stage, setStage] = useState<BoardStage | undefined>(board.stage);
+  const pickStage = (s: BoardStage | undefined) => { setStage(s); onStage?.(s); };
   // remember where the board is left (a moment after it stops moving)
   useEffect(() => { const id = window.setTimeout(() => onPos?.(pos), 300); return () => window.clearTimeout(id); }, [pos]); // eslint-disable-line react-hooks/exhaustive-deps
   const [state, setState] = useState<"starting" | "ready" | "denied">("starting");
@@ -156,7 +161,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
         c.style.left = `${area.left}px`; c.style.top = `${area.top}px`; c.style.width = `${area.w}px`; c.style.height = `${area.h}px`;
         c.width = Math.round(area.w * dpr); c.height = Math.round(area.h * dpr);
         const ctx = c.getContext("2d");
-        if (ctx) { ctx.clearRect(0, 0, c.width, c.height); drawBoard(ctx, c.width, c.height, { ...board, ...pos, font }, text, signer); }
+        if (ctx) { ctx.clearRect(0, 0, c.width, c.height); drawBoard(ctx, c.width, c.height, { ...board, ...pos, font, stage }, text, signer); }
       }
       frame = requestAnimationFrame(() => { if (!c || !area) paint(); });
     };
@@ -165,7 +170,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
     v?.addEventListener(testMode ? "load" : "loadedmetadata", paint);
     window.addEventListener("resize", paint);
     return () => { cancelAnimationFrame(frame); v?.removeEventListener(testMode ? "load" : "loadedmetadata", paint); window.removeEventListener("resize", paint); };
-  }, [pos, board, text, signer, state, sampleUrl, testMode, font, handReady]);
+  }, [pos, board, text, signer, state, sampleUrl, testMode, font, handReady, stage]);
 
   const takePicture = async (): Promise<Blob> => {
     if (testMode) return sampleShot(shots + 1);
@@ -272,6 +277,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
       </button>
       {thumb ? <img key={thumb.n} ref={thumbEl} src={thumb.url} alt="" className="camera-shot-thumb" /> : null}
       <div className="camera-controls">
+        <StageTicks value={stage} onChange={pickStage} />
         <div className="camera-size-row">
           <label className="camera-size">{t("camera.boardSize")}
             <input type="range" min={0.15} max={0.6} step={0.01} value={pos.width} onChange={(e) => setPos((p) => ({ ...p, width: Number(e.target.value) }))} />

@@ -6,7 +6,7 @@ export type Whiteboard = {
   item: string;
   /** 施工位置 (filled from the drawing, editable) */
   place: string;
-  /** 施工日期 in ROC form, e.g. "109.10.15" */
+  /** 查驗日期 in ROC form, e.g. "109.10.15" (was 施工日期; 用戶 2026-11-23：「施工日期改查驗日期」) */
   date: string;
   /** 查驗人員 typed name; a signer's signature is drawn instead when signerId is set */
   inspector: string;
@@ -18,9 +18,12 @@ export type Whiteboard = {
   width: number;
   /** writing of the values: 落雁體 handwriting (default) or 黑體 (用戶 2026-11-23) */
   font?: BoardFont;
+  /** the ticked box of 施工前 / 施工中 / 施工後, none when unset (用戶 2026-11-23) */
+  stage?: BoardStage;
 };
 
 export type BoardFont = "hand" | "sans";
+export type BoardStage = "before" | "during" | "after";
 
 export type CameraBatch = {
   id: string;
