@@ -100,8 +100,13 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
   const [page, setPage] = useState(0);
   const [offset, setOffset] = useState(0);
   const viewport = useRef<HTMLDivElement>(null);
-  const gesture = useRef<{ id: number; x: number; y: number; dx: number; dragged: boolean } | null>(null);
+  const gesture = useRef<{ id: number; x: number; y: number; dx: number; dragged: boolean; button: HTMLButtonElement | null; touch: boolean } | null>(null);
   const suppressClick = useRef(false);
+  // A finger tap presses its button on lift, not when the browser decides it was a click: on the phone the 工程相機
+  // button needed two taps (用戶 2026-11-23); a press held a little long or a tap during the page slide gave no click.
+  // The browser's own click that may follow is dropped so the button acts once.
+  const tappedAt = useRef(0);
+  const ownClick = useRef(false);
   const goTo = (next: number) => {
     const active = document.activeElement;
     if (active instanceof HTMLElement && viewport.current?.contains(active)) active.blur();
@@ -136,6 +141,13 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
       suppressClick.current = true;
       e.preventDefault(); e.stopPropagation();
       goTo(cancel || Math.abs(g.dx) < 32 ? page : page + (g.dx < 0 ? 1 : -1));
+    } else if (!cancel && g.touch && g.button && !g.button.disabled) {
+      const b = g.button.getBoundingClientRect();
+      if (e.clientX >= b.left - 16 && e.clientX <= b.right + 16 && e.clientY >= b.top - 16 && e.clientY <= b.bottom + 16) {
+        tappedAt.current = performance.now();
+        ownClick.current = true;
+        try { g.button.click(); } finally { ownClick.current = false; }
+      }
     }
     setOffset(0);
     if (e.currentTarget.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
@@ -160,7 +172,7 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
           if (!e.isPrimary || (e.button !== 0 && !middle)) return;
           if (middle) e.preventDefault();
           suppressClick.current = false;
-          gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dragged: false };
+          gesture.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dragged: false, touch: e.pointerType !== "mouse", button: (e.target as Element | null)?.closest?.("button") as HTMLButtonElement | null };
         }}
         onPointerMove={e => {
           const g = gesture.current;
@@ -178,7 +190,7 @@ export function CheckStrip({ spaces, space, switching, missing, xrefsUnloaded, x
         }}
         onPointerUp={e => finish(e)} onPointerCancel={e => finish(e, true)}
         onLostPointerCapture={e => { if (e.target === e.currentTarget && gesture.current) finish(e, true); }}
-        onClickCapture={e => { if (suppressClick.current) { e.preventDefault(); e.stopPropagation(); } }}
+        onClickCapture={e => { if (ownClick.current) return; if (suppressClick.current || performance.now() - tappedAt.current < 800) { e.preventDefault(); e.stopPropagation(); } }}
         onMouseDown={e => { if (e.button === 1) e.preventDefault(); }}
         onAuxClick={e => { if (e.button === 1) e.preventDefault(); }}>
         <div className="check-strip-track" style={{ transform: `translateX(calc(${-page * 100}% + ${offset}px))` }}>
