@@ -189,14 +189,23 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   const [thumb, setThumb] = useState<{ url: string; n: number; from: { left: number; top: number; width: number; height: number } | null } | null>(null);
   const thumbEl = useRef<HTMLImageElement>(null);
   useEffect(() => () => { if (thumb) URL.revokeObjectURL(thumb.url); }, [thumb]);
+  // It only says "a photo was taken": it shrinks into the top-left corner and is gone (用戶 2026-11-23：「縮到最左上後
+  // 直接消失，這只是提醒有拍到照片用」).
   useLayoutEffect(() => {
-    const el = thumbEl.current, from = thumb?.from;
-    if (!el || !from || typeof el.animate !== "function") return;
-    try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch { /* no matchMedia */ }
+    const el = thumbEl.current, n = thumb?.n, from = thumb?.from;
+    if (!el || n === undefined) return;
+    const gone = () => setThumb((cur) => (cur?.n === n ? null : cur));
+    let reduced = false;
+    try { reduced = matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { /* no matchMedia */ }
+    if (!from || reduced || typeof el.animate !== "function") { const id = window.setTimeout(gone, 500); return () => window.clearTimeout(id); }
     const to = el.getBoundingClientRect(), host = el.offsetParent?.getBoundingClientRect() ?? { left: 0, top: 0 };
-    const box = (b: { left: number; top: number; width: number; height: number }, radius: string) =>
-      ({ left: `${b.left - host.left}px`, top: `${b.top - host.top}px`, width: `${b.width}px`, height: `${b.height}px`, borderRadius: radius });
-    el.animate([box(from, "0px"), box(to, "10px")], { duration: 480, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" });
+    const box = (b: { left: number; top: number; width: number; height: number }, radius: string, opacity: number, offset?: number) =>
+      ({ left: `${b.left - host.left}px`, top: `${b.top - host.top}px`, width: `${b.width}px`, height: `${b.height}px`, borderRadius: radius, opacity, ...(offset === undefined ? {} : { offset }) });
+    const corner = { left: to.left, top: to.top, width: 16, height: 16 };
+    const run = el.animate([box(from, "0px", 1), box(to, "10px", 1, 0.75), box(corner, "6px", 0)],
+      { duration: 640, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)", fill: "forwards" });
+    run.onfinish = gone;
+    return () => { run.onfinish = null; };
   }, [thumb?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const flyThumb = (photo: Blob) => {
     const v = testMode ? sample.current : video.current, area = shown(), r = v?.getBoundingClientRect();
