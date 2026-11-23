@@ -7,7 +7,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Capacitor } from "@capacitor/core";
 import { useI18n } from "../i18n/translations";
-import { testPhoto, usesTestPhoto } from "./testPhoto";
+import { guestPhoto, testPhoto, usesTestPhoto } from "./testPhoto";
+import { IS_GUEST } from "../auth/guestMode";
 import { allowRotation } from "../native/screenRotation";
 import type { Signer, Whiteboard } from "./types";
 import { boardRect, drawBoard, type BoardText } from "./whiteboard";
@@ -45,7 +46,9 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   const { t } = useI18n();
   const video = useRef<HTMLVideoElement>(null);
   const sample = useRef<HTMLImageElement>(null);
-  const [testMode] = useState(() => usesTestPhoto(Capacitor.isNativePlatform()));
+  // a computer shoots the drawn test scene, a guest the demo site photos; neither opens a camera
+  const [testMode] = useState(() => IS_GUEST || usesTestPhoto(Capacitor.isNativePlatform()));
+  const sampleShot = (n: number) => (IS_GUEST ? guestPhoto(n) : testPhoto(n));
   const [sampleUrl, setSampleUrl] = useState("");
   const overlay = useRef<HTMLCanvasElement>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -96,7 +99,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
     if (!testMode && !awake) return;
     if (testMode) {
       let url = "";
-      void testPhoto(shots + 1).then((b) => { if (!live) return; url = URL.createObjectURL(b); setSampleUrl(url); setState("ready"); });
+      void sampleShot(shots + 1).then((b) => { if (!live) return; url = URL.createObjectURL(b); setSampleUrl(url); setState("ready"); });
       return () => { live = false; if (url) URL.revokeObjectURL(url); };
     }
     const md = navigator.mediaDevices;
@@ -159,7 +162,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   }, [pos, board, text, signer, state, sampleUrl, testMode]);
 
   const takePicture = async (): Promise<Blob> => {
-    if (testMode) return testPhoto(shots + 1);
+    if (testMode) return sampleShot(shots + 1);
     const track = stream.current?.getVideoTracks()[0];
     const IC = (globalThis as { ImageCapture?: new (t: MediaStreamTrack) => Capture }).ImageCapture;
     if (track && IC) {
@@ -253,7 +256,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
       ) : (
         <div className="camera-stage">
           {testMode ? <img ref={sample} src={sampleUrl || undefined} alt="" className="camera-sample" /> : <video ref={video} playsInline muted />}
-          {testMode ? <p className="camera-test-note">{t("camera.testPhoto")}</p> : null}
+          {testMode ? <p className="camera-test-note">{t(IS_GUEST ? "camera.guestPhoto" : "camera.testPhoto")}</p> : null}
           <canvas ref={overlay} className="camera-overlay" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
         </div>
       )}

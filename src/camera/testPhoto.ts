@@ -59,3 +59,12 @@ export function testPhoto(shot: number): Promise<Blob> {
   paintTestScene(c.getContext("2d")!, c.width, c.height, shot);
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error("test photo failed"))), "image/jpeg", 0.92));
 }
+
+/** Guests (訪客試用, no sign-in) shoot the bundled demo site photos in turn instead of a camera (用戶 2026-11-23：「要加
+ * 預設照片」): no camera permission, the same pictures for everyone. Drawn, not real site photos (the site is public). */
+export const GUEST_PHOTOS = [1, 2, 3, 4].map((n) => `./demo/camera/demo-photo-${n}.jpg`);
+export async function guestPhoto(shot: number): Promise<Blob> {
+  const res = await fetch(GUEST_PHOTOS[(Math.max(1, shot) - 1) % GUEST_PHOTOS.length]);
+  if (!res.ok) return testPhoto(shot); // missing on this build: fall back to the drawn test scene
+  return res.blob();
+}

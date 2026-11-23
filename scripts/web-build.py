@@ -63,6 +63,11 @@ DEMO = ['示範-住宅平面.dwg', '示範-圖框.dwg', '示範-住宅平面.pdf
 (out / 'demo').mkdir(exist_ok=True)
 for name in DEMO:
     shutil.copy2(w / 'web/demo' / name, out / 'demo' / name)
+# 訪客試用的示範工地照片（程式畫的，不是現場照，用戶 2026-11-23「要加預設照片」）：也只放這四張。
+DEMO_PHOTOS = [f'demo-photo-{n}.jpg' for n in range(1, 5)]
+(out / 'demo' / 'camera').mkdir(exist_ok=True)
+for name in DEMO_PHOTOS:
+    shutil.copy2(w / 'web/demo/camera' / name, out / 'demo' / 'camera' / name)
 # Do not publish the native zero-collection notice as the web policy.
 shutil.copy2(w / 'WEB_PRIVACY.md', out / 'licenses/PRIVACY_POLICY.md')
 (out / '.nojekyll').write_text('', encoding='utf8')
