@@ -15,7 +15,9 @@ export function SignaturePad({ initialName, signer, onSaved, onCancel }: {
 }) {
   const { t } = useI18n();
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [name, setName] = useState(signer?.name ?? initialName);
+  // The name comes from the 查驗人員 field of the batch settings outside; this window has no field of its own
+  // (用戶 2026-11-23：「上方的查驗人員這格取消，重複了」). Empty there: kept as 「未具名簽名」.
+  const name = initialName.trim() || signer?.name || t("camera.signUnnamed");
   const [strokes, setStrokes] = useState<number[][]>([]);
   const current = useRef<number[] | null>(null);
 
@@ -38,7 +40,6 @@ export function SignaturePad({ initialName, signer, onSaved, onCancel }: {
     <div className="confirm-backdrop">
       <section role="dialog" aria-modal="true" aria-label={t("camera.signTitle")} className="confirm-box camera-sign">
         <h2>{t("camera.signTitle")}</h2>
-        <label>{t("camera.field.inspector")}<input value={name} onChange={(e) => setName(e.target.value)} /></label>
         <canvas ref={canvas} className="camera-sign-pad" style={{ aspectRatio: String(ASPECT) }}
           onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); current.current = point(e); setStrokes((l) => { const n = [...l, current.current!]; paint(n); return n; }); }}
           onPointerMove={(e) => { if (!current.current) return; current.current.push(...point(e)); paint(strokes); }}
@@ -46,7 +47,7 @@ export function SignaturePad({ initialName, signer, onSaved, onCancel }: {
         <div className="camera-actions">
           <button type="button" onClick={() => { setStrokes([]); paint([]); }}>{t("camera.signClear")}</button>
           <button type="button" onClick={onCancel}>{t("camera.cancel")}</button>
-          <button type="button" className="camera-primary" disabled={!name.trim() || !strokes.length}
+          <button type="button" className="camera-primary" disabled={!strokes.length}
             onClick={() => void saveSigner({ id: signer?.id, name: name.trim(), aspect: ASPECT, strokes }).then(onSaved)}>{t("camera.save")}</button>
         </div>
       </section>

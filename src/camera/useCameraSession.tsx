@@ -389,7 +389,7 @@ function BatchSettings({ initial, signers: initialSigners, onSave, onCancel, onD
       </label>
       <button type="button" onClick={() => setSigning(true)}>{t("camera.signNew")}</button>
       {signing ? <SignaturePad initialName={d.inspector} onCancel={() => setSigning(false)}
-        onSaved={(s) => { setSigning(false); setSigners([...signers.filter((x) => x.id !== s.id), s]); setD({ ...d, signerId: s.id, inspector: d.inspector || s.name }); }} /> : null}
+        onSaved={(s) => { setSigning(false); setSigners([...signers.filter((x) => x.id !== s.id), s]); setD({ ...d, signerId: s.id }); }} /> : null}
       {field("cardDate", t("camera.field.cardDate"))}
       <div className="camera-actions">
         <button type="submit" className="camera-primary">{t("camera.save")}</button>

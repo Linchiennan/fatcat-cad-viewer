@@ -56,6 +56,7 @@ export const CAMERA_STRINGS = {
   "camera.fromGallery": { zh: "從相簿加入", en: "Add from gallery" },
   "camera.signTitle": { zh: "查驗人員簽名", en: "Inspector's signature" },
   "camera.signNew": { zh: "新增簽名", en: "New signature" },
+  "camera.signUnnamed": { zh: "未具名簽名", en: "Unnamed signature" },
   "camera.signClear": { zh: "清除重簽", en: "Clear" },
   "camera.exportTitle": { zh: "匯出請款資料", en: "Export the photo package" },
   "camera.exportWhat": { zh: "勾選要的檔案：「匯出檔案」一個個分開給出；「一鍵壓縮打包」包成一個 ZIP。", en: "Tick the files: Export gives them one by one; Zip packs them into one ZIP." },
