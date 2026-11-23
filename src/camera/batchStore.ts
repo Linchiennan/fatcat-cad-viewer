@@ -179,15 +179,18 @@ export async function updatePoint(id: string, patch: Partial<Pick<ShotPoint, "x"
   });
 }
 
-/** Delete a point; its photos become unplaced (未定位), later points move up a number. */
-export async function deletePoint(id: string): Promise<void> {
-  await tx("readwrite", async (s) => {
+/** Delete a point with its photos (用戶 2026-11-23：「刪除定點後，清單內也要刪除」; they used to become 未定位); later
+ * points move up a number. Returns how many photos went with it. */
+export async function deletePoint(id: string): Promise<number> {
+  return tx("readwrite", async (s) => {
     const old = (await req(s.points.get(id))) as ShotPoint | undefined;
     if (!old) throw notFound("point");
     await req(s.points.delete(id));
     for (const p of closeGap(await inBatch<ShotPoint>(s.points, old.batchId), old.no)) await req(s.points.put(p));
-    for (const ph of await inBatch<PhotoRecord>(s.photos, old.batchId)) if (ph.pointId === id) await req(s.photos.put({ ...ph, pointId: null }));
+    let gone = 0;
+    for (const ph of await inBatch<PhotoRecord>(s.photos, old.batchId)) if (ph.pointId === id) { await req(s.photos.delete(ph.id)); await req(s.blobs.delete(ph.id)); gone++; }
     await touch(s, old.batchId);
+    return gone;
   });
 }
 

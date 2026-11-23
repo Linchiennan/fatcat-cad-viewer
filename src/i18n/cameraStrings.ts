@@ -39,7 +39,7 @@ export const CAMERA_STRINGS = {
   // the narrow buttons beside the note: the line break is part of the label, so it does not depend on the font's width
   "camera.deletePointShort": { zh: "刪除\n定點", en: "Delete\nspot" },
   "camera.deletePhotoShort": { zh: "刪除\n照片", en: "Delete\nphoto" },
-  "camera.deletedPoint": { zh: "已刪定點 {no}，照片移到未定位", en: "Spot {no} deleted (its photos are now unplaced)" },
+  "camera.deletedPoint": { zh: "已刪除定點 {no} 和 {N} 張照片", en: "Spot {no} and its {N} photos deleted" },
   "camera.deletedPhotos": { zh: "已刪定點 {no} 的 {N} 張照片", en: "Deleted {N} photos of spot {no}" },
   "camera.renumber": { zh: "改號", en: "Renumber" },
   "camera.renumberAsk": { zh: "位置 {no} 改成第幾號？（1～{max}）", en: "New number for spot {no}? (1–{max})" },

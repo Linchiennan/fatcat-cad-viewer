@@ -417,7 +417,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
               {/* both delete at once, no confirm (用戶 2026-11-23：「刪除定點跟刪除照片 就直接刪，不需確認」); a one-line note says what went */}
               <button type="button" className="camera-danger" onClick={() => {
                 const no = selected.no;
-                void deletePoint(selected.id).then(() => { setSelectedId(null); setMessage(t("camera.deletedPoint", { no })); return reload(batch); }).catch(fail);
+                void deletePoint(selected.id).then((n) => { setSelectedId(null); setMessage(t("camera.deletedPoint", { no, N: n })); return reload(batch); }).catch(fail);
               }}>{t("camera.deletePointShort")}</button>
               {/* the photos of this spot, right here (用戶 2026-11-23：最右邊加「刪除照片」，不用到清單才能刪) */}
               <button type="button" className="camera-danger" disabled={!count} onClick={() => {

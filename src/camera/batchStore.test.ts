@@ -33,15 +33,17 @@ describe("batchStore", () => {
     expect((await listBatches()).length).toBe(2);
   });
 
-  it("closes the number gap and unplaces photos when a point is deleted", async () => {
+  it("closes the number gap and deletes the point's photos with it (用戶 2026-11-23)", async () => {
     const b = await createBatch(batchFields);
     const [a, , c] = [await addPoint(b.id, { x: 0, y: 0, angle: 0, place: "" }), await addPoint(b.id, { x: 0, y: 0, angle: 0, place: "" }), await addPoint(b.id, { x: 0, y: 0, angle: 0, place: "" })];
     const ph = await addPhoto({ batchId: b.id, pointId: a.id, takenAt: 1, width: 1, height: 1, board }, jpg());
-    await deletePoint(a.id);
+    const kept = await addPhoto({ batchId: b.id, pointId: c.id, takenAt: 2, width: 1, height: 1, board }, jpg());
+    expect(await deletePoint(a.id)).toBe(1);
     const left = await listPoints(b.id);
     expect(left.map((p) => p.no)).toEqual([1, 2]);
     expect(left.find((p) => p.id === c.id)!.no).toBe(2);
-    expect((await listPhotos(b.id)).find((p) => p.id === ph.id)!.pointId).toBeNull();
+    expect((await listPhotos(b.id)).map((p) => p.id)).toEqual([kept.id]);
+    expect(ph.id).not.toBe(kept.id);
   });
 
   it("renumbers, moves points and edits whiteboards", async () => {
