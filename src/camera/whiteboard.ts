@@ -38,7 +38,8 @@ const valueFont = (board: { font?: BoardFont }, px: number) =>
   board.font === "hand" ? `400 ${px * HAND_SCALE}px "${HAND_FONT}", ${FONT}` : `500 ${px * 1.05}px ${FONT}`;
 // 落雁體 comes only in Thin and its glyphs sit small in the em box: at the 黑體 size the values read like pencil
 // (2026-11-23 export check), so it is drawn larger and its strokes thickened like a whiteboard marker
-const HAND_SCALE = 1.4, HAND_INK = 0.07;
+// 1.4 → ×1.15 (用戶 2026-11-23：「落雁體的字體放大1.15倍」)
+const HAND_SCALE = 1.4 * 1.15, HAND_INK = 0.07;
 function drawValue(ctx: CanvasRenderingContext2D, board: { font?: BoardFont }, s: string, x: number, y: number, px: number): void {
   ctx.fillText(s, x, y);
   if (board.font !== "hand") return;
