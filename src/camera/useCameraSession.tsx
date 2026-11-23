@@ -31,8 +31,9 @@ function remember(b: Remembered): void {
   try { localStorage.setItem(LAST_KEY, JSON.stringify(b)); } catch { /* private mode */ }
 }
 
-/** Default board place and size: bottom-left, as the hand-held board in the user's photos. */
-export const DEFAULT_BOARD = { x: 0.02, y: 0.6, width: 0.3 } as const;
+/** Default board place and size: flush in the bottom-left corner (用戶 2026-11-23：「預設白板都是靠最左下」). x 0 / y 1 are
+ * clamped to the picture by boardRect, so the board sits in the corner whatever the picture's shape (upright or sideways). */
+export const DEFAULT_BOARD = { x: 0, y: 1, width: 0.3 } as const;
 const BOARD_KEY = "fatcat.camera.board";
 type BoardPos = Pick<Whiteboard, "x" | "y" | "width">;
 /** Where the user last left the board in the camera (用戶 2026-11-22：調整後的白板位置跟大小要自動記憶). */
