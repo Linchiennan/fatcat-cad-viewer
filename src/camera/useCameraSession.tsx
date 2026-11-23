@@ -377,8 +377,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     };
     body = (
       <div className="camera-body">
-        <h3>{t("camera.exportTitle")}</h3>
-        <p className="camera-hint">{t("camera.exportWhat")}</p>
+        {/* the title sits in the head row; one short line here, so every option and both buttons show (用戶 2026-11-23：
+            「點匯出要完整顯示所有選項，上方文字去調整」) */}
+        <p className="camera-hint camera-export-what">{t("camera.exportWhat")}</p>
         {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
         <fieldset className="camera-parts">
           {(["sheetMono", "sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
@@ -389,7 +390,6 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <div className="camera-actions">
           <button type="button" className="camera-primary" disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(false)}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
           <button type="button" className="camera-zip" title={t("camera.exportZipTip")} disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(true)}>{t("camera.exportZip")}</button>
-          <button type="button" disabled={!!progress} onClick={() => setView("work")}>{t("camera.cancel")}</button>
         </div>
       </div>
     );
@@ -437,20 +437,20 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
               }}>{t("camera.deletePhotoShort")}</button>
             </div>
           )
-        ) : placing ? <p className="camera-hint">{t("camera.placeHintShort")}</p> : null}
+        ) : null /* no hint under the tools while 放點 is on (用戶 2026-11-23：「點選到放點，下方不要出現說明」) */}
       </div>
     );
   }
 
   const subView = view === "settings" || view === "photos" || view === "export";
   const panel = open ? (
-    <section className={"camera-sheet" + (collapsed ? " collapsed" : "")} aria-label={t("camera.title")}
+    <section className={"camera-sheet" + (collapsed ? " collapsed" : "") + (view === "export" ? " exporting" : "")} aria-label={t("camera.title")}
       style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
       <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the 符號 slider sits there (swapped with the place name,
             用戶 2026-11-23) */}
-        {view === "batches" ? <span className="camera-head-label">{t("camera.batchesShort")}</span> : batch && view === "work" ? (
+        {view === "batches" ? <span className="camera-head-label">{t("camera.batchesShort")}</span> : view === "export" ? <span className="camera-head-label">{t("camera.exportTitle")}</span> : batch && view === "work" ? (
           <label className="camera-head-scale"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
             <input type="range" min={MARKER_SCALE_MIN} max={MARKER_SCALE_MAX} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
           </label>
