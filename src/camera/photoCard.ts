@@ -47,6 +47,8 @@ export function photoCell(boxTop: number): { x: number; y: number; w: number; h:
 }
 
 /** 工程名稱 line as on the card. */
-export const infoLine = (h: CardHeading): string => `工程名稱：${h.project}${"　".repeat(3)}日期：${h.date}`;
+/** The line under the title: 工程名稱 from the left, 日期 against the right edge of the boxes, wherever the name ends
+ * (用戶 2026-11-23：「日期固定在右邊」; it used to follow the name after three spaces). */
+export const infoParts = (h: CardHeading): { project: string; date: string } => ({ project: `工程名稱：${h.project}`, date: `日期：${h.date}` });
 /** 「照 片 保 存 卡」 with the spacing of the user's card */
 export const CARD_TITLE = "照 片 保 存 卡";

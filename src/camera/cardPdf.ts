@@ -2,7 +2,7 @@
 // Word to convert it), then put into an A4 PDF with pdf-lib. Text uses 標楷體 when the device has it, else the
 // bundled font; the layout does not change.
 import { PDFDocument } from "pdf-lib";
-import { A4, CARD, CARD_TITLE, fitInCell, infoLine, pages, photoCell, type CardEntry, type CardHeading } from "./photoCard";
+import { A4, CARD, CARD_TITLE, fitInCell, infoParts, pages, photoCell, type CardEntry, type CardHeading } from "./photoCard";
 
 const FONT = '"DFKai-SB", "標楷體", "BiauKai", "FatCat Sans", serif';
 // 用戶 2026-11-23：「這產出的PDF畫質很差」: the whole page used to be one 144 dpi JPEG, text included (soft, with JPEG
@@ -27,7 +27,10 @@ async function drawPage(heading: CardHeading, page: readonly CardEntry[], photos
   ctx.font = `${CARD.companyPt}px ${FONT}`; ctx.fillText(heading.company, A4.w / 2, CARD.companyTop);
   ctx.font = `${CARD.titlePt}px ${FONT}`; ctx.fillText(CARD_TITLE, A4.w / 2, CARD.titleTop);
   ctx.textAlign = "left";
-  ctx.font = `${CARD.textPt}px ${FONT}`; ctx.fillText(infoLine(heading), CARD.left - 7, CARD.infoTop);
+  ctx.font = `${CARD.textPt}px ${FONT}`;
+  const info = infoParts(heading);
+  ctx.fillText(info.project, CARD.left - 7, CARD.infoTop);
+  ctx.textAlign = "right"; ctx.fillText(info.date, CARD.right, CARD.infoTop); ctx.textAlign = "left";
   for (let i = 0; i < page.length; i++) {
     const e = page[i], top = CARD.boxTops[i];
     const cell = photoCell(top);

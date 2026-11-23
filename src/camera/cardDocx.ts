@@ -1,7 +1,7 @@
 // 照片保存卡 as .docx (spec 009 定案 8): plain WordprocessingML zipped with fflate — company, 「照 片 保 存 卡」,
 // 工程名稱 / 日期 heading on every page, then two boxed tables a page (label column + photo merged down the rows).
 import { strToU8, zipSync } from "fflate";
-import { CARD, CARD_TITLE, infoLine, pages, fitInCell, photoCell, type CardEntry, type CardHeading } from "./photoCard";
+import { CARD, CARD_TITLE, infoParts, pages, fitInCell, photoCell, type CardEntry, type CardHeading } from "./photoCard";
 
 const TW = 20; // twips per point
 const EMU = 12700; // EMU per point
@@ -12,6 +12,13 @@ const run = (text: string, halfPoints: number, bold = false) =>
 
 const para = (text: string, pt: number, opts: { center?: boolean; before?: number; after?: number; pageBreak?: boolean } = {}) =>
   `<w:p><w:pPr>${opts.pageBreak ? "<w:pageBreakBefore/>" : ""}<w:spacing w:before="${(opts.before ?? 0) * TW}" w:after="${(opts.after ?? 0) * TW}" w:line="240" w:lineRule="auto"/>${opts.center ? '<w:jc w:val="center"/>' : ""}</w:pPr>${run(text, pt * 2)}</w:p>`;
+
+/** 工程名稱 on the left, 日期 on a right tab at the boxes' right edge (用戶 2026-11-23：「日期固定在右邊」). */
+function infoPara(h: CardHeading): string {
+  const info = infoParts(h), right = Math.round((CARD.right - CARD.left) * TW), hp = CARD.textPt * 2;
+  return `<w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="${right}"/></w:tabs><w:spacing w:before="${4 * TW}" w:after="${6 * TW}" w:line="240" w:lineRule="auto"/></w:pPr>` +
+    `${run(info.project, hp)}<w:r><w:tab/></w:r>${run(info.date, hp)}</w:p>`;
+}
 
 function imageXml(rid: string, n: number, entry: CardEntry): string {
   // its own proportions in the cell, not stretched to it (用戶 2026-11-23：白板會變形)
@@ -50,7 +57,7 @@ export function buildCardDocx(heading: CardHeading, entries: readonly CardEntry[
   pages(entries).forEach((page, pi) => {
     body += para(heading.company, CARD.companyPt, { center: true, pageBreak: pi > 0 });
     body += para(CARD_TITLE, CARD.titlePt, { center: true, before: 2 });
-    body += para(infoLine(heading), CARD.textPt, { before: 4, after: 6 });
+    body += infoPara(heading);
     page.forEach((entry, i) => {
       n += 1;
       const rid = `rIdImg${n}`, name = `image${n}.jpeg`;
