@@ -230,3 +230,8 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
 
 /* projects are held to delete: no text selection or callout while holding (用戶 2026-11-23) */
 .camera-home .camera-batches button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+/* the camera panel, project list and shoot screen are controls only: no text selection, no long-press callout; typing
+   in a field still selects (用戶 2026-11-23) */
+.camera-sheet, .camera-home, .camera-screen { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.camera-sheet input, .camera-sheet textarea, .camera-home input, .camera-screen input { -webkit-user-select: text; user-select: text; }

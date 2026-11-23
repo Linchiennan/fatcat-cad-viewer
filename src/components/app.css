@@ -846,7 +846,9 @@ button { cursor: pointer; }
 /* ── Mobile-native pass (Emil Kowalski skills, 2026-11-14) ─────────────────────────────── */
 /* Buttons: no 300ms double-tap wait, no text selection or callout on long-press. */
 button, a, [role="button"], label { touch-action: manipulation; }
-button, [role="button"] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+/* no browser text selection or long-press callout on controls: a label holding a file picker (相簿) got highlighted
+   (用戶 2026-11-23：「要停用瀏覽器原本的選取功能」) */
+button, [role="button"], label, summary { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 @media (pointer: coarse) {
   /* iPhone Safari zooms the page into any input under 16px and never zooms back. */
   html:root input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
