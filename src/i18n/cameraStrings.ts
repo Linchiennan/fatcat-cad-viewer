@@ -35,6 +35,7 @@ export const CAMERA_STRINGS = {
   "camera.deletedPhotos": { zh: "已刪定點 {no} 的 {N} 張照片", en: "Deleted {N} photos of spot {no}" },
   "camera.renumber": { zh: "改號", en: "Renumber" },
   "camera.renumberAsk": { zh: "位置 {no} 改成第幾號？（1～{max}）", en: "New number for spot {no}? (1–{max})" },
+  "camera.unplacedTag": { zh: "未定位", en: "Unplaced" },
   "camera.spotNo": { zh: "位置 {no}", en: "Spot {no}" },
   "camera.placeEditTip": { zh: "點一下修改位置名稱", en: "Tap to rename the place" },
   "camera.placeEditLabel": { zh: "位置名稱", en: "Place name" },

@@ -41,11 +41,16 @@ export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete 
   const row = (ph: PhotoRecord) => {
     const l = labels.get(ph.id);
     return (
-      <li key={ph.id} className="camera-photo">
-        <Thumb id={ph.id} />
-        <div>
-          <strong>{l ? cardLabel(l) : "—"}</strong>
-          <small>{ph.board.item} · {ph.board.place || "—"} · {ph.board.date}</small>
+      // a card: the number on the top-left corner of the photo, place in bold, item and date below
+      // (用戶 2026-11-23 白板 #5：「去美化，並把數字改到最左上」)
+      <li key={ph.id} className={"camera-photo" + (l ? "" : " loose")}>
+        <div className="camera-photo-pic">
+          <Thumb id={ph.id} />
+          <b className="camera-photo-no">{l ? cardLabel(l) : t("camera.unplacedTag")}</b>
+        </div>
+        <div className="camera-photo-info">
+          <strong>{ph.board.place || "—"}</strong>
+          <small>{[ph.board.item, ph.board.date].filter(Boolean).join(" · ")}</small>
           {editing === ph.id ? (
             <BoardForm board={ph.board} onSave={(b) => { setEditing(null); onEdit(ph, b); }} onCancel={() => setEditing(null)} />
           ) : (
