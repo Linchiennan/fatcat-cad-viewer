@@ -142,7 +142,7 @@
 /* English labels are about twice as wide (Renumber / Delete spot / Delete photo) and squeezed the status box to a
    square (用戶 2026-11-23：「切換成英文版，工程相機底下的按鈕比例就不正常了」): there they wrap to two short lines
    so the row keeps the same proportions as in Chinese */
-html[lang="en"] .camera-sheet .camera-sel button { max-width: 76px; padding: 0 8px; white-space: normal; font-size: 0.78rem; line-height: 1.05; }
+html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-height: 1.05; }
 .camera-sheet .camera-row button { min-height: 36px; height: 36px; padding: 0 12px; font-size: 0.85rem; }
 .camera-row input[type="number"] { width: 64px; min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
 .camera-sheet .camera-paw { width: 64px; height: 64px; margin: 2px 0 4px; }
@@ -184,9 +184,15 @@ html[lang="en"] .camera-sheet .camera-sel button { max-width: 76px; padding: 0 8
 /* the spot buttons keep their one-line size; the note box takes what is left */
 /* the three buttons beside the note are narrow, two characters a line (刪除／定點), so the note has room and is not cut on a
    phone (用戶 2026-11-23 白板 #1「在手機上顯示不完整」「調整右邊按鈕」; it had about 130 px) */
-.camera-sheet .camera-sel button { flex: none; white-space: normal; padding: 0 8px; font-size: 0.8rem; line-height: 1.1; max-width: calc(2.2em + 16px); }
+.camera-sheet .camera-sel button { flex: none; white-space: pre; padding: 0 8px; font-size: 0.8rem; line-height: 1.1; }
 /* the place name row below the tools: full width */
 .camera-compact .camera-place { justify-self: stretch; width: 100%; }
+/* the panel button style (inline-flex, centred) won over the grid above, so 位置 N sat tiny in the middle (用戶 2026-11-23：
+   「位置5的字體過小，而且要往左一點」): one line from the left, the label readable */
+.camera-sheet button.camera-place { display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 12px; }
+.camera-sheet button.camera-place span { font-size: 0.85rem; }
+.camera-sheet button.camera-place strong { flex: 0 1 auto; font-size: 0.95rem; }
+.camera-sheet button.camera-place svg { flex: none; }
 /* 工程相機 from the home page: the batch list on its own screen (用戶 2026-11-23) */
 .camera-home { position: fixed; inset: 0; z-index: 150; display: flex; flex-direction: column; background: var(--bg, #0b1118); color: var(--text); padding: calc(10px + var(--safe-top, 0px)) 16px calc(16px + var(--safe-bottom, 0px)); }
 .camera-home-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

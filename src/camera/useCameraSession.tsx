@@ -419,12 +419,12 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
               <button type="button" className="camera-danger" onClick={() => {
                 const no = selected.no;
                 void deletePoint(selected.id).then(() => { setSelectedId(null); setMessage(t("camera.deletedPoint", { no })); return reload(batch); }).catch(fail);
-              }}>{t("camera.deletePoint")}</button>
+              }}>{t("camera.deletePointShort")}</button>
               {/* the photos of this spot, right here (用戶 2026-11-23：最右邊加「刪除照片」，不用到清單才能刪) */}
               <button type="button" className="camera-danger" disabled={!count} onClick={() => {
                 const own = photos.filter((p) => p.pointId === selected.id), no = selected.no;
                 void (async () => { for (const ph of own) await deletePhoto(ph.id); setMessage(t("camera.deletedPhotos", { no, N: own.length })); await reload(batch); })().catch(fail);
-              }}>{t("camera.deletePhoto")}</button>
+              }}>{t("camera.deletePhotoShort")}</button>
             </div>
           )
         ) : placing ? <p className="camera-hint">{t("camera.placeHintShort")}</p> : null}
