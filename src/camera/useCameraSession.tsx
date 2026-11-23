@@ -91,6 +91,11 @@ export type CameraContext = {
   viewKey: string;
   space: string;
   index: MeasurementIndex | null;
+  /** the base is a PDF page (用戶 2026-11-23 選 B 支援 PDF): no CAD files in the export, names from the page's words */
+  pdf?: boolean;
+  /** words on a PDF page and how near a spot they count (page points) */
+  placeTexts?: PlaceText[];
+  placeRadius?: { room: number; unit: number };
   /** the sheet as PDF with `paint` drawn on (photo points), and its width in drawing units */
   exportSheet?(paint: Parameters<NonNullable<ExportCapable["exportWithOverlay"]>>[1], mode: "color" | "mono"): Promise<{ blob: Blob; sheetWidth: number }>;
 };
@@ -247,6 +252,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   }, [ctx.viewKey, batch, reload]);
 
   const texts: PlaceText[] = useMemo(() => {
+    if (ctx.placeTexts) return ctx.placeTexts;
     const out: PlaceText[] = [];
     for (const e of ctx.index?.entities ?? []) {
       const raw = e.properties?.text;
@@ -255,7 +261,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       out.push({ text: plainCadText(raw), x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 });
     }
     return out;
-  }, [ctx.index]);
+  }, [ctx.index, ctx.placeTexts]);
 
   /** drawing width from the sheet's objects (sizes the DXF markers when no sheet PDF is made) */
   const indexWidth = useMemo(() => { let lo = Infinity, hi = -Infinity; for (const e of ctx.index?.entities ?? []) { const b = e.bounds; if (Number.isFinite(b.minX) && Number.isFinite(b.maxX)) { lo = Math.min(lo, b.minX); hi = Math.max(hi, b.maxX); } } return hi > lo ? hi - lo : 0; }, [ctx.index]);
@@ -345,14 +351,14 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       // 001–999 in a batch; beyond that a new batch (用戶 2026-11-23)
       if (points.length >= MAX_POINTS) { setPlacing(false); setMessage(t("camera.batchFull", { N: MAX_POINTS })); return; }
       try {
-        const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts) });
+        const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts, ctx.placeRadius) });
         setPoints((list) => [...list, p]); setSelectedId(p.id); // placing stays on: tap after tap (用戶 2026-11-22：放點要能連續放)
       } catch (e) { fail(e); }
     },
     onSelect: (id: string | null) => { setSelectedId(id); setRenumbering(false); },
     onMove: async (id: string, at: { x: number; y: number }) => {
       try {
-        const p = await updatePoint(id, { x: at.x, y: at.y, place: placeName(ctx.drawingName, at, texts) });
+        const p = await updatePoint(id, { x: at.x, y: at.y, place: placeName(ctx.drawingName, at, texts, ctx.placeRadius) });
         setPoints((list) => list.map((q) => (q.id === id ? p : q)));
       } catch (e) { fail(e); }
     },
@@ -435,7 +441,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         // 黑白 and 彩色 白底 對位圖, each when ticked (用戶 2026-11-23)
         const mono = parts.sheetMono && ctx.exportSheet ? await ctx.exportSheet(paint, "mono").catch(() => null) : null;
         const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet(paint, "color").catch(() => null) : null;
-        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetMonoPdf: mono?.blob ?? null, sheetWidth: mono?.sheetWidth || sheet?.sheetWidth || indexWidth, parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
+        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetMonoPdf: mono?.blob ?? null, sheetWidth: mono?.sheetWidth || sheet?.sheetWidth || indexWidth, parts: ctx.pdf ? { ...parts, markerDxf: false, arrowLisp: false } : parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
         if (asZip) {
           const out = await exportBatch(input);
           await shareFile(out.blob, out.fileName, "application/zip");
@@ -454,7 +460,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <p className="camera-hint camera-export-what">{t("camera.exportWhat")}</p>
         {unplaced ? <p className="camera-batch-line"><em>{t("camera.exportUnplaced", { N: unplaced })}</em></p> : null}
         <fieldset className="camera-parts">
-          {(["sheetMono", "sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).map((k) => (
+          {/* a PDF base has no CAD coordinates to line the DXF / LISP up with (用戶 2026-11-23 選 B) */}
+          {(["sheetMono", "sheetPdf", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).filter((k) => !(ctx.pdf && (k === "markerDxf" || k === "arrowLisp"))).map((k) => (
             <label key={k} className="camera-check" title={k === "sheetMono" || k === "sheetPdf" ? t(`camera.part.${k}.tip`) : undefined}><input type="checkbox" checked={parts[k]} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
           ))}
         </fieldset>

@@ -30,7 +30,8 @@ import { setExportFileActions } from "../library/exportFileActions";
 import { ExportBoxLayer, ExportNote, ExportSheet, type ExportNoteState } from "../components/ExportSheet";
 import { exportRequest, ExportNotReadyError, loadExportChoice, loadExportDrawing, loadSaveExport, saveExportChoice, type ExportChoice, type ExportResult, type ScreenBox } from "./exportFlow";
 import type { MeasurementIndex, MeasurementSettings, MeasurementUnit } from "../viewer/measurementGeometry";
-import { savePosition } from "../viewer/readingPosition";
+import { drawingIdentity, savePosition, sheetKey } from "../viewer/readingPosition";
+import type { PlaceText } from "../camera/placeName";
 import type { TextHit } from "../viewer/textSearch";
 import { splitCadWarnings } from "../viewer/cadWarnings";
 import { canKeep, hasAnything, initialMeasureState, measureReducer, toastKey, type MeasureAction, type MeasureState } from "../measure/measureState";
@@ -57,7 +58,7 @@ import { useCameraSession, type CameraLaunch } from "../camera/useCameraSession"
 import { CameraHome } from "../camera/CameraHome";
 import type { CameraBatch } from "../camera/types";
 import { isAbort, progressFraction, readFailureCode, toAppError, viewerFailureCode } from "./shellText";
-import { loadCadViewer, loadMeasurePanel, loadPdfViewer, MissingModuleError, type CadViewerParts, type MeasurePanelComponent, type PdfViewerComponent } from "./viewerModules";
+import { loadCadViewer, loadMeasurePanel, loadPdfViewer, MissingModuleError, type CadViewerParts, type MeasurePanelComponent, type PdfViewerComponent, type PdfViewerHandle } from "./viewerModules";
 
 // Privacy / license and source code pages: downloaded only when opened.
 const LegalPage = lazy(() => import("./LegalPages").then((m) => ({ default: m.LegalPage })));
@@ -212,7 +213,11 @@ export function App() {
   useEffect(() => { setMeasurePreview(null); }, [settings.enabled, settings.snap, settings.mode, settings.info, drawable]);
 
   const canvasRef = useRef<DrawingCanvasHandle | null>(null);
-  const pdfRef = useRef<ViewerHandle | null>(null);
+  const pdfRef = useRef<PdfViewerHandle | null>(null);
+  // a PDF page as the 工程相機 base (用戶 2026-11-23 選 B 支援 PDF): one project is one page
+  const [pdfPage, setPdfPage] = useState(0);
+  const [pdfId, setPdfId] = useState("");
+  const [pdfTexts, setPdfTexts] = useState<PlaceText[] | null>(null);
   const request = useRef(0);
   const abort = useRef<AbortController | null>(null);
   const pendingImport = useRef(false);
@@ -230,6 +235,7 @@ export function App() {
     measurementKey.current = ""; setMeasureSaveFailed(false);
     setXrefsApplying(false); applyingFile.current = null;
     setSaveFailed(false); setReport(null); setSpaces([]); setSpace(MODEL_SPACE); setSwitching(false); setIndex(null);
+    setPdfPage(0); setPdfTexts(null);
     setCadTab(null); dispatch({ type: "reset" }); setMeasureDetail(false); setCardPlace(null); setUnits(DEFAULT_UNITS);
     setMarking(false); setTextDialog(null); setShareNote(null); setMarkCount(0); setSearchOpen(false); setSearch(null);
     setNameCard(false); setIncomingArchive(null); setConfirm(null); setAudit(null);
@@ -249,6 +255,7 @@ export function App() {
     setLibraryOpen(false); setCloseConfirm(false);
     resetDrawingState();
     pendingImport.current = false;
+    setCameraLaunch(null);
     setLast(null); setDrawable(null); setError(null); setScreen("home");
     if (was) recordDiagnostic("drawing.close", { name: was.file.name.replace(/^.*[\\/]/, "") });
   }, [cancelWork, resetDrawingState]);
@@ -675,23 +682,51 @@ export function App() {
       void openDrawing(file, id);
     } catch { setCameraHomeNote(t("camera.homeMissing", { name: b.drawingName })); }
   }, [openDrawing, t]);
+  // the PDF's own key: its name and content, then the page
+  useEffect(() => {
+    if (!isPdf || !drawable) { setPdfId(""); return; }
+    let live = true;
+    void drawingIdentity(drawable).then((id) => { if (live) setPdfId(id); }).catch(() => {});
+    return () => { live = false; };
+  }, [isPdf, drawable]);
+  const pdfSpace = `PDF p.${pdfPage}`;
+  const pdfViewKey = pdfId && pdfPage > 0 ? sheetKey(pdfId, pdfSpace) : "";
   useEffect(() => {
     const go = cameraLaunch;
-    if (!go || screen !== "viewing" || !report || switching || isPdf) return;
+    if (!go || screen !== "viewing" || switching) return;
+    if (isPdf) {
+      if (!pdfViewKey) return;
+      // a project of another page: turn to it first
+      const want = Number(/^PDF p\.(\d+)$/.exec(go.space ?? "")?.[1] ?? 0);
+      if (want > 0 && want !== pdfPage) { pdfRef.current?.goToPage(want); return; }
+      setSearchOpen(false); setCameraOpen(true);
+      return;
+    }
+    if (!report) return;
     if (go.space && go.space !== space && spaces.some((x) => x.name === go.space)) { setSwitching(true); canvasRef.current?.switchSpace(go.space); return; }
     setSearchOpen(false); endMeasure(); endMarkup(); setCadTab(null); setCameraOpen(true);
-  }, [cameraLaunch, screen, report, switching, isPdf, space, spaces]); // eslint-disable-line react-hooks/exhaustive-deps
-  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { focusPoint: (x, y) => {
+  }, [cameraLaunch, screen, report, switching, isPdf, space, spaces, pdfViewKey, pdfPage]); // eslint-disable-line react-hooks/exhaustive-deps
+  const camera = useCameraSession(cameraOpen && screen === "viewing", { focusPoint: (x, y) => {
     // the spot in the middle of the drawing left above the camera panel (用戶 2026-11-23：清單與箭頭雙向跳)
-    const h = canvasRef.current as unknown as { centerOn?(p: { x: number; y: number }, at: { x: number; y: number }): void } | null;
-    const el = document.querySelector(".drawing-canvas"), sheet = document.querySelector(".camera-sheet");
+    const h = (isPdf ? pdfRef.current : canvasRef.current) as unknown as { centerOn?(p: { x: number; y: number }, at: { x: number; y: number }): void } | null;
+    const el = document.querySelector(isPdf ? ".pdf-scroll" : ".drawing-canvas"), sheet = document.querySelector(".camera-sheet");
     if (!h?.centerOn || !el) return;
     const r = el.getBoundingClientRect(), sr = sheet?.getBoundingClientRect();
     // the panel stands on the right when the phone is sideways, at the bottom when upright
     const side = !!sr && sr.left > r.left + r.width / 2;
     const right = side ? Math.min(r.right, sr!.left) : r.right, bottom = sr && !side ? Math.min(r.bottom, sr.top) : r.bottom;
     h.centerOn({ x, y }, { x: (r.left + right) / 2 - r.left, y: (Math.max(r.top, 0) + bottom) / 2 - r.top });
-  }, onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint, mode) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await atBestDpi(sheetDpis(isAppleMobile()), (dpi) => h.exportWithOverlay!({ range: "sheet", format: "pdf", paper: "A3", dpi, whitePaper: mode, title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint)); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
+  }, onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: isPdf ? pdfViewKey : index?.viewKey ?? "", space: isPdf ? pdfSpace : space, index: isPdf ? null : index,
+    // a PDF page: its words name the spots (a room label within about 7 cm of paper, the unit within 25 cm)
+    ...(isPdf ? { pdf: true, placeTexts: pdfTexts ?? [], placeRadius: { room: 200, unit: 700 } } : {}),
+    exportSheet: async (paint, mode) => {
+    if (isPdf) {
+      if (!drawable || !(pdfPage > 0)) throw new Error("no page");
+      const { exportPdfPage } = await import("../camera/pdfSheet");
+      const apple = isAppleMobile(), r = await atBestDpi(sheetDpis(apple), (dpi) => exportPdfPage(drawable, pdfPage, paint, mode, dpi, apple ? 16e6 : undefined));
+      return { blob: r.blob, sheetWidth: r.sheetWidth };
+    }
+    const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await atBestDpi(sheetDpis(isAppleMobile()), (dpi) => h.exportWithOverlay!({ range: "sheet", format: "pdf", paper: "A3", dpi, whitePaper: mode, title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint)); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
 
@@ -711,7 +746,8 @@ export function App() {
   let viewer: ReactNode = null;
   if (drawable && showing) {
     if (isPdf) {
-      viewer = Pdf ? <Pdf ref={pdfRef} file={drawable} onProgress={onProgress} onReady={onReady} onError={onViewerError} /> : null;
+      viewer = Pdf ? <Pdf ref={pdfRef} file={drawable} onProgress={onProgress} onReady={onReady} onError={onViewerError}
+        photoMarkers={camera.photoMarkers} camera={cameraOpen} onPage={(n) => setPdfPage(n)} onPageTexts={setPdfTexts} /> : null;
     } else if (cad) {
       viewer = (
         <cad.Canvas ref={canvasRef} file={drawable} holdPicture={xrefsApplying && drawable === applyingFile.current} createEngine={cad.createEngine} measurement={settings}
@@ -773,6 +809,14 @@ export function App() {
                 onCamera={isPdf ? undefined : () => { setSearchOpen(false); endMeasure(); endMarkup(); setCadTab(null); setCameraOpen(true); }} />
             ) : null}
 
+            {/* a PDF has no check strip: its 工程相機 button alone, in the same corner (用戶 2026-11-23 選 B 支援 PDF) */}
+            {screen === "viewing" && isPdf && !cameraOpen && pdfViewKey ? (
+              <nav className="check-strip pdf-camera-strip" aria-label={t("camera.button")} data-fit="corner">
+                <div className="check-strip-viewport"><div className="check-strip-track"><div className="check-strip-page">
+                  <button type="button" className="strip-camera" title={t("camera.buttonTip")} onClick={() => { setSearchOpen(false); setCameraOpen(true); }}>{t("camera.button")}</button>
+                </div></div></div>
+              </nav>
+            ) : null}
             {selecting ? <SelectionBar tool={selectionTool} count={selectionCount} onTool={setSelectionTool} onDelete={askDeleteSelection} /> : null}
             {marking ? (
               <MarkupBar tool={markTool} color={markColor} count={markCount} sharing={sharing}

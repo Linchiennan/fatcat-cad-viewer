@@ -61,6 +61,9 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
         </button>
       </header>
       <div className="camera-home-body">
+        {/* before a drawing is picked: label rooms and the floor on it first (用戶 2026-11-23：「底圖上要先有各空間名稱跟樓層名稱才方便辨識」
+            「放在首頁，上方提示，用紅字粗體明顯」) */}
+        <p className="camera-home-tip">{t("camera.homeDrawingTip")}</p>
         <button type="button" className="camera-primary camera-home-new" onClick={onNew}>{t("camera.homeNew")}</button>
         {message || note ? <p className="camera-message camera-message-box" role="alert" title={message || note}>{message || note}</p> : null}
         {batches === null ? null : batches.length ? (

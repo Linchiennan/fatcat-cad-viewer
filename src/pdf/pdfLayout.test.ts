@@ -44,3 +44,12 @@ describe("PDF page layout (T17 3.3)", () => {
     expect(zoomText(1.25 * 1.25)).toBe("156%");
   });
 });
+
+describe("whole page beside the camera panel (用戶 2026-11-23：「PDF也有做橫向模式嗎?」)", () => {
+  it("fits the tighter side, times the zoom", async () => {
+    const { fitPageScale } = await import("./pdfLayout");
+    expect(fitPageScale(400, 344, 841, 595, 1)).toBeCloseTo(400 / 841); // width is tighter
+    expect(fitPageScale(900, 300, 841, 595, 1)).toBeCloseTo(300 / 595); // height is tighter
+    expect(fitPageScale(521, 344, 841, 595, 2)).toBeCloseTo((344 / 595) * 2); // the free box beside the panel: height is tighter
+  });
+});

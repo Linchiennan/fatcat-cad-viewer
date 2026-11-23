@@ -8,7 +8,12 @@
   padding: calc(92px + env(safe-area-inset-top, 0px)) 18px calc(186px + env(safe-area-inset-bottom, 0px));
 }
 .pdf-scroll:active { cursor: grabbing; }
-.pdf-page { display: block; margin: 0 auto; will-change: transform; background: #fff; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+/* the page and the camera's spots on it move and zoom as one (工程相機 on a PDF, 用戶 2026-11-23) */
+.pdf-scroll { position: absolute; }
+.pdf-sheet { position: relative; width: max-content; margin: 0 auto; will-change: transform; }
+.pdf-page { display: block; background: #fff; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+.pdf-sheet > .photo-marker-layer { overflow: visible; }
+.pdf-pager[hidden] { display: none; }
 .pdf-pager {
   /* just above the paw (and its strand of wool), close to the main button (用戶 2026-10-27：換頁鈕往下移，靠近貓爪主按鈕) */
   position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar-top, 90px) + 40px);
@@ -32,4 +37,10 @@
   bottom: calc(var(--bar-top, 90px) + 40px + 58px);
   padding: 5px 12px; border-radius: 999px; background: rgba(16, 26, 36, 0.92); color: #ffc46b; font-size: 0.78rem;
   pointer-events: none;
+}
+
+/* sideways with the 工程相機 open: the page sits between the buttons on the left (59 px) and the panel on the right
+   (200 px), full height (用戶 2026-11-23：「PDF也有做橫向模式嗎?」) */
+@media (orientation: landscape) and (max-height: 600px) {
+  :root:has(.camera-sheet) .pdf-scroll { padding: 8px calc(224px + env(safe-area-inset-right, 0px)) 8px calc(75px + env(safe-area-inset-left, 0px)); }
 }

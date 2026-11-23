@@ -12,6 +12,10 @@ const MAX_SIDE = 8192;
 export const pageScale = (scrollWidth: number, pageWidth: number, zoom: number) =>
   Math.max(0.05, (scrollWidth - SIDE_PADDING) / pageWidth) * zoom;
 
+/** CSS scale that shows the whole page in a box (the free part beside the 工程相機 panel when the phone is sideways), times the zoom. */
+export const fitPageScale = (boxWidth: number, boxHeight: number, pageWidth: number, pageHeight: number, zoom: number) =>
+  Math.max(0.05, Math.min(boxWidth / pageWidth, boxHeight / pageHeight)) * zoom;
+
 /** Canvas pixels per CSS pixel: device ratio, at most 2, about 12 million pixels and 8192 px a side. */
 export function pixelRatio(cssWidth: number, cssHeight: number, devicePixelRatio: number): number {
   const area = cssWidth * cssHeight;

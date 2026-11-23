@@ -35,8 +35,9 @@ export type DrawingCanvasProps = DrawingCanvasEvents & {
   onEngine?(engine: CadEngine | null): void;
 };
 
-/** What the App hands src/pdf/PdfViewer.tsx (export `PdfViewer`, forwardRef → ViewerHandle). */
-export type PdfViewerProps = ViewerEvents & { file: File };
+/** What the App hands src/pdf/PdfViewer.tsx (export `PdfViewer`, forwardRef → PdfViewerHandle). */
+import type { PdfViewerProps, PdfViewerHandle } from "../pdf/PdfViewer";
+export type { PdfViewerProps, PdfViewerHandle };
 
 /** What the App hands src/measure/MeasurePanel.tsx (export `MeasurePanel`): the full measuring panel (T16 2.4). */
 export type MeasurePanelProps = {
@@ -62,7 +63,7 @@ export type MeasurePanelProps = {
 };
 
 export type DrawingCanvasComponent = ComponentType<DrawingCanvasProps & RefAttributes<DrawingCanvasHandle>>;
-export type PdfViewerComponent = ComponentType<PdfViewerProps & RefAttributes<ViewerHandle>>;
+export type PdfViewerComponent = ComponentType<PdfViewerProps & RefAttributes<PdfViewerHandle>>;
 export type MeasurePanelComponent = ComponentType<MeasurePanelProps>;
 
 type Loader<T> = () => Promise<T>;

@@ -351,3 +351,6 @@ form.camera-row input[type="number"] { flex: 1 1 auto; width: auto; min-width: 0
 
 /* the place name and the new number are typed in the middle of their boxes (用戶 2026-11-23 白板 #2 #3「字體預設置中」) */
 .camera-sheet form.camera-place.editing input, .camera-row input[type="number"] { text-align: center; }
+
+/* the drawing tip at the top of the project list: red and bold so it is seen before 新增專案 (用戶 2026-11-23) */
+.camera-home-tip { margin: 0 0 10px; color: #ff5a4e; font-weight: 700; font-size: 0.95rem; line-height: 1.4; }

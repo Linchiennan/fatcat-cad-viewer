@@ -60,6 +60,7 @@ export const CAMERA_STRINGS = {
   "camera.unplacedTag": { zh: "未定位", en: "Unplaced" },
   "camera.homeTitle": { zh: "工程相機", en: "Site camera" },
   "camera.homeNew": { zh: "新增專案（先選圖面）", en: "New batch (choose a drawing)" },
+  "camera.homeDrawingTip": { zh: "底圖可用 DWG、DXF 或 PDF；建議底圖先標好各空間名稱（如主臥、浴室）和樓層名稱（如 8F），放點時比較好辨識位置。", en: "The drawing can be DWG, DXF or PDF. Label every room (e.g. master bedroom, bathroom) and the floor (e.g. 8F) on it first, so each spot is easy to identify." },
   "camera.homeEmpty": { zh: "還沒有專案。按上面「新增專案」選一張圖開始。", en: "No batches yet. Press New batch and choose a drawing." },
   "camera.homeUnnamed": { zh: "（未命名專案）", en: "(unnamed batch)" },
   "camera.homeMissing": { zh: "找不到這個專案的圖「{name}」，請先在我的圖面加回這張圖", en: "The drawing {name} of this batch is not in My drawings any more" },
