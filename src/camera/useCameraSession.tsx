@@ -104,6 +104,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [message, setMessage] = useState("");
   // a note belongs to the screen it was said on: switching screens clears it (the 清單 showed the spot-lock note, cut off)
   useEffect(() => { setMessage(""); }, [view]);
+  // on the demo project's own page, say that nothing tried here is kept (runs after the clearing above)
+  useEffect(() => { if (view === "work" && batch?.demo) setMessage(t("camera.demoNote")); }, [view, batch?.id, batch?.demo, t]);
   const [renumbering, setRenumbering] = useState(false);
   const [shooting, setShooting] = useState(false);
   /** pulled down out of the way to see the drawing (用戶 2026-11-22：上方橫桿往下拉讓視窗隱藏) */
@@ -172,6 +174,17 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     setMessage("");
     void reloadBatches().catch(fail);
   }, [open, reloadBatches, fail]);
+
+  // Leaving the demo project puts it back as it was: what was tried in it is not kept (用戶 2026-11-23：「範例內的照片也要
+  // 能刪除，定點也是，只是不能存檔」)
+  const shownDemo = useRef<string | null>(null);
+  useEffect(() => {
+    const now = open && batch?.demo ? batch.id : null;
+    if (shownDemo.current && shownDemo.current !== now) {
+      void import("../library/demoSeed").then((m) => m.resetDemoProject()).then(() => reloadBatches()).catch(() => {});
+    }
+    shownDemo.current = now;
+  }, [open, batch?.id, batch?.demo, reloadBatches]);
 
   // A different sheet: the open batch belongs to another drawing.
   useEffect(() => {
@@ -400,14 +413,13 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
               <p className="camera-message camera-message-box" role="status" title={message}>{message}</p>
               <button type="button" onClick={() => setRenumbering(true)}>{t("camera.renumber")}</button>
               {/* both delete at once, no confirm (用戶 2026-11-23：「刪除定點跟刪除照片 就直接刪，不需確認」); a one-line note says what went */}
-              {/* the demo project's own spots and photos stay (用戶 2026-11-23) */}
-              <button type="button" className="camera-danger" disabled={!!selected.demo} onClick={() => {
+              <button type="button" className="camera-danger" onClick={() => {
                 const no = selected.no;
                 void deletePoint(selected.id).then(() => { setSelectedId(null); setMessage(t("camera.deletedPoint", { no })); return reload(batch); }).catch(fail);
               }}>{t("camera.deletePoint")}</button>
               {/* the photos of this spot, right here (用戶 2026-11-23：最右邊加「刪除照片」，不用到清單才能刪) */}
-              <button type="button" className="camera-danger" disabled={!photos.some((p) => p.pointId === selected.id && !p.demo)} onClick={() => {
-                const own = photos.filter((p) => p.pointId === selected.id && !p.demo), no = selected.no;
+              <button type="button" className="camera-danger" disabled={!count} onClick={() => {
+                const own = photos.filter((p) => p.pointId === selected.id), no = selected.no;
                 void (async () => { for (const ph of own) await deletePhoto(ph.id); setMessage(t("camera.deletedPhotos", { no, N: own.length })); await reload(batch); })().catch(fail);
               }}>{t("camera.deletePhoto")}</button>
             </div>

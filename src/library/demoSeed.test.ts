@@ -63,12 +63,21 @@ describe("demo seeding", () => {
     expect(photos.every((p) => p.demo && p.board.font === "hand")).toBe(true);
     const code = (p: Promise<unknown>) => p.then(() => "ok", (e) => (e as { code?: string }).code);
     expect(await code(cam.deleteBatch(b.id))).toBe("PROTECTED");
-    expect(await code(cam.deletePoint(points[0].id))).toBe("PROTECTED");
-    expect(await code(cam.deletePhoto(photos[0].id))).toBe("PROTECTED");
-    const mine = await cam.addPoint(b.id, { x: 1, y: 1, angle: 0, place: "" });
-    expect(await code(cam.deletePoint(mine.id))).toBe("ok");
+    // its spots and photos can be deleted, and anything tried is put back by the reset (用戶 2026-11-23：「範例內的照片也要能
+    // 刪除，定點也是，只是不能存檔」)
+    expect(await code(cam.deletePoint(points[0].id))).toBe("ok");
+    expect(await code(cam.deletePhoto(photos[1].id))).toBe("ok");
+    await cam.addPoint(b.id, { x: 1, y: 1, angle: 0, place: "" });
+    expect(await seed.resetDemoProject()).toBe(true);
+    const again = (await cam.listBatches()).filter((x) => x.demo);
+    expect(again).toHaveLength(1);
+    expect((await cam.listPoints(again[0].id)).map((p) => p.place)).toEqual(["主浴", "浴室", "臥室1", "餐廳・廚房"]);
+    expect(await cam.listPhotos(again[0].id)).toHaveLength(4);
     // a customer's own batch sorts above the demo
-    await cam.createBatch({ ...b, demo: undefined, name: "mine" } as never);
+    await cam.createBatch({ ...again[0], demo: undefined, name: "mine" } as never);
+    expect((await cam.listBatches()).map((x) => x.name)).toEqual(["mine", "1151029-輕隔間配管"]);
+    // a reset leaves the customer's own batches alone
+    await seed.resetDemoProject();
     expect((await cam.listBatches()).map((x) => x.name)).toEqual(["mine", "1151029-輕隔間配管"]);
   });
 });

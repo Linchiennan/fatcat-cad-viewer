@@ -58,7 +58,7 @@ export function PhotoList({ points, photos, selected, onPlace, onEdit, onDelete 
             <div className="camera-actions">
               <button type="button" onClick={() => setEditing(ph.id)}>{t("camera.editBoard")}</button>
               {selected && ph.pointId !== selected.id ? <button type="button" onClick={() => onPlace(ph)}>{t("camera.placeHere")}</button> : null}
-              {ph.demo ? null : <button type="button" className="camera-danger" onClick={() => onDelete(ph)}>{t("camera.deletePhoto")}</button>}
+              <button type="button" className="camera-danger" onClick={() => onDelete(ph)}>{t("camera.deletePhoto")}</button>
             </div>
           )}
         </div>

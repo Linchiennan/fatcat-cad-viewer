@@ -29,8 +29,16 @@ export async function seedDemoDrawings(opened = false): Promise<number> {
       n++;
     } catch { /* the other demos still come */ }
   }
-  await seedDemoProject().catch(() => false);
+  await resetDemoProject().catch(() => false);
   return n;
+}
+
+/** Put the demo project back as shipped: what was changed or deleted in it is not kept (用戶 2026-11-23：「只是不能存檔」). */
+export async function resetDemoProject(): Promise<boolean> {
+  const store = await import("../camera/batchStore");
+  if (!(await listLibraryDrawings()).some((e) => e.demo && (e.demoOf ?? e.name) === DEMO_PLAN)) return false;
+  await store.removeDemoBatches();
+  return seedDemoProject();
 }
 
 /** The demo 工程相機 project: four spots on the demo plan, one demo site photo each (用戶 2026-11-23：「這專案畫面沒看到範例」). */

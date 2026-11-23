@@ -106,6 +106,18 @@ export async function hasDemoBatch(): Promise<boolean> {
   return (await listBatches()).some((b) => b.demo);
 }
 
+/** Take the demo project away with everything in it (to put it back fresh). */
+export async function removeDemoBatches(): Promise<void> {
+  await tx("readwrite", async (s) => {
+    for (const b of (await req(s.batches.getAll())) as CameraBatch[]) {
+      if (!b.demo) continue;
+      for (const p of await inBatch<ShotPoint>(s.points, b.id)) await req(s.points.delete(p.id));
+      for (const p of await inBatch<PhotoRecord>(s.photos, b.id)) { await req(s.photos.delete(p.id)); await req(s.blobs.delete(p.id)); }
+      await req(s.batches.delete(b.id));
+    }
+  });
+}
+
 /** Write the demo project as given (ids, numbers and flags included), in one go. */
 export async function seedDemoBatch(batch: CameraBatch, points: readonly ShotPoint[], photos: readonly { photo: PhotoRecord; blob: Blob }[]): Promise<void> {
   await tx("readwrite", async (s) => {
@@ -119,7 +131,8 @@ export async function getBatch(id: string): Promise<CameraBatch | null> {
   return ((await tx("readonly", (s) => req(s.batches.get(id)))) as CameraBatch | undefined) ?? null;
 }
 
-/** The demo project, its spots and photos are never deleted (用戶 2026-11-23). */
+/** The demo project itself is never deleted (用戶 2026-11-23); its spots and photos may be — it is put back as it was
+ * (用戶 2026-11-23：「範例內的照片也要能刪除，定點也是，只是不能存檔」). */
 const demoKept = () => new LibraryError("PROTECTED", "demo content");
 
 /** Delete a batch with its points, photos and originals (asked first in the UI); not the demo project. */
@@ -171,7 +184,6 @@ export async function deletePoint(id: string): Promise<void> {
   await tx("readwrite", async (s) => {
     const old = (await req(s.points.get(id))) as ShotPoint | undefined;
     if (!old) throw notFound("point");
-    if (old.demo) throw demoKept();
     await req(s.points.delete(id));
     for (const p of closeGap(await inBatch<ShotPoint>(s.points, old.batchId), old.no)) await req(s.points.put(p));
     for (const ph of await inBatch<PhotoRecord>(s.photos, old.batchId)) if (ph.pointId === id) await req(s.photos.put({ ...ph, pointId: null }));
@@ -222,7 +234,6 @@ export async function deletePhoto(id: string): Promise<void> {
   await tx("readwrite", async (s) => {
     const old = (await req(s.photos.get(id))) as PhotoRecord | undefined;
     if (!old) throw notFound("photo");
-    if (old.demo) throw demoKept();
     await req(s.photos.delete(id));
     await req(s.blobs.delete(id));
     await touch(s, old.batchId);
