@@ -55,7 +55,9 @@
 .camera-message { margin: 0; color: var(--accent-hi); font-size: 0.78rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .camera-message-box { flex: 1 1 auto; min-width: 0; height: 36px; box-sizing: border-box; padding: 2px 8px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; font-size: 0.7rem; line-height: 1.25; align-content: center; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; }
 .camera-message-box:empty { border-style: dashed; opacity: 0.5; }
-.camera-message-bottom { margin: 0 14px 10px; }
+/* the full-width note at the bottom: the small box beside 改號 has 0.7rem, too small across the whole panel (用戶 2026-11-23：
+   「下面字體沒調整好」) — a readable size, centred, two lines at most */
+.camera-message-bottom { margin: 0 14px 10px; display: flex; align-items: center; height: auto; min-height: 40px; padding: 4px 12px; font-size: 0.85rem; line-height: 1.3; }
 .camera-screen { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; background: #000; color: #fff; }
 .camera-stage { position: relative; flex: 1; min-height: 0; }
 .camera-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
