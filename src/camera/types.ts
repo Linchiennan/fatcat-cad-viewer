@@ -58,6 +58,8 @@ export type CameraBatch = {
   boardWeight?: BoardWeight;
   /** size of the photo markers on screen and on the 對位圖 (1 = normal) */
   markerScale?: number;
+  /** the demo project shipped with the app: never deleted (用戶 2026-11-23：「這專案畫面沒看到範例」) */
+  demo?: true;
   createdAt: number;
   updatedAt: number;
 };
@@ -75,6 +77,8 @@ export type ShotPoint = {
   angle: number;
   /** 施工位置 suggested for photos taken here */
   place: string;
+  /** part of the demo project: never deleted */
+  demo?: true;
 };
 
 export type PhotoRecord = {
@@ -88,6 +92,8 @@ export type PhotoRecord = {
   /** original JPEG size in bytes */
   bytes: number;
   board: Whiteboard;
+  /** part of the demo project: never deleted */
+  demo?: true;
 };
 
 /** A signature kept for an inspector (定案 6): strokes in a unit box, drawn as ink at export. */

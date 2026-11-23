@@ -4,6 +4,8 @@ export const CAMERA_STRINGS = {
   "camera.buttonTip": { zh: "在圖上點位置拍施工照片，自動編號並產出照片保存卡", en: "Place site photos on the drawing; numbers and photo record cards are made for you" },
   "camera.title": { zh: "工程相機", en: "Site photos" },
   "camera.close": { zh: "關閉", en: "Close" },
+  "camera.demoTag": { zh: "示範", en: "Demo" },
+  "camera.demoKept": { zh: "示範專案的內容不能刪除", en: "The demo project cannot be deleted" },
   "camera.toProjects": { zh: "回工程相機專案清單", en: "Back to the site camera projects" },
   "camera.backToCamera": { zh: "返回工程相機", en: "Back to the camera" },
   "camera.pointLocked": { zh: "有照片不能移動／轉向，請先刪照片", en: "Has photos: delete them to move or turn" },

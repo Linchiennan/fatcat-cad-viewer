@@ -34,7 +34,7 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
             {batches.map((b) => (
               <li key={b.id}>
                 <button type="button" onClick={() => onPick(b)}>
-                  <strong>{b.name || t("camera.homeUnnamed")}</strong>
+                  <strong>{b.demo ? <em className="camera-demo-tag">{t("camera.demoTag")}</em> : null}{b.name || t("camera.homeUnnamed")}</strong>
                   <small>{b.drawingName.replace(/\.[^.]+$/, "")}{b.space && b.space !== "Model" ? ` · ${b.space}` : ""} · {day(b.updatedAt)}</small>
                 </button>
               </li>

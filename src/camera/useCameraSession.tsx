@@ -148,7 +148,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const fail = useCallback((e: unknown) => {
     const code = (e as { code?: string } | null)?.code;
-    setMessage(code === "STORAGE_FULL" ? t("camera.storageFull") : t("camera.failed", { why: e instanceof Error ? e.message : String(e) }));
+    setMessage(code === "STORAGE_FULL" ? t("camera.storageFull") : code === "PROTECTED" ? t("camera.demoKept") : t("camera.failed", { why: e instanceof Error ? e.message : String(e) }));
   }, [t]);
 
   const reloadBatches = useCallback(async () => {
@@ -310,7 +310,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         {batches.length ? (
           <ul className="camera-batches camera-batch-cards">
             {batches.map((b) => (
-              <li key={b.id}><button type="button" onClick={() => void openBatch(b)}><strong>{b.name || t("camera.homeUnnamed")}</strong>
+              <li key={b.id}><button type="button" onClick={() => void openBatch(b)}><strong>{b.demo ? <em className="camera-demo-tag">{t("camera.demoTag")}</em> : null}{b.name || t("camera.homeUnnamed")}</strong>
                 <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg></button></li>
             ))}
           </ul>
@@ -324,7 +324,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   } else if (view === "settings") {
     body = <BatchSettings initial={batch ?? newBatchDraft()} createdAt={batch?.createdAt} signers={signers} onSave={(d) => void saveSettings(d)}
       onCancel={() => setView(batch ? "work" : "batches")}
-      onDelete={batch ? () => askDeleteBatch(batch, photos.length) : undefined} />;
+      onDelete={batch && !batch.demo ? () => askDeleteBatch(batch, photos.length) : undefined} />;
   } else if (view === "photos" && batch) {
     body = <PhotoList batch={batch} points={points} photos={photos} selected={selected}
       onPlace={(ph) => void updatePhoto(ph.id, { pointId: selected?.id ?? null, board: { ...ph.board, place: selected?.place ?? ph.board.place } }).then(() => reload(batch)).catch(fail)}
@@ -400,13 +400,14 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
               <p className="camera-message camera-message-box" role="status" title={message}>{message}</p>
               <button type="button" onClick={() => setRenumbering(true)}>{t("camera.renumber")}</button>
               {/* both delete at once, no confirm (用戶 2026-11-23：「刪除定點跟刪除照片 就直接刪，不需確認」); a one-line note says what went */}
-              <button type="button" className="camera-danger" onClick={() => {
+              {/* the demo project's own spots and photos stay (用戶 2026-11-23) */}
+              <button type="button" className="camera-danger" disabled={!!selected.demo} onClick={() => {
                 const no = selected.no;
                 void deletePoint(selected.id).then(() => { setSelectedId(null); setMessage(t("camera.deletedPoint", { no })); return reload(batch); }).catch(fail);
               }}>{t("camera.deletePoint")}</button>
               {/* the photos of this spot, right here (用戶 2026-11-23：最右邊加「刪除照片」，不用到清單才能刪) */}
-              <button type="button" className="camera-danger" disabled={!count} onClick={() => {
-                const own = photos.filter((p) => p.pointId === selected.id), no = selected.no;
+              <button type="button" className="camera-danger" disabled={!photos.some((p) => p.pointId === selected.id && !p.demo)} onClick={() => {
+                const own = photos.filter((p) => p.pointId === selected.id && !p.demo), no = selected.no;
                 void (async () => { for (const ph of own) await deletePhoto(ph.id); setMessage(t("camera.deletedPhotos", { no, N: own.length })); await reload(batch); })().catch(fail);
               }}>{t("camera.deletePhoto")}</button>
             </div>

@@ -97,16 +97,35 @@ export async function updateBatch(id: string, patch: Partial<NewBatch>): Promise
 
 export async function listBatches(): Promise<CameraBatch[]> {
   const all = await tx("readonly", (s) => req(s.batches.getAll() as IDBRequest<CameraBatch[]>));
-  return all.sort((a, b) => b.updatedAt - a.updatedAt);
+  // newest first; the demo project always last, below the customer's own
+  return all.sort((a, b) => Number(!!a.demo) - Number(!!b.demo) || b.updatedAt - a.updatedAt);
+}
+
+/** Whether the demo project is there. */
+export async function hasDemoBatch(): Promise<boolean> {
+  return (await listBatches()).some((b) => b.demo);
+}
+
+/** Write the demo project as given (ids, numbers and flags included), in one go. */
+export async function seedDemoBatch(batch: CameraBatch, points: readonly ShotPoint[], photos: readonly { photo: PhotoRecord; blob: Blob }[]): Promise<void> {
+  await tx("readwrite", async (s) => {
+    await req(s.batches.add(batch));
+    for (const p of points) await req(s.points.add(p));
+    for (const { photo, blob } of photos) { await req(s.photos.add(photo)); await req(s.blobs.add({ id: photo.id, blob })); }
+  });
 }
 
 export async function getBatch(id: string): Promise<CameraBatch | null> {
   return ((await tx("readonly", (s) => req(s.batches.get(id)))) as CameraBatch | undefined) ?? null;
 }
 
-/** Delete a batch with its points, photos and originals (asked first in the UI). */
+/** The demo project, its spots and photos are never deleted (用戶 2026-11-23). */
+const demoKept = () => new LibraryError("PROTECTED", "demo content");
+
+/** Delete a batch with its points, photos and originals (asked first in the UI); not the demo project. */
 export async function deleteBatch(id: string): Promise<void> {
   await tx("readwrite", async (s) => {
+    if (((await req(s.batches.get(id))) as CameraBatch | undefined)?.demo) throw demoKept();
     for (const p of await inBatch<ShotPoint>(s.points, id)) await req(s.points.delete(p.id));
     for (const p of await inBatch<PhotoRecord>(s.photos, id)) { await req(s.photos.delete(p.id)); await req(s.blobs.delete(p.id)); }
     await req(s.batches.delete(id));
@@ -152,6 +171,7 @@ export async function deletePoint(id: string): Promise<void> {
   await tx("readwrite", async (s) => {
     const old = (await req(s.points.get(id))) as ShotPoint | undefined;
     if (!old) throw notFound("point");
+    if (old.demo) throw demoKept();
     await req(s.points.delete(id));
     for (const p of closeGap(await inBatch<ShotPoint>(s.points, old.batchId), old.no)) await req(s.points.put(p));
     for (const ph of await inBatch<PhotoRecord>(s.photos, old.batchId)) if (ph.pointId === id) await req(s.photos.put({ ...ph, pointId: null }));
@@ -202,6 +222,7 @@ export async function deletePhoto(id: string): Promise<void> {
   await tx("readwrite", async (s) => {
     const old = (await req(s.photos.get(id))) as PhotoRecord | undefined;
     if (!old) throw notFound("photo");
+    if (old.demo) throw demoKept();
     await req(s.photos.delete(id));
     await req(s.blobs.delete(id));
     await touch(s, old.batchId);
