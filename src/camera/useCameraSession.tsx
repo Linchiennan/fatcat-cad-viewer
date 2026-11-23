@@ -35,6 +35,10 @@ function remember(b: Remembered): void {
  * clamped to the picture by boardRect, so the board sits in the corner whatever the picture's shape (upright or sideways). */
 
 
+/** 符號 slider range (用戶 2026-11-23：「符號大小要從10%到200%」; was 50–300 %); older batches above it are capped */
+const MARKER_SCALE_MIN = 0.1, MARKER_SCALE_MAX = 2;
+const clampScale = (v: number) => Math.min(MARKER_SCALE_MAX, Math.max(MARKER_SCALE_MIN, v));
+
 /** The demo drawings shipped for trying the app (web/demo, 「示範-…」). */
 const isDemoDrawing = (name: string) => /^示範-/.test(name.replace(/^.*[\\/]/, ""));
 const DEMO_MARKER_SCALE = 2;
@@ -131,7 +135,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   /** size of every marker (slider); saved to the batch a moment after the slider stops */
   const [markerScale, setMarkerScale] = useState(1);
   const saveScale = useRef<number | undefined>(undefined);
-  useEffect(() => { setMarkerScale(batch?.markerScale ?? 1); }, [batch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setMarkerScale(clampScale(batch?.markerScale ?? 1)); }, [batch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const changeScale = (v: number) => {
     setMarkerScale(v);
     window.clearTimeout(saveScale.current);
@@ -416,7 +420,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
             用戶 2026-11-23) */}
         {view === "batches" ? <span className="camera-head-label">{t("camera.batchesShort")}</span> : batch && view === "work" ? (
           <label className="camera-head-scale"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
-            <input type="range" min={0.5} max={3} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
+            <input type="range" min={MARKER_SCALE_MIN} max={MARKER_SCALE_MAX} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
           </label>
         ) : <span className="camera-head-space" aria-hidden="true" />}
         {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
