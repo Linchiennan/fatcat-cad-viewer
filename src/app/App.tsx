@@ -681,7 +681,8 @@ export function App() {
   // Overlays inside references are not drawn in CAD either (13F 牆板放樣 showed 外參 ⚠ 9 with all six applied); a file of
   // another name picked by hand counts, so a wrong pick does not look done (用戶 2026-10-30).
   const xrefsUnloaded = report ? report.xrefs.filter((x) => (!x.loaded && !x.disabled && !x.savedUnloaded && !x.notNeeded) || (x.loaded && !x.disabled && x.mismatch)).length : 0;
-  const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking && !selecting;
+  // not while the 工程相機 is open: the drawing gets the room (用戶 2026-11-23 白板 #9「全部拿掉」)
+  const showStrip = screen === "viewing" && !!report && !isPdf && !inspecting && !marking && !selecting && !cameraOpen;
   // 3D viewports are not drawn (cadDocument NO_3D_VIEWPORT): say so up front instead of leaving an empty frame.
   const key3d = `${last?.entryId ?? ""}|${space}`;
   const show3dNote = screen === "viewing" && !isPdf && !!report && closed3d !== key3d && report.warnings.some((w) => w.includes("無法開啟3D"));
