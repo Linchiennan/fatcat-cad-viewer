@@ -9,10 +9,10 @@ import type { Whiteboard } from "./types";
 beforeEach(() => { vi.stubGlobal("indexedDB", new IDBFactory()); resetCameraDbForTests(); });
 afterEach(() => vi.unstubAllGlobals());
 
-const board: Whiteboard = { item: "輕隔間配管", place: "8F-A 戶 主浴", date: "109.10.15", inspector: "羅文彬", x: 0.02, y: 0.6, width: 0.3 };
+const board: Whiteboard = { item: "輕隔間配管", place: "8F-A 戶 主浴", date: "109.10.15", inspector: "大肥貓", x: 0.02, y: 0.6, width: 0.3 };
 const batchFields = {
   name: "8F室內隔間配管完成", drawingName: "8F-室內隔間對位圖.dwg", viewKey: "k", space: "Model", company: "威德水電工程有限公司",
-  project: "PARK23 集合住宅新建工程", trade: "水電工程", item: "輕隔間配管", inspector: "羅文彬", cardDate: "",
+  project: "PARK23 集合住宅新建工程", trade: "水電工程", item: "輕隔間配管", inspector: "大肥貓", cardDate: "",
 };
 const jpg = (n = 10) => new Blob([new Uint8Array(n)], { type: "image/jpeg" });
 
@@ -71,8 +71,8 @@ describe("batchStore", () => {
   it("refuses empty photos and keeps signers", async () => {
     const b = await createBatch(batchFields);
     await expect(addPhoto({ batchId: b.id, pointId: null, takenAt: 1, width: 1, height: 1, board }, jpg(0))).rejects.toMatchObject({ code: "INVALID_FILE" });
-    const s = await saveSigner({ name: "羅文彬", aspect: 3, strokes: [[0, 0, 1, 1]] });
-    await saveSigner({ id: s.id, name: "羅文彬", aspect: 3, strokes: [[0, 1, 1, 0]] });
+    const s = await saveSigner({ name: "大肥貓", aspect: 3, strokes: [[0, 0, 1, 1]] });
+    await saveSigner({ id: s.id, name: "大肥貓", aspect: 3, strokes: [[0, 1, 1, 0]] });
     expect((await listSigners()).map((x) => x.strokes[0])).toEqual([[0, 1, 1, 0]]);
     await deleteSigner(s.id);
     expect(await listSigners()).toEqual([]);
