@@ -47,79 +47,65 @@ export function drawSignature(ctx: CanvasRenderingContext2D, signer: Signer, x: 
 }
 
 /**
- * Aluminium frame of the board: four bevelled bars lit from the top left (light top/left, darker bottom/right) with a
- * fine brushed grain, grey plastic corner caps, a soft shadow under the board and a thin shadow line on the white surface.
- * Fills the white surface and returns the frame width in pixels.
+ * Aluminium frame of the board (see the note inside: drawn after real site-whiteboard photos). Fills the white surface
+ * and returns the frame width in pixels.
  */
 function aluminiumFrame(ctx: CanvasRenderingContext2D, r: { x: number; y: number; w: number; h: number }): number {
-  // 用戶 2026-11-23：「鋁框要寫實的，邊框再瘦1/3」— 2.3 % of the board width (was 3.5 %), a rounded anodised profile
+  // Drawn after real Taiwanese site whiteboards (用戶 2026-11-23：「鋁框要寫實的」「你的鋁框更假了...你去上網查真實照片」;
+  // reference: WTB 銀鋁框工程白板 photos): a light matte silver profile with low contrast and a few fine grooves along it,
+  // a thin dark line where it meets the white panel, and light-grey plastic L corner pieces with two screws each.
   const f = Math.max(2, r.w * 0.0233), { x, y, w, h } = r;
   ctx.save();
-  // soft shadow of the whole board on the photo
-  ctx.shadowColor = "rgba(0, 0, 0, 0.32)"; ctx.shadowBlur = f * 2.2; ctx.shadowOffsetX = f * 0.35; ctx.shadowOffsetY = f * 0.7;
-  ctx.fillStyle = "#9aa1a7"; ctx.fillRect(x, y, w, h);
+  // a faint shadow of the board on the photo (it stands against something)
+  ctx.shadowColor = "rgba(0, 0, 0, 0.22)"; ctx.shadowBlur = f * 1.2; ctx.shadowOffsetX = f * 0.2; ctx.shadowOffsetY = f * 0.4;
+  ctx.fillStyle = "#c9ccce"; ctx.fillRect(x, y, w, h);
   ctx.restore();
   ctx.save();
-  // white surface, with the frame's shadow falling on it along the top and left
   ctx.fillStyle = "#fbfbf8"; ctx.fillRect(x + f, y + f, w - f * 2, h - f * 2);
-  const lip = f * 0.9;
-  let g = ctx.createLinearGradient(0, y + f, 0, y + f + lip);
-  g.addColorStop(0, "rgba(0, 0, 0, 0.16)"); g.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = g; ctx.fillRect(x + f, y + f, w - f * 2, lip);
-  g = ctx.createLinearGradient(x + f, 0, x + f + lip, 0);
-  g.addColorStop(0, "rgba(0, 0, 0, 0.12)"); g.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = g; ctx.fillRect(x + f, y + f, lip, h - f * 2);
-  // a rounded profile across the bar, outer edge → inner lip: dark rim, narrow highlight, satin face, darker lip.
-  // The lit sides (top, left) are brighter than the shaded ones (bottom, right).
-  const profile = (lit: boolean): [number, string][] => lit
-    ? [[0, "#7c838a"], [0.12, "#c9ced3"], [0.26, "#fbfcfd"], [0.4, "#e3e7ea"], [0.72, "#c3c9ce"], [0.9, "#9ba2a8"], [1, "#6c737a"]]
-    : [[0, "#5f666d"], [0.12, "#9fa6ac"], [0.26, "#d5dade"], [0.4, "#b9bfc4"], [0.72, "#9da4aa"], [0.9, "#7f868c"], [1, "#565d64"]];
-  const bar = (pts: [number, number][], from: [number, number], to: [number, number], lit: boolean) => {
-    const gr = ctx.createLinearGradient(from[0], from[1], to[0], to[1]);
-    for (const [o, c] of profile(lit)) gr.addColorStop(o, c);
-    ctx.fillStyle = gr;
-    ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fill();
+  // matte satin bars: lit sides a touch lighter, shaded sides a touch darker (low contrast, as in the photos)
+  const side = (pts: [number, number][], fill: string) => { ctx.fillStyle = fill; ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.fill(); };
+  side([[x, y], [x + w, y], [x + w - f, y + f], [x + f, y + f]], "#d9dcde");
+  side([[x, y], [x + f, y + f], [x + f, y + h - f], [x, y + h]], "#d4d7d9");
+  side([[x, y + h], [x + f, y + h - f], [x + w - f, y + h - f], [x + w, y + h]], "#c2c6c9");
+  side([[x + w, y], [x + w, y + h], [x + w - f, y + h - f], [x + w - f, y + f]], "#c6cacd");
+  // fine grooves along the profile: a dark line with a light line beside it, at about a third and two thirds across
+  const groove = (o: number) => {
+    const t = Math.max(0.5, f * 0.06);
+    ctx.lineWidth = t;
+    ctx.strokeStyle = "rgba(120, 126, 131, 0.55)";
+    ctx.strokeRect(x + o, y + o, w - o * 2, h - o * 2);
+    ctx.strokeStyle = "rgba(246, 247, 248, 0.7)";
+    ctx.strokeRect(x + o + t, y + o + t, w - (o + t) * 2, h - (o + t) * 2);
   };
-  bar([[x, y], [x + w, y], [x + w - f, y + f], [x + f, y + f]], [0, y], [0, y + f], true);                     // top: outer → inner
-  bar([[x, y], [x + f, y + f], [x + f, y + h - f], [x, y + h]], [x, 0], [x + f, 0], true);                     // left
-  bar([[x, y + h], [x + f, y + h - f], [x + w - f, y + h - f], [x + w, y + h]], [0, y + h], [0, y + h - f], false); // bottom
-  bar([[x + w, y], [x + w, y + h], [x + w - f, y + h - f], [x + w - f, y + f]], [x + w, 0], [x + w - f, 0], false); // right
-  // brushed grain: fine, uneven streaks along each bar (seeded, the same on every photo)
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  ctx.lineWidth = Math.max(0.4, f * 0.035);
-  for (let k = 0; k < 14; k++) {
-    const o = f * (0.15 + rnd() * 0.7), a = 0.05 + rnd() * 0.1, light = rnd() > 0.4;
-    ctx.strokeStyle = light ? `rgba(255, 255, 255, ${a})` : `rgba(40, 45, 50, ${a})`;
-    const s0 = rnd() * 0.3, s1 = 0.7 + rnd() * 0.3;
-    ctx.beginPath();
-    ctx.moveTo(x + w * s0, y + o); ctx.lineTo(x + w * s1, y + o);                 // top
-    ctx.moveTo(x + w * s0, y + h - o); ctx.lineTo(x + w * s1, y + h - o);         // bottom
-    ctx.moveTo(x + o, y + h * s0); ctx.lineTo(x + o, y + h * s1);                 // left
-    ctx.moveTo(x + w - o, y + h * s0); ctx.lineTo(x + w - o, y + h * s1);         // right
-    ctx.stroke();
-  }
-  // mitred joints at the corners
-  ctx.strokeStyle = "rgba(30, 34, 38, 0.55)"; ctx.lineWidth = Math.max(0.5, f * 0.06);
-  ctx.beginPath();
-  ctx.moveTo(x, y); ctx.lineTo(x + f, y + f); ctx.moveTo(x + w, y); ctx.lineTo(x + w - f, y + f);
-  ctx.moveTo(x, y + h); ctx.lineTo(x + f, y + h - f); ctx.moveTo(x + w, y + h); ctx.lineTo(x + w - f, y + h - f);
-  ctx.stroke();
-  // crisp outer edge
-  ctx.strokeStyle = "rgba(35, 39, 43, 0.8)"; ctx.lineWidth = Math.max(0.6, f * 0.07);
+  groove(f * 0.3); groove(f * 0.62);
+  // edges: a soft grey outline and a thin dark line where the frame meets the panel
+  ctx.strokeStyle = "rgba(150, 155, 159, 0.9)"; ctx.lineWidth = Math.max(0.5, f * 0.06);
   ctx.strokeRect(x + ctx.lineWidth / 2, y + ctx.lineWidth / 2, w - ctx.lineWidth, h - ctx.lineWidth);
-  // small dark-grey plastic corner caps, a touch of shine on the lit corner
-  const cap = f * 1.3;
-  for (const [cx, cy] of [[x, y], [x + w - cap, y], [x, y + h - cap], [x + w - cap, y + h - cap]] as [number, number][]) {
-    const cg = ctx.createRadialGradient(cx + cap * 0.35, cy + cap * 0.3, cap * 0.05, cx + cap / 2, cy + cap / 2, cap * 0.75);
-    cg.addColorStop(0, "#6e747a"); cg.addColorStop(0.6, "#3f4449"); cg.addColorStop(1, "#2a2e32");
-    ctx.fillStyle = cg;
+  ctx.strokeStyle = "rgba(95, 100, 105, 0.75)"; ctx.lineWidth = Math.max(0.6, f * 0.09);
+  ctx.strokeRect(x + f, y + f, w - f * 2, h - f * 2);
+  // light-grey plastic L corner pieces, a little wider than the frame, two screws each
+  const arm = f * 3.1, t = f * 1.35;
+  const corner = (cx: number, cy: number, sx: number, sy: number) => {
+    const pts: [number, number][] = [[cx, cy], [cx + sx * arm, cy], [cx + sx * arm, cy + sy * t], [cx + sx * t, cy + sy * t], [cx + sx * t, cy + sy * arm], [cx, cy + sy * arm]];
+    const g = ctx.createLinearGradient(cx, cy, cx + sx * arm, cy + sy * arm);
+    g.addColorStop(0, "#e9eaeb"); g.addColorStop(1, "#cfd1d3");
+    ctx.fillStyle = g;
+    // the outer corner is rounded, as on the real pieces
+    const rad = t * 0.7;
     ctx.beginPath();
-    const round = (ctx as { roundRect?: (x: number, y: number, w: number, h: number, r: number) => void }).roundRect;
-    if (typeof round === "function") round.call(ctx, cx, cy, cap, cap, cap * 0.32);
-    else ctx.rect(cx, cy, cap, cap);
-    ctx.fill();
-  }
+    ctx.moveTo(cx + sx * rad, cy);
+    pts.slice(1).forEach(([px, py]) => ctx.lineTo(px, py));
+    ctx.lineTo(cx, cy + sy * rad);
+    ctx.quadraticCurveTo(cx, cy, cx + sx * rad, cy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(140, 145, 149, 0.9)"; ctx.lineWidth = Math.max(0.5, f * 0.07); ctx.stroke();
+    for (const [px, py] of [[cx + sx * (arm - t * 0.62), cy + sy * t * 0.5], [cx + sx * t * 0.5, cy + sy * (arm - t * 0.62)]] as [number, number][]) {
+      const s = t * 0.22;
+      ctx.fillStyle = "#8d9296"; ctx.beginPath(); ctx.arc(px, py, s, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#dfe1e3"; ctx.beginPath(); ctx.arc(px - s * 0.25, py - s * 0.25, s * 0.45, 0, Math.PI * 2); ctx.fill();
+    }
+  };
+  corner(x, y, 1, 1); corner(x + w, y, -1, 1); corner(x, y + h, 1, -1); corner(x + w, y + h, -1, -1);
   ctx.restore();
   return f;
 }
