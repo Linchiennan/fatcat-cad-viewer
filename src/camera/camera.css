@@ -101,6 +101,9 @@
 .camera-compact { gap: 6px; padding-bottom: 10px; }
 .camera-tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .camera-sheet .camera-tools > button, .camera-tools > label { position: relative; min-height: 50px; height: 50px; padding: 2px 0; flex-direction: column; gap: 1px; font-size: 0.78rem; border-radius: 10px; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+/* 放點 pressed shows it (用戶 2026-11-23：「點到放點時，按鈕要變色才知道有按到」): the tool button style above had the
+   same weight as the general pressed rule and came later, so the pressed colour never showed */
+.camera-sheet .camera-tools > button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-hi); color: #1b1b1b; }
 .camera-tools svg { width: 22px; height: 22px; }
 .camera-badge { position: absolute; top: -5px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #ff5a4a; color: #fff; font-style: normal; font-size: 0.7rem; line-height: 18px; }
 .camera-row { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 0.85rem; color: var(--muted); }
