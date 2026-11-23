@@ -36,6 +36,9 @@ if (!previewHost && IS_WEB_BUILD && "serviceWorker" in navigator) {
   });
 }
 
+// iPhone Safari shows :active (the pressed look of buttons) only on a page that listens for touches
+document.addEventListener("touchstart", () => {}, { passive: true });
+
 async function start() {
   // 訪客試用：記憶體儲存要在任何資料庫打開之前換上，示範圖放進那個空圖庫後才開畫面。
   if (IS_GUEST && !previewHost) {
