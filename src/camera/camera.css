@@ -176,3 +176,13 @@
 .camera-home-new { min-height: 48px; border-radius: 12px; border: 1.5px solid var(--accent-hi); font: inherit; font-size: 1rem; }
 .camera-home .camera-batches button { min-height: 56px; border-radius: 12px; border: 1px solid var(--tile-line); background: rgba(255, 255, 255, 0.035); color: var(--text); font: inherit; display: flex; gap: 2px; }
 .camera-home .camera-message-box { flex: none; height: auto; min-height: 36px; -webkit-line-clamp: 3; }
+/* batch page of the panel (用戶 2026-11-23 白板 #10：美化跟精簡) */
+.camera-head-label { justify-self: start; font-size: 0.95rem; font-weight: 700; color: var(--text); }
+.camera-batch-view { gap: 10px; }
+.camera-batch-cards button { min-height: 48px; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: space-between; gap: 8px; border-radius: 12px; border: 1px solid var(--tile-line); background: rgba(255, 255, 255, 0.035); color: var(--text); font: inherit; }
+.camera-batch-cards button strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camera-batch-cards button svg { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.camera-empty { margin: 0; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.9rem; }
+.camera-empty svg { flex: none; width: 22px; height: 22px; color: var(--accent); }
+.camera-batch-new { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; font: inherit; }
+.camera-batch-new svg { width: 18px; height: 18px; }

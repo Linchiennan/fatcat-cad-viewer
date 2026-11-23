@@ -274,16 +274,21 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   let body: ReactElement | null = null;
   if (view === "batches") {
     body = (
-      <div className="camera-body">
-        <h3>{t("camera.batches")}</h3>
+      // the batches of this sheet, short (用戶 2026-11-23 白板 #10：「美化跟精簡」): no heading (拍照批次 sits in the head),
+      // a card per batch, or one line when there is none; then 新增批次
+      <div className="camera-body camera-batch-view">
         {batches.length ? (
-          <ul className="camera-batches">
+          <ul className="camera-batches camera-batch-cards">
             {batches.map((b) => (
-              <li key={b.id}><button type="button" onClick={() => void openBatch(b)}><strong>{b.name}</strong><small>{b.item}</small></button></li>
+              <li key={b.id}><button type="button" onClick={() => void openBatch(b)}><strong>{b.name || t("camera.homeUnnamed")}</strong>
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5l7 7-7 7" /></svg></button></li>
             ))}
           </ul>
-        ) : <p>{t("camera.noBatches")}</p>}
-        <button type="button" className="camera-primary" onClick={() => { setBatch(null); setView("settings"); }}>{t("camera.newBatch")}</button>
+        ) : (
+          <p className="camera-empty"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z" /><circle cx="12" cy="13.2" r="3.4" /></svg>{t("camera.noBatches")}</p>
+        )}
+        <button type="button" className="camera-primary camera-batch-new" onClick={() => { setBatch(null); setView("settings"); }}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>{t("camera.newBatch")}</button>
       </div>
     );
   } else if (view === "settings") {
@@ -389,7 +394,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
       <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the 符號 slider sits there (swapped with the place name,
             用戶 2026-11-23) */}
-        {batch && view === "work" ? (
+        {view === "batches" ? <span className="camera-head-label">{t("camera.batchesShort")}</span> : batch && view === "work" ? (
           <label className="camera-head-scale"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
             <input type="range" min={0.5} max={3} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
           </label>
