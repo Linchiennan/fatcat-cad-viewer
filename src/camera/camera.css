@@ -348,3 +348,6 @@ form.camera-row input[type="number"] { flex: 1 1 auto; width: auto; min-width: 0
   :root:has(.camera-sheet) .file-bar .file-library { width: 42px; padding: 0; justify-content: center; }
   :root:has(.camera-sheet) .file-bar .file-library span { display: none; }
 }
+
+/* the place name and the new number are typed in the middle of their boxes (用戶 2026-11-23 白板 #2 #3「字體預設置中」) */
+.camera-sheet form.camera-place.editing input, .camera-row input[type="number"] { text-align: center; }
