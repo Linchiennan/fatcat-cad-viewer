@@ -475,7 +475,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const subView = view === "settings" || view === "photos" || view === "export";
   const panel = open ? (
-    <section ref={sheetRef} className={"camera-sheet" + (collapsed ? " collapsed" : "") + (full && !collapsed ? " full" : "") + (view === "export" ? " exporting" : "")} aria-label={t("camera.title")}
+    <section ref={sheetRef} className={"camera-sheet" + (collapsed ? " collapsed" : "") + (full && !collapsed ? " full" : "") + (view === "export" ? " exporting" : "") + (view === "photos" ? " listing" : "")} aria-label={t("camera.title")}
       style={dragHeight !== null ? { height: dragHeight, maxHeight: "none", transition: "none" } : pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>

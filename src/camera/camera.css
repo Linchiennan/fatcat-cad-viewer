@@ -247,3 +247,14 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
 
 /* full screen, pulled up by the grip (用戶 2026-11-23) */
 .camera-sheet.full { max-height: none; height: calc(100% - 16px - var(--safe-bottom, 0px)); }
+
+/* 清單: the X sits in the grip row and the cards are a little tighter, so a full-screen list shows six photos
+   (用戶 2026-11-23：「打X的圓也要往上移，一次能顯示6張照片」) */
+.camera-sheet.listing .camera-grip { height: 36px; }
+.camera-sheet.listing header.camera-head { position: absolute; top: 0; right: 10px; height: 36px; padding: 0; display: flex; }
+.camera-sheet.listing header > :not(.camera-x) { display: none; }
+.camera-sheet.listing button.camera-x { width: 32px; height: 32px; min-height: 32px; }
+.camera-sheet.listing .camera-photo { grid-template-columns: 96px minmax(0, 1fr); gap: 10px; padding: 6px; }
+.camera-sheet.listing .camera-thumb { width: 96px; height: 72px; }
+.camera-sheet.listing .camera-photo-info .camera-actions { margin-top: 4px; }
+.camera-sheet.listing .camera-photo-info .camera-actions button { min-height: 30px; height: 30px; }
