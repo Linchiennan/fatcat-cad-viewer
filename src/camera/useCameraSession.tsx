@@ -71,6 +71,8 @@ export function saveBoardPos(p: BoardPos): void {
 export type CameraLaunch = { batchId?: string; space?: string; newBatch?: boolean };
 
 export type CameraContext = {
+  /** move the drawing so this point (drawing units) shows above the panel (用戶 2026-11-23：清單與箭頭雙向跳) */
+  focusPoint?: (x: number, y: number) => void;
   /** the X on the camera's own page: leave the drawing for the 工程相機 project list (用戶 2026-11-23：「按X返回專案，不是到
    * 看圖模式」); without it the X only closes the panel */
   onProjects?: () => void;
@@ -376,7 +378,17 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       onCancel={() => setView(batch ? "work" : "batches")}
       onDelete={batch && !batch.demo ? () => askDeleteBatch(batch, photos.length) : undefined} />;
   } else if (view === "photos" && batch) {
-    body = <PhotoList batch={batch} points={points} photos={photos}
+    body = <PhotoList batch={batch} points={points} photos={photos} current={selectedId}
+      onFocus={(ph) => {
+        // a photo tapped: its spot picked and shown on the drawing (用戶 2026-11-23：「有開啟清單時，點箭頭跟底下的照片，要做雙向跳」)
+        const pt = points.find((q) => q.id === ph.pointId);
+        if (!pt) return;
+        const wasFull = full;
+        setSelectedId(pt.id); setFull(false);
+        // from full screen, wait for the panel to settle (0.22 s) so the spot lands above where it ends up
+        if (wasFull) window.setTimeout(() => ctx.focusPoint?.(pt.x, pt.y), 280);
+        else requestAnimationFrame(() => ctx.focusPoint?.(pt.x, pt.y));
+      }}
       onEdit={(ph, board) => void updatePhoto(ph.id, { board }).then(() => reload(batch)).catch(fail)}
       onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(async () => {
         await reload(batch);

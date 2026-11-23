@@ -681,7 +681,14 @@ export function App() {
     if (go.space && go.space !== space && spaces.some((x) => x.name === go.space)) { setSwitching(true); canvasRef.current?.switchSpace(go.space); return; }
     setSearchOpen(false); endMeasure(); endMarkup(); setCadTab(null); setCameraOpen(true);
   }, [cameraLaunch, screen, report, switching, isPdf, space, spaces]); // eslint-disable-line react-hooks/exhaustive-deps
-  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint, mode) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await atBestDpi(sheetDpis(isAppleMobile()), (dpi) => h.exportWithOverlay!({ range: "sheet", format: "pdf", paper: "A3", dpi, whitePaper: mode, title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint)); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
+  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { focusPoint: (x, y) => {
+    // the spot in the middle of the drawing left above the camera panel (用戶 2026-11-23：清單與箭頭雙向跳)
+    const h = canvasRef.current as unknown as { centerOn?(p: { x: number; y: number }, at: { x: number; y: number }): void } | null;
+    const el = document.querySelector(".drawing-canvas"), sheet = document.querySelector(".camera-sheet");
+    if (!h?.centerOn || !el) return;
+    const r = el.getBoundingClientRect(), bottom = sheet ? Math.min(r.bottom, sheet.getBoundingClientRect().top) : r.bottom;
+    h.centerOn({ x, y }, { x: r.width / 2, y: (Math.max(r.top, 0) + bottom) / 2 - r.top });
+  }, onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint, mode) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await atBestDpi(sheetDpis(isAppleMobile()), (dpi) => h.exportWithOverlay!({ range: "sheet", format: "pdf", paper: "A3", dpi, whitePaper: mode, title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint)); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
 

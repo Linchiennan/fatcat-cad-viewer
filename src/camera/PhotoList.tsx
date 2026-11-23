@@ -31,12 +31,21 @@ function Thumb({ id }: { id: string }) {
   return src ? <img className="camera-thumb" src={src} alt="" /> : <span className="camera-thumb" />;
 }
 
-export function PhotoList({ points, photos, onEdit, onDelete }: {
+export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete }: {
   batch: CameraBatch; points: readonly ShotPoint[]; photos: readonly PhotoRecord[];
+  /** the spot picked on the drawing: its photos are marked and scrolled to */
+  current?: string | null;
+  /** a photo tapped: show its spot on the drawing */
+  onFocus?(photo: PhotoRecord): void;
   onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void;
 }) {
   const { t } = useI18n();
   const [editing, setEditing] = useState<string | null>(null);
+  // the spot picked on the drawing: bring its first photo into view (用戶 2026-11-23：雙向跳)
+  useEffect(() => {
+    if (!current) return;
+    document.querySelector(`.camera-photos li[data-point="${current}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [current]);
   const labels = photoLabels(points, photos);
   const placed = cardOrder(points, photos), loose = photos.filter((p) => !p.pointId);
   const row = (ph: PhotoRecord) => {
@@ -44,7 +53,8 @@ export function PhotoList({ points, photos, onEdit, onDelete }: {
     return (
       // a card: the number on the top-left corner of the photo, place in bold, item and date below
       // (用戶 2026-11-23 白板 #5：「去美化，並把數字改到最左上」)
-      <li key={ph.id} className={"camera-photo" + (l ? "" : " loose")}>
+      <li key={ph.id} data-point={ph.pointId ?? ""} className={"camera-photo" + (l ? "" : " loose") + (current && ph.pointId === current ? " current" : "")}
+        onClick={() => { if (ph.pointId) onFocus?.(ph); }}>
         <div className="camera-photo-pic">
           <Thumb id={ph.id} />
           <b className="camera-photo-no">{l ? cardLabel(l) : t("camera.unplacedTag")}</b>
@@ -55,7 +65,7 @@ export function PhotoList({ points, photos, onEdit, onDelete }: {
           {editing === ph.id ? (
             <BoardForm board={ph.board} onSave={(b) => { setEditing(null); onEdit(ph, b); }} onCancel={() => setEditing(null)} />
           ) : (
-            <div className="camera-actions">
+            <div className="camera-actions" onClick={(e) => e.stopPropagation()}>
               <button type="button" onClick={() => setEditing(ph.id)}>{t("camera.editBoard")}</button>
               {/* no 放到選取的位置 (用戶 2026-11-23：「放到選取位置按鈕全部取消」) */}
               <button type="button" className="camera-danger" onClick={() => onDelete(ph)}>{t("camera.deletePhoto")}</button>

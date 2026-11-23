@@ -58,6 +58,9 @@
 /* the full-width note at the bottom: the small box beside 改號 has 0.7rem, too small across the whole panel (用戶 2026-11-23：
    「下面字體沒調整好」) — a readable size, centred, two lines at most */
 .camera-message-bottom { margin: 0 14px 10px; display: flex; align-items: center; height: auto; min-height: 40px; padding: 4px 12px; font-size: 0.85rem; line-height: 1.3; }
+/* it is a child of the panel column: without this it took the extra height when the grip pulled the panel taller
+   (用戶 2026-11-23：「下方的警告要固定尺寸，不隨橫桿拉伸移動」) */
+.camera-sheet > .camera-message-bottom { flex: none; }
 .camera-screen { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; background: #000; color: #fff; }
 .camera-stage { position: relative; flex: 1; min-height: 0; }
 .camera-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
@@ -258,3 +261,7 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
 .camera-sheet.listing .camera-thumb { width: 96px; height: 72px; }
 .camera-sheet.listing .camera-photo-info .camera-actions { margin-top: 4px; }
 .camera-sheet.listing .camera-photo-info .camera-actions button { min-height: 30px; height: 30px; }
+
+/* the picked spot's photos in the list (用戶 2026-11-23：清單與箭頭雙向跳) */
+.camera-photo { cursor: pointer; }
+.camera-photo.current { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: rgba(255, 181, 71, 0.08); }

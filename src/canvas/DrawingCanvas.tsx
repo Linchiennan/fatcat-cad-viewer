@@ -239,6 +239,15 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
       const result = request.whitePaper && paper ? await paper.call(e, make, request.whitePaper) as Awaited<ReturnType<typeof make>> : await make();
       return { ...result, sheetWidth };
     },
+    centerOn(point, at) {
+      // a plain pan, zoom untouched: where the point is on the canvas now, moved to `at` (zoomTo re-fits the view
+      // and left it tens of px off)
+      const e = engine.current as unknown as { screenToDrawing?(x: number, y: number): { x: number; y: number }; pixelsPerUnit?(): number; panBy?(dx: number, dy: number): void } | null;
+      const ppu = e?.pixelsPerUnit?.() ?? 0;
+      if (!e?.screenToDrawing || !e.panBy || !(ppu > 0)) return;
+      const o = e.screenToDrawing(0, 0), sx = (point.x - o.x) * ppu, sy = (o.y - point.y) * ppu;
+      e.panBy(at.x - sx, at.y - sy);
+    },
     showSearchHit(bounds, textHeight, at) {
       const e = engine.current;
       if (!e) return;

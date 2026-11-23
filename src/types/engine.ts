@@ -74,6 +74,8 @@ export interface DrawingCanvasHandle extends ViewerHandle {
   /** Zoom to a search hit and draw the red box (textHeight and `at` 0..1 optional). */
   showSearchHit(bounds: DrawingBounds, textHeight?: number, at?: number): void;
   clearSearchHit(): void;
+  /** Move the view, zoom kept, so the drawing point lands at canvas point `at` (CSS px). */
+  centerOn?(point: DrawingPoint, at: { x: number; y: number }): void;
   switchSpace(name: string): void;
   showLayer(name: string, visible: boolean): void;
   applyLayerState(name: string): void;
