@@ -166,9 +166,9 @@ export function PhotoMarkerLayer(props: Props) {
     e.stopPropagation(); e.preventDefault();
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* pointer already gone: the drag still works without capture */ }
     props.onSelect(id);
-    // a point with photos stays where it was shot: it is selected but not moved until its photos are deleted
-    // (用戶 2026-11-23：「有拍到照片的箭頭我說不能移動了，裡面的照片刪除才能移動」)
-    if (kind === "move" && props.done?.has(id)) { props.onLocked?.(id); return; }
+    // a point with photos stays as it was shot: selected, but neither moved nor turned until its photos are deleted
+    // (用戶 2026-11-23：「有拍到照片的箭頭我說不能移動了，裡面的照片刪除才能移動」「轉向也鎖」)
+    if (props.done?.has(id)) { props.onLocked?.(id); return; }
     const r = svg.current?.getBoundingClientRect(), pt = props.points.find((q) => q.id === id);
     const [c] = pt ? props.project([{ x: pt.x, y: pt.y }]) : [{ x: NaN, y: NaN }];
     const ox = r && Number.isFinite(c.x) ? e.clientX - r.left - c.x : 0, oy = r && Number.isFinite(c.y) ? e.clientY - r.top - c.y : 0;
@@ -204,7 +204,7 @@ export function PhotoMarkerLayer(props: Props) {
           ring is still grabbed by its own move grip (用戶 2026-11-22：「當定點箭頭有照片時，變成不能移動」— the new
           point's ring lay on top of the photographed one next to it). Not while placing, so taps add points. */}
       {(() => {
-        const p = props.placing ? null : props.points.find((q) => q.id === props.selectedId);
+        const p = props.placing ? null : props.points.find((q) => q.id === props.selectedId && !props.done?.has(q.id));
         if (!p) return null;
         const g = ghost?.id === p.id ? ghost : null, [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
         if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
@@ -227,7 +227,7 @@ export function PhotoMarkerLayer(props: Props) {
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k * 1.3 + 2} strokeWidth={Math.max(1, 3 * k)} className="photo-marker-ring" /> : null}
             {/* finger-sized grip (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it.
                 Invisible; the drawn arrow and circle are unchanged. The selected point's turn ring is drawn below. */}
-            <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className="photo-marker-arrow"
+            <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className={"photo-marker-arrow" + (isDone ? " locked" : "")}
               onPointerDown={(e) => begin(e, p.id, "turn")} />
             <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={markerLine(k)} className="photo-marker-circle" stroke={MARKER_RED} fill={isDone ? MARKER_DONE : "none"} />
             <circle cx={c.x} cy={c.y} r={props.placing ? Math.max(MARKER_RADIUS_PX * k + 2, 8) : moveGripRadius(k)} className={"photo-marker-grip" + (isDone ? " locked" : "")}

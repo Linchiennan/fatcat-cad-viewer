@@ -123,4 +123,4 @@
 .camera-sheet button.camera-primary:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: not-allowed; }
 .camera-sheet button:disabled { opacity: 0.45; cursor: not-allowed; }
 /* a point with photos cannot be moved (用戶 2026-11-23) */
-.photo-marker-grip.locked { cursor: not-allowed; }
+.photo-marker-grip.locked, .photo-marker-arrow.locked { cursor: not-allowed; }
