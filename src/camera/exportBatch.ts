@@ -18,8 +18,8 @@ import { boardTitle } from "./whiteboard";
 
 /** What goes into the ZIP (用戶 2026-11-22：匯出的資料要能勾選). */
 export type ExportParts = { sheetMono: boolean; sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
-// 對位圖: 黑白 (only the arrows in colour) by default, 彩色白底 on request (用戶 2026-11-23)
-export const ALL_PARTS: ExportParts = { sheetMono: true, sheetPdf: false, markerDxf: true, photos: true, originals: false, cardDocx: true, cardPdf: true, arrowLisp: true };
+// all ticked by default (用戶 2026-11-23：對位圖黑白為預設；「右邊這幾樣預設打勾」= 彩色對位圖、LISP、原圖、保存卡 PDF)
+export const ALL_PARTS: ExportParts = { sheetMono: true, sheetPdf: true, markerDxf: true, photos: true, originals: true, cardDocx: true, cardPdf: true, arrowLisp: true };
 
 export type ExportInput = {
   batch: CameraBatch;
