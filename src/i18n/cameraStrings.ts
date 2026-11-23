@@ -13,6 +13,8 @@ export const CAMERA_STRINGS = {
   "camera.markersLabel": { zh: "拍照位置", en: "Photo spots" },
   "camera.batchesShort": { zh: "拍照批次", en: "Photo batches" },
   "camera.noBatches": { zh: "這張圖還沒有批次", en: "No batch on this drawing yet" },
+  "camera.noPhotos": { zh: "這個批次還沒有照片", en: "No photos in this batch yet" },
+  "camera.allPhotosDeleted": { zh: "照片已全部刪除", en: "All photos deleted" },
   "camera.newBatch": { zh: "新增批次", en: "New batch" },
   "camera.open": { zh: "開啟", en: "Open" },
   "camera.batchCount": { zh: "{points} 個位置、{photos} 張照片", en: "{points} spots, {photos} photos" },

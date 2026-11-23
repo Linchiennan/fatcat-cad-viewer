@@ -103,9 +103,15 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState("");
   // a note belongs to the screen it was said on: switching screens clears it (the 清單 showed the spot-lock note, cut off)
-  useEffect(() => { setMessage(""); }, [view]);
+  // a page change clears the note, unless one was left for the new page
+  const noteForPage = useRef<string | null>(null);
+  const pageNoteShown = useRef(false);
+  useEffect(() => { pageNoteShown.current = noteForPage.current !== null; setMessage(noteForPage.current ?? ""); noteForPage.current = null; }, [view]);
   // on the demo project's own page, say that nothing tried here is kept (runs after the clearing above)
-  useEffect(() => { if (view === "work" && batch?.demo) setMessage(t("camera.demoNote")); }, [view, batch?.id, batch?.demo, t]);
+  useEffect(() => {
+    if (pageNoteShown.current) { pageNoteShown.current = false; return; } // a note left for this page comes first
+    if (view === "work" && batch?.demo) setMessage(t("camera.demoNote"));
+  }, [view, batch?.id, batch?.demo, t]);
   const [renumbering, setRenumbering] = useState(false);
   const [shooting, setShooting] = useState(false);
   /** pulled down out of the way to see the drawing (用戶 2026-11-22：上方橫桿往下拉讓視窗隱藏) */
@@ -341,7 +347,12 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   } else if (view === "photos" && batch) {
     body = <PhotoList batch={batch} points={points} photos={photos}
       onEdit={(ph, board) => void updatePhoto(ph.id, { board }).then(() => reload(batch)).catch(fail)}
-      onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(() => reload(batch)).catch(fail) })} />;
+      onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(async () => {
+        await reload(batch);
+        // the last one gone: back to the camera's page with its tools, not an empty list (用戶 2026-11-23：「我刪光照片 怎麼
+        // 功能就不見了」), with a note that survives the page change
+        if (photos.length <= 1) { noteForPage.current = t("camera.allPhotosDeleted"); setView("work"); }
+      }).catch(fail) })} />;
   } else if (view === "export" && batch) {
     const placedCount = photos.filter((p) => p.pointId).length;
     /** zip: 「一鍵壓縮打包」 one ZIP; otherwise the files one by one (用戶 2026-11-22：可不包 ZIP) */

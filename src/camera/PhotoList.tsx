@@ -70,6 +70,8 @@ export function PhotoList({ points, photos, onEdit, onDelete }: {
       {/* no 取消 button: the X in the head goes back (用戶 2026-11-23：刪除) */}
       {loose.length ? <><h3>{t("camera.unplaced", { N: loose.length })}</h3><ul className="camera-photos">{loose.map(row)}</ul></> : null}
       <ul className="camera-photos">{placed.map(row)}</ul>
+      {/* nothing left: say so instead of an empty page (用戶 2026-11-23：「我刪光照片 怎麼功能就不見了」) */}
+      {photos.length ? null : <p className="camera-empty">{t("camera.noPhotos")}</p>}
     </div>
   );
 }
