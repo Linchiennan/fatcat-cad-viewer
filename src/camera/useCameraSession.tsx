@@ -230,6 +230,16 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     onLocked: () => setMessage(t("camera.pointLocked")),
   } : null;
 
+  /** New place name for a spot; its photos that showed the old name on the board follow. */
+  const renamePlace = async (p: ShotPoint, place: string) => {
+    if (!batch || place === p.place) return;
+    try {
+      await updatePoint(p.id, { place });
+      for (const ph of photos) if (ph.pointId === p.id && ph.board.place === p.place) await updatePhoto(ph.id, { board: { ...ph.board, place } });
+      await reload(batch);
+    } catch (e) { fail(e); }
+  };
+
   const askDeleteBatch = (b: CameraBatch, count: number) => setConfirm({
     message: t("camera.deleteBatchAsk", { name: b.name, photos: count }), okLabel: t("camera.deleteBatch"),
     onOk: () => void deleteBatch(b.id).then(async () => { setBatch(null); setView("batches"); await reload(null); await reloadBatches(); }).catch(fail),
@@ -325,7 +335,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
             </form>
           ) : (
             <div className="camera-row camera-sel">
-              <span>{t("camera.selected", { no: markerText(selected, photos), place: selected.place || "—" })}{count ? " · " + photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(nos.get(p.id)!)).join("、") : ""}</span>
+              {/* the status note as a box where the place text was, as tall as 改號 (用戶 2026-11-23) */}
+              <p className="camera-message camera-message-box" role="status" title={message}>{message}</p>
               <button type="button" onClick={() => setRenumbering(true)}>{t("camera.renumber")}</button>
               {/* both delete at once, no confirm (用戶 2026-11-23：「刪除定點跟刪除照片 就直接刪，不需確認」); a one-line note says what went */}
               <button type="button" className="camera-danger" onClick={() => {
@@ -350,7 +361,11 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
-      <header className="camera-head"><span className="camera-titles"><strong>{t("camera.title")}</strong>{batch ? <small>{batch.name}</small> : null}</span>
+      <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the selected spot and its place name sit
+            there instead, tap to rename it (用戶 2026-11-23：「並把位置調整到剛剛刪除的這個，並增加點擊修改的功能」) */}
+        {batch && view === "work" && selected ? <PlaceField key={selected.id} label={t("camera.spotNo", { no: markerText(selected, photos) })} place={selected.place}
+          photos={photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(photoLabels(points, photos).get(p.id)!)).join("、")} onSave={(v) => void renamePlace(selected, v)} />
+          : <span className="camera-head-space" aria-hidden="true" />}
         {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
         {batch && view === "work" ? (
           <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setShooting(true); }}>
@@ -364,7 +379,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : "camera.close")} title={t(subView ? "camera.backToCamera" : "camera.close")}
           onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></header>
       {body}
-      {message ? <p className="camera-message" role="status" title={message}>{message}</p> : null}
+      {message && !(view === "work" && selected && !renumbering) ? <p className="camera-message camera-message-box camera-message-bottom" role="status" title={message}>{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
       {shooting && batch ? (
         <CameraScreen board={boardFor(selected, new Date())} signer={signers.find((x) => x.id === batch.signerId) ?? null}
@@ -437,4 +452,27 @@ function SignaturePreview({ signer }: { signer: Signer }) {
     drawSignature(ctx, signer, 4 * dpr, 2 * dpr, c.width - 8 * dpr, c.height - 4 * dpr);
   }, [signer]);
   return <canvas ref={ref} className="camera-sign-preview" aria-hidden="true" />;
+}
+
+/** The selected spot in the panel head: its number and place name; tap the name to rename it. */
+function PlaceField({ label, place, photos, onSave }: { label: string; place: string; photos: string; onSave(v: string): void }) {
+  const { t } = useI18n();
+  const [editing, setEditing] = useState(false);
+  const [v, setV] = useState(place);
+  useEffect(() => { if (!editing) setV(place); }, [place, editing]);
+  const done = () => { setEditing(false); const s = v.trim(); if (s !== place) onSave(s); };
+  if (editing) {
+    return (
+      <form className="camera-place editing" onSubmit={(e) => { e.preventDefault(); done(); }}>
+        <span>{label}</span>
+        <input autoFocus value={v} aria-label={t("camera.placeEditLabel")} onChange={(e) => setV(e.target.value)} onBlur={done}
+          onKeyDown={(e) => { if (e.key === "Escape") { setV(place); setEditing(false); } }} />
+      </form>
+    );
+  }
+  return (
+    <button type="button" className="camera-place" title={t("camera.placeEditTip") + (photos ? "（" + photos + "）" : "")} onClick={() => setEditing(true)}>
+      <span>{label}</span><strong>{place || "—"}</strong><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" /></svg>
+    </button>
+  );
 }

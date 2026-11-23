@@ -42,7 +42,12 @@
 .camera-photo > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .camera-thumb { flex: none; width: 96px; height: 54px; object-fit: cover; border-radius: 6px; background: #0b151d; }
 /* one short line, small (用戶 2026-11-23：「下方的說明改成一行字就好，字體縮小」); the whole text is in the tooltip */
-.camera-message { margin: 0; padding: 4px 14px 8px; color: var(--accent-hi); font-size: 0.78rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the status note: one small line in a box as tall as the 改號 button (用戶 2026-11-23：「最下方的狀態說明改成框，高度同改號
+   按鈕，並移到原本的位置」); the whole text is in the tooltip */
+.camera-message { margin: 0; color: var(--accent-hi); font-size: 0.78rem; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.camera-message-box { flex: 1 1 auto; min-width: 0; height: 36px; box-sizing: border-box; padding: 2px 8px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; font-size: 0.7rem; line-height: 1.25; align-content: center; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #0b151d; }
+.camera-message-box:empty { border-style: dashed; opacity: 0.5; }
+.camera-message-bottom { margin: 0 14px 10px; }
 .camera-screen { position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column; background: #000; color: #fff; }
 .camera-stage { position: relative; flex: 1; min-height: 0; }
 .camera-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
@@ -94,8 +99,6 @@
 .camera-flash { min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1.5px solid #888; background: #222; color: #fff; font: inherit; display: inline-flex; align-items: center; gap: 6px; }
 .camera-flash span { color: #ffd23f; }
 /* compact panel (用戶 2026-11-22 白板 #2) */
-.camera-titles { display: flex; flex-direction: column; min-width: 0; }
-.camera-titles small { color: var(--muted); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 30vw; }
 .camera-sheet button.camera-x { justify-self: end; width: 40px; min-height: 40px; height: 40px; padding: 0; border-radius: 50%; }
 .camera-x svg { width: 20px; height: 20px; }
 .camera-compact { gap: 6px; padding-bottom: 10px; }
@@ -109,7 +112,7 @@
 .camera-row { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 0.85rem; color: var(--muted); }
 .camera-row > span { flex: none; }
 .camera-scale-row input { flex: 1; min-width: 0; }
-.camera-sel > span { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camera-sel { justify-content: flex-end; }
 .camera-sheet .camera-row button { min-height: 36px; height: 36px; padding: 0 12px; font-size: 0.85rem; }
 .camera-row input[type="number"] { width: 64px; min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
 .camera-sheet .camera-paw { width: 64px; height: 64px; margin: 2px 0 4px; }
@@ -141,3 +144,12 @@
   .camera-shutter { grid-column: 1; grid-row: 2; align-self: center; width: 72px; height: 72px; }
   .camera-flash, .camera-flash-space { grid-column: 1; grid-row: 1; justify-self: stretch; min-height: 40px; justify-content: center; }
 }
+/* selected spot in the panel head, tap to rename (用戶 2026-11-23) */
+.camera-place { justify-self: start; max-width: 100%; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; column-gap: 4px; align-items: center; padding: 2px 8px; min-height: 44px; border-radius: 10px; border: 1.5px dashed var(--tile-line); background: transparent; color: var(--text); font: inherit; font-size: 0.85rem; text-align: left; }
+.camera-place span { grid-column: 1; grid-row: 1; font-size: 0.7rem; color: var(--muted); line-height: 1.2; }
+.camera-place strong { grid-column: 1; grid-row: 2; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.25; }
+.camera-place svg { grid-column: 2; grid-row: 1 / 3; width: 15px; height: 15px; color: var(--accent); }
+.camera-place.editing { border-style: solid; border-color: var(--accent); }
+.camera-place.editing input { grid-column: 1 / 3; grid-row: 2; min-width: 0; flex: 1; width: 100%; min-height: 32px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
+/* the spot buttons keep their one-line size; the note box takes what is left */
+.camera-sheet .camera-sel button { flex: none; white-space: nowrap; }
