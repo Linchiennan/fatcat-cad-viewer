@@ -226,6 +226,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         setPoints((list) => list.map((q) => (q.id === id ? p : q)));
       } catch (e) { fail(e); }
     },
+    onLocked: () => setMessage(t("camera.pointLocked")),
   } : null;
 
   const askDeleteBatch = (b: CameraBatch, count: number) => setConfirm({
