@@ -244,3 +244,6 @@ html[lang="en"] .camera-sheet .camera-sel button { font-size: 0.78rem; line-heig
 /* 匯出: the panel may grow so every option and both buttons show; the note is one short line (用戶 2026-11-23) */
 .camera-sheet.exporting:not(.collapsed) { max-height: min(86vh, 680px); }
 .camera-export-what { margin: 0 0 2px; font-size: 0.85rem; }
+
+/* full screen, pulled up by the grip (用戶 2026-11-23) */
+.camera-sheet.full { max-height: none; height: calc(100% - 16px - var(--safe-bottom, 0px)); }

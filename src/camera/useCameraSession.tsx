@@ -116,34 +116,60 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [shooting, setShooting] = useState(false);
   /** pulled down out of the way to see the drawing (用戶 2026-11-22：上方橫桿往下拉讓視窗隱藏) */
   const [collapsed, setCollapsed] = useState(false);
+  /** pulled up to fill the screen (用戶 2026-11-23：「橫桿怎麼不能拉到最上面，滿畫面?」) */
+  const [full, setFull] = useState(false);
   const [pull, setPull] = useState(0);
-  const pullFrom = useRef<{ id: number; y: number; moved: boolean } | null>(null);
+  /** the panel's height while the grip is dragged up (or down from full), following the finger */
+  const [dragHeight, setDragHeight] = useState<number | null>(null);
+  const sheetRef = useRef<HTMLElement>(null);
+  const pullFrom = useRef<{ id: number; y: number; moved: boolean; h0: number; max: number } | null>(null);
   /** how far a hidden panel is pulled up before it opens */
   const OPEN_PULL = 30;
-  useEffect(() => { if (!open) { setCollapsed(false); setPull(0); } }, [open]);
+  /** how far the grip goes before letting go switches between normal and full screen */
+  const FULL_PULL = 60;
+  useEffect(() => { if (!open) { setCollapsed(false); setFull(false); setPull(0); setDragHeight(null); } }, [open]);
   const grip = {
-    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); pullFrom.current = { id: e.pointerId, y: e.clientY, moved: false }; },
+    onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const s = sheetRef.current, holder = s?.offsetParent as HTMLElement | null;
+      pullFrom.current = { id: e.pointerId, y: e.clientY, moved: false, h0: s?.getBoundingClientRect().height ?? 0, max: (holder?.clientHeight ?? window.innerHeight) - 16 };
+    },
     onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
       const f = pullFrom.current;
       if (!f || f.id !== e.pointerId) return;
       const dy = e.clientY - f.y;
       if (Math.abs(dy) > 6) f.moved = true;
       // pulled up while hidden: open it at once and stop there — following the finger carried the empty strip up the
-      // whole screen (用戶 2026-11-23：「清單的橫桿拉動，動作錯誤，拉到最上會變空的」)
-      if (collapsed && dy < -OPEN_PULL) { setCollapsed(false); f.y = e.clientY; setPull(0); return; }
-      setPull(collapsed ? Math.max(-OPEN_PULL, Math.min(0, dy)) : Math.max(0, dy));
+      // whole screen (用戶 2026-11-23：「清單的橫桿拉動，動作錯誤，拉到最上會變空的」); pulling on grows it
+      if (collapsed) {
+        if (dy < -OPEN_PULL) { setCollapsed(false); f.y = e.clientY; f.h0 = 0; setPull(0); return; }
+        setPull(Math.max(-OPEN_PULL, Math.min(0, dy)));
+        return;
+      }
+      // open: up (or down from full) changes the height with the finger; down from normal slides it out of the way
+      if (dy < 0 || full) {
+        const h0 = f.h0 || (sheetRef.current?.getBoundingClientRect().height ?? 0);
+        f.h0 = h0;
+        setPull(0);
+        setDragHeight(Math.max(120, Math.min(f.max, h0 - dy)));
+        return;
+      }
+      setDragHeight(null);
+      setPull(Math.max(0, dy));
     },
     onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => {
       const f = pullFrom.current;
       pullFrom.current = null;
       if (!f || f.id !== e.pointerId) return;
       const dy = e.clientY - f.y;
-      if (!f.moved) setCollapsed((c) => !c); // a tap toggles
-      else if (!collapsed && dy > 40) setCollapsed(true);
-      else if (collapsed && dy < -30) setCollapsed(false);
-      setPull(0);
+      if (!f.moved) { setCollapsed((c) => !c); setFull(false); } // a tap hides or opens
+      else if (collapsed && dy < -OPEN_PULL) setCollapsed(false);
+      else if (!collapsed && !full && dy < -FULL_PULL) setFull(true);
+      else if (full && dy > FULL_PULL) setFull(false);
+      else if (!collapsed && !full && dy > 40) setCollapsed(true);
+      setPull(0); setDragHeight(null);
     },
-    onPointerCancel: () => { pullFrom.current = null; setPull(0); },
+    onPointerCancel: () => { pullFrom.current = null; setPull(0); setDragHeight(null); },
   };
   const [parts, setPartsNow] = useState<ExportParts>(() => { try { return { ...ALL_PARTS, ...(JSON.parse(localStorage.getItem("fatcat.camera.parts") ?? "{}") as Partial<ExportParts>) }; } catch { return { ...ALL_PARTS }; } });
   const setParts = (p: ExportParts) => { setPartsNow(p); try { localStorage.setItem("fatcat.camera.parts", JSON.stringify(p)); } catch { /* private mode */ } };
@@ -449,8 +475,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const subView = view === "settings" || view === "photos" || view === "export";
   const panel = open ? (
-    <section className={"camera-sheet" + (collapsed ? " collapsed" : "") + (view === "export" ? " exporting" : "")} aria-label={t("camera.title")}
-      style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
+    <section ref={sheetRef} className={"camera-sheet" + (collapsed ? " collapsed" : "") + (full && !collapsed ? " full" : "") + (view === "export" ? " exporting" : "")} aria-label={t("camera.title")}
+      style={dragHeight !== null ? { height: dragHeight, maxHeight: "none", transition: "none" } : pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
       <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the 符號 slider sits there (swapped with the place name,
