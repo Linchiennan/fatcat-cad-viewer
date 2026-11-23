@@ -15,6 +15,8 @@ import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
 import { ALL_PARTS, exportBatch, exportBatchFiles, type ExportParts } from "./exportBatch";
 import { useLongPress } from "./longPress";
+import type { SheetMark } from "./sheetLinks";
+import { ARROW_TIP } from "./PhotoMarkerLayer";
 import { allowRotation } from "../native/screenRotation";
 import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile, shareFiles } from "../native/fileHandoff";
@@ -437,11 +439,17 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     const run = async (asZip: boolean) => {
       setMessage(""); setProgress({ done: 0, total: placedCount + 2 });
       try {
-        const paint: Parameters<NonNullable<CameraContext["exportSheet"]>>[0] = (c, project, ppu, scale, sheetWidth) => paintPhotoMarkers(c, points, labels, project, scale, markerUnitRadius(sheetWidth || indexWidth, markerScale) * ppu);
+        // the spots as they land on the sheet picture, for the arrows' links to their photos (用戶 2026-11-24 選 A)
+        let sheetMarks: SheetMark[] = [];
+        const paint: Parameters<NonNullable<CameraContext["exportSheet"]>>[0] = (c, project, ppu, scale, sheetWidth) => {
+          const radius = markerUnitRadius(sheetWidth || indexWidth, markerScale) * ppu, W = c.canvas.width, H = c.canvas.height;
+          sheetMarks = points.flatMap((p) => { const [q] = project([{ x: p.x, y: p.y }]); return Number.isFinite(q.x) && Number.isFinite(q.y) && W > 0 && H > 0 ? [{ pointId: p.id, fx: (q.x * scale) / W, fy: (q.y * scale) / H, fr: (ARROW_TIP * radius * scale) / W }] : []; });
+          paintPhotoMarkers(c, points, labels, project, scale, radius);
+        };
         // 黑白 and 彩色 白底 對位圖, each when ticked (用戶 2026-11-23)
         const mono = parts.sheetMono && ctx.exportSheet ? await ctx.exportSheet(paint, "mono").catch(() => null) : null;
         const sheet = parts.sheetPdf && ctx.exportSheet ? await ctx.exportSheet(paint, "color").catch(() => null) : null;
-        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetMonoPdf: mono?.blob ?? null, sheetWidth: mono?.sheetWidth || sheet?.sheetWidth || indexWidth, parts: ctx.pdf ? { ...parts, markerDxf: false, arrowLisp: false } : parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
+        const input = { batch: { ...batch, markerScale }, points, photos, signers, sheetPdf: sheet?.blob ?? null, sheetMonoPdf: mono?.blob ?? null, sheetWidth: mono?.sheetWidth || sheet?.sheetWidth || indexWidth, sheetMarks, parts: ctx.pdf ? { ...parts, markerDxf: false, arrowLisp: false } : parts, onProgress: (done: number, total: number) => setProgress({ done, total }) };
         if (asZip) {
           const out = await exportBatch(input);
           await shareFile(out.blob, out.fileName, "application/zip");

@@ -15,6 +15,7 @@ import { cardLabel, cardOrder, markerText, photoLabels, plainLabel, rocDateLong 
 import type { CardEntry } from "./photoCard";
 import type { CameraBatch, PhotoRecord, ShotPoint, Signer } from "./types";
 import { boardTitle } from "./whiteboard";
+import { canvasHeader, linkSheetToPhotos, type PhotoPage, type SheetMark } from "./sheetLinks";
 
 /** What goes into the ZIP (用戶 2026-11-22：匯出的資料要能勾選). */
 export type ExportParts = { sheetMono: boolean; sheetPdf: boolean; markerDxf: boolean; photos: boolean; originals: boolean; cardDocx: boolean; cardPdf: boolean; arrowLisp: boolean };
@@ -31,6 +32,8 @@ export type ExportInput = {
   sheetMonoPdf?: Blob | null;
   /** sheet width in drawing units (sizes the DXF circles) */
   sheetWidth: number;
+  /** where the spots are on the sheet picture: the 對位圖 gets its photo pages and the arrows link to them (用戶 2026-11-24 選 A) */
+  sheetMarks?: readonly SheetMark[];
   parts: ExportParts;
   onProgress?(done: number, total: number): void;
   now?: Date;
@@ -93,7 +96,8 @@ async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base
   const files: Zippable = {};
   const composed = new Map<string, Blob>(), bytes = new Map<string, Uint8Array>();
   const { parts } = input;
-  const needComposed = parts.photos || parts.cardDocx || parts.cardPdf;
+  const linking = (parts.sheetMono || parts.sheetPdf) && !!input.sheetMarks?.length;
+  const needComposed = parts.photos || parts.cardDocx || parts.cardPdf || linking;
   const total = placed.length + 2;
   for (let i = 0; i < placed.length; i++) {
     const ph = placed[i], l = labels.get(ph.id)!;
@@ -120,8 +124,11 @@ async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base
   const page = /^PDF p\.(\d+)$/.exec(batch.space ?? "")?.[1];
   const sheet = safe(batch.drawingName.replace(/\.[^.]+$/, "") + (page ? `-第${page}頁` : ""));
   const markerLabels = new Map(points.map((p) => [p.id, markerText(p, photos)]));
-  if (parts.sheetMono && input.sheetMonoPdf) files[`對位圖/${sheet}-黑白.pdf`] = [new Uint8Array(await input.sheetMonoPdf.arrayBuffer()), { level: 0 }];
-  if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}-彩色.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
+  // each 對位圖 carries the photos after it, an arrow tapped goes to its spot's photo
+  const pages: PhotoPage[] = linking ? placed.flatMap((ph) => { const jpg = bytes.get(ph.id); return jpg && ph.pointId ? [{ pointId: ph.pointId, jpg, width: ph.width, height: ph.height, label: cardLabel(labels.get(ph.id)!), place: ph.board.place ?? "" }] : []; }) : [];
+  const sheetFile = async (pdf: Blob) => { const raw = new Uint8Array(await pdf.arrayBuffer()); return linking ? await linkSheetToPhotos(raw, input.sheetMarks!, pages, canvasHeader).catch(() => raw) : raw; };
+  if (parts.sheetMono && input.sheetMonoPdf) files[`對位圖/${sheet}-黑白.pdf`] = [await sheetFile(input.sheetMonoPdf), { level: 0 }];
+  if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}-彩色.pdf`] = [await sheetFile(input.sheetPdf), { level: 0 }];
   if (parts.arrowLisp) files[`對位圖/${sheet}-插入對位箭頭.lsp`] = [strToU8(arrowBlockLisp(points, markerLabels, { scale: batch.markerScale ?? 1, title: batch.name })), { level: 0 }];
   if (parts.markerDxf) files[`對位圖/${sheet}-標記.dxf`] = strToU8(markerDxf(points, markerLabels, dxfRadius(input.sheetWidth, batch.markerScale ?? 1)));
   return { files, base, done: () => input.onProgress?.(total, total) };
