@@ -70,6 +70,12 @@ export function rocDate(when: Date): string {
   return `${when.getFullYear() - 1911}.${String(when.getMonth() + 1).padStart(2, "0")}.${String(when.getDate()).padStart(2, "0")}`;
 }
 
+/** Batch name: the day it was made (ROC) and the 施工項目, e.g. "115.11.23 輕隔間配管" (用戶 2026-11-23：「批次名稱改成
+ * 創建時的日期+施工項目，不用手動輸入」). */
+export function batchName(createdAt: number, item: string): string {
+  return [rocDate(new Date(createdAt)), item.trim()].filter(Boolean).join(" ");
+}
+
 /** ROC date as on the 照片保存卡 heading: "109 年 10 月 21 日". */
 export function rocDateLong(when: Date): string {
   return `${when.getFullYear() - 1911} 年 ${when.getMonth() + 1} 月 ${when.getDate()} 日`;

@@ -9,7 +9,7 @@ import {
   addPhoto, addPoint, createBatch, deleteBatch, deletePhoto, deletePoint, listBatches, listPhotos, listPoints, listSigners,
   renumberPoint, updateBatch, updatePhoto, updatePoint, type NewBatch,
 } from "./batchStore";
-import { markerText, photoLabels, plainLabel, rocDate } from "./numbering";
+import { batchName, markerText, photoLabels, plainLabel, rocDate } from "./numbering";
 import { placeName, type PlaceText } from "./placeName";
 import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
@@ -18,7 +18,7 @@ import { markerUnitRadius, paintPhotoMarkers } from "./alignment";
 import { shareFile, shareFiles } from "../native/fileHandoff";
 import { CameraScreen } from "./CameraScreen";
 import { SignaturePad } from "./SignaturePad";
-import { boardTitle } from "./whiteboard";
+import { boardTitle, drawSignature } from "./whiteboard";
 import { PawShape } from "../components/ViewerToolbar";
 import type { CameraBatch, PhotoRecord, ShotPoint, Signer, Whiteboard } from "./types";
 
@@ -170,7 +170,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const newBatchDraft = (): NewBatch => {
     const r = remembered();
     return {
-      name: ctx.drawingName.replace(/\.[^.]+$/, ""), drawingName: ctx.drawingName, viewKey: ctx.viewKey, space: ctx.space,
+      name: "", drawingName: ctx.drawingName, viewKey: ctx.viewKey, space: ctx.space,
       company: r.company ?? "", project: r.project ?? "", trade: r.trade ?? "", item: r.item ?? "", inspector: r.inspector ?? "",
       signerId: r.signerId, cardDate: "",
     };
@@ -249,7 +249,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       </div>
     );
   } else if (view === "settings") {
-    body = <BatchSettings initial={batch ?? newBatchDraft()} signers={signers} onSave={(d) => void saveSettings(d)}
+    body = <BatchSettings initial={batch ?? newBatchDraft()} createdAt={batch?.createdAt} signers={signers} onSave={(d) => void saveSettings(d)}
       onCancel={() => setView(batch ? "work" : "batches")}
       onDelete={batch ? () => askDeleteBatch(batch, photos.length) : undefined} />;
   } else if (view === "photos" && batch) {
@@ -362,40 +362,64 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   return { photoMarkers: markers, panel, batch, points, photos, keepPhotos };
 }
 
-function BatchSettings({ initial, signers: initialSigners, onSave, onCancel, onDelete }: {
-  initial: NewBatch; signers: readonly Signer[]; onSave(d: NewBatch): void; onCancel(): void; onDelete?(): void;
+function BatchSettings({ initial, createdAt, signers: initialSigners, onSave, onCancel, onDelete }: {
+  initial: NewBatch; createdAt?: number; signers: readonly Signer[]; onSave(d: NewBatch): void; onCancel(): void; onDelete?(): void;
 }) {
   const { t } = useI18n();
   const [d, setD] = useState<NewBatch>(initial);
   const [signers, setSigners] = useState<readonly Signer[]>(initialSigners);
   const [signing, setSigning] = useState(false);
-  const field = (key: keyof NewBatch, label: string) => (
-    <label key={key}>{label}<input value={String(d[key] ?? "")} onChange={(e) => setD({ ...d, [key]: e.target.value })} /></label>
+  const field = (key: keyof NewBatch, label: string, extra?: { required?: boolean }) => (
+    <label key={key} className={extra?.required && !String(d[key] ?? "").trim() ? "camera-missing" : undefined}><span>{label}{extra?.required ? <em className="camera-required">＊必填</em> : null}</span>
+      <input value={String(d[key] ?? "")} required={extra?.required} onChange={(e) => setD({ ...d, [key]: e.target.value })} /></label>
   );
+  // 查驗人員 is required and the signature is bound to that name (用戶 2026-11-23：「查驗人員設定成一定要輸入人名，並且
+  // 綁訂電子簽名」): the signature saved under the same name is used, and signing saves it under this name.
+  const inspector = d.inspector.trim();
+  const bound = inspector ? signers.find((s) => s.name.trim() === inspector) : undefined;
+  // the name is made, not typed: the day the batch was made (now for a new one) and the 施工項目
+  const [made] = useState(() => createdAt ?? Date.now());
+  const name = batchName(made, d.item);
+  const ready = !!inspector;
   return (
-    <form className="camera-body camera-settings" onSubmit={(e) => { e.preventDefault(); if (d.name.trim()) onSave({ ...d, name: d.name.trim() }); }}>
+    <form className="camera-body camera-settings" onSubmit={(e) => { e.preventDefault(); if (ready) onSave({ ...d, name, inspector, signerId: bound?.id }); }}>
       <h3>{t("camera.settings")}</h3>
-      {field("name", t("camera.field.name"))}
+      <p className="camera-batch-name"><span>{t("camera.field.name")}</span><strong>{name}</strong></p>
       {field("company", t("camera.field.company"))}
       {field("project", t("camera.field.project"))}
       {field("trade", t("camera.field.trade"))}
       {field("item", t("camera.field.item"))}
-      {field("inspector", t("camera.field.inspector"))}
-      <label>{t("camera.field.signer")}
-        <select value={d.signerId ?? ""} onChange={(e) => setD({ ...d, signerId: e.target.value || undefined })}>
-          <option value="">{t("camera.field.noSigner")}</option>
-          {signers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </label>
-      <button type="button" onClick={() => setSigning(true)}>{t("camera.signNew")}</button>
-      {signing ? <SignaturePad initialName={d.inspector} onCancel={() => setSigning(false)}
-        onSaved={(s) => { setSigning(false); setSigners([...signers.filter((x) => x.id !== s.id), s]); setD({ ...d, signerId: s.id }); }} /> : null}
+      {field("inspector", t("camera.field.inspector"), { required: true })}
+      {!inspector ? <p className="camera-required-hint" role="alert">{t("camera.inspectorRequired")}</p> : null}
+      <div className="camera-sign-row">
+        {bound ? <SignaturePreview signer={bound} /> : null}
+        <span className="camera-sign-status">{!inspector ? t("camera.signNeedName") : bound ? t("camera.signBound", { name: inspector }) : t("camera.signNone", { name: inspector })}</span>
+        <button type="button" disabled={!inspector} onClick={() => setSigning(true)}>{bound ? t("camera.signAgain") : t("camera.signDo")}</button>
+      </div>
+      {signing && inspector ? <SignaturePad initialName={inspector} signer={bound} onCancel={() => setSigning(false)}
+        onSaved={(s) => { setSigning(false); setSigners([...signers.filter((x) => x.id !== s.id), s]); }} /> : null}
       {field("cardDate", t("camera.field.cardDate"))}
       <div className="camera-actions">
-        <button type="submit" className="camera-primary">{t("camera.save")}</button>
+        <button type="submit" className="camera-primary" disabled={!ready}>{t("camera.save")}</button>
         <button type="button" onClick={onCancel}>{t("camera.cancel")}</button>
         {onDelete ? <button type="button" className="camera-danger" onClick={onDelete}>{t("camera.deleteBatch")}</button> : null}
       </div>
     </form>
   );
+}
+
+/** The bound signature, small, in the same pen ink as on the whiteboard. */
+function SignaturePreview({ signer }: { signer: Signer }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1, w = 96, h = 32;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = "#fbfbf8"; ctx.fillRect(0, 0, c.width, c.height);
+    drawSignature(ctx, signer, 4 * dpr, 2 * dpr, c.width - 8 * dpr, c.height - 4 * dpr);
+  }, [signer]);
+  return <canvas ref={ref} className="camera-sign-preview" aria-hidden="true" />;
 }

@@ -110,3 +110,15 @@
 .camera-row input[type="number"] { width: 64px; min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
 .camera-sheet .camera-paw { width: 64px; height: 64px; margin: 2px 0 4px; }
 .camera-parts { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; } .camera-parts .camera-check { min-height: 38px; font-size: 0.88rem; }
+/* 查驗人員 required, signature bound to the name (用戶 2026-11-23) */
+.camera-required { color: #ff6b5a; font-style: normal; margin-left: 4px; }
+.camera-settings label.camera-missing input { border-color: #ff6b5a; }
+.camera-required-hint { margin: -4px 0 0; color: #ff6b5a; font-size: 0.85rem; }
+.camera-sign-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.camera-sign-row .camera-sign-status { flex: 1 1 140px; min-width: 0; font-size: 0.9rem; color: var(--muted); }
+.camera-sign-preview { width: 96px; height: 32px; border-radius: 6px; flex: none; }
+.camera-batch-name { display: flex; flex-direction: column; gap: 4px; margin: 0; font-size: 0.9rem; color: var(--muted); }
+.camera-batch-name strong { color: var(--text); font-size: 1rem; min-height: 40px; display: flex; align-items: center; padding: 0 10px; border-radius: 10px; border: 1.5px dashed var(--tile-line); }
+/* a disabled main button must not look pressable (儲存 while 查驗人員 is empty) */
+.camera-sheet button.camera-primary:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: not-allowed; }
+.camera-sheet button:disabled { opacity: 0.45; cursor: not-allowed; }
