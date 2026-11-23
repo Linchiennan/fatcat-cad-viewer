@@ -105,7 +105,9 @@
 .camera-grip { flex: none; display: flex; justify-content: center; align-items: center; height: 26px; cursor: grab; touch-action: none; }
 .camera-grip span { width: 56px; height: 6px; border-radius: 3px; background: var(--muted, #9fb0bf); }
 .camera-sheet.collapsed { max-height: none; }
-.camera-sheet.collapsed > :not(.camera-grip):not(header) { display: none; }
+/* hidden: only the grip is left (用戶 2026-11-23：「縮到最小能只剩橫桿」), a little taller to catch */
+.camera-sheet.collapsed > :not(.camera-grip) { display: none; }
+.camera-sheet.collapsed .camera-grip { height: 34px; }
 .camera-sheet.collapsed header { padding-top: 0; }
 /* cat-paw shutter in the title row (用戶 2026-11-22 白板 #1), same paw as the toolbar's centre button */
 .camera-sheet header.camera-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 0; }

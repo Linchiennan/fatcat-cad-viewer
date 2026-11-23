@@ -522,8 +522,11 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         ) : <span />}
         {/* on 設定 / 清單 / 匯出 the X goes back to the camera, only there it closes the panel (用戶 2026-11-23：「設定的X是要
             返回工程相機，不是整個關閉」) */}
-        <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")} title={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")}
-          onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); if (ctx.onProjects) ctx.onProjects(); else onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button></header>
+        {/* no X on the camera page itself (用戶 2026-11-23：「貓爪右邊的X」拿掉); 設定／清單／匯出 keep theirs to go back */}
+        {view === "work" ? <span className="camera-head-space" aria-hidden="true" /> : (
+          <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")} title={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")}
+          onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); if (ctx.onProjects) ctx.onProjects(); else onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+        )}</header>
       {body}
       {message && !(view === "work" && selected && !renumbering) ? <p className="camera-message camera-message-box camera-message-bottom" role="status" title={message}>{message}</p> : null}
       {confirm ? <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} /> : null}
