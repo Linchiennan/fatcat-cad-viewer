@@ -62,7 +62,7 @@ describe("names (T11 3.2)", () => {
 
 describe("demo drawings (用戶 2026-11-23：保留範例、不讓客戶刪除)", () => {
   it("keeps a demo drawing: no delete, no replace, no deleting the folder holding it", async () => {
-    const demo = await lib.importDrawingToLibrary(file("示範-住宅平面.dwg"), "root", undefined, { at: 1000, opened: false });
+    const demo = await lib.importDrawingToLibrary(file("示範-住宅平面.dwg"), "root", undefined, { at: 1000, opened: false, of: "示範-住宅平面.dwg" });
     expect(demo.demo).toBe(true);
     expect([demo.createdAt, demo.updatedAt, demo.lastOpenedAt]).toEqual([1000, 1000, 0]);
     expect(await code(lib.deleteLibraryEntry(demo.id))).toBe("PROTECTED");

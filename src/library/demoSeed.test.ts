@@ -28,6 +28,19 @@ describe("demo seeding", () => {
     const all = await lib.listLibraryDrawings();
     expect(all.filter((e) => e.demo).length).toBe(3);
     expect(all.filter((e) => !e.demo).map((e) => e.name)).toEqual(["示範-住宅平面.dwg"]);
+    // the demo beside it is named "… (2)": still found, not added again, and the project still finds its plan
+    expect(await seed.seedDemoDrawings()).toBe(0);
+    expect((await lib.listLibraryDrawings()).filter((e) => e.demo).length).toBe(3);
+    const cam = await import("../camera/batchStore");
+    expect((await cam.listBatches()).length).toBe(1);
+  });
+
+  it("does not add a demo again after the customer renames it", async () => {
+    await seed.seedDemoDrawings();
+    const plan = (await lib.listLibraryDrawings()).find((e) => e.demoOf === "示範-住宅平面.dwg")!;
+    await lib.renameLibraryEntry(plan.id, "我的示範.dwg");
+    expect(await seed.seedDemoDrawings()).toBe(0);
+    expect((await lib.listLibraryDrawings()).length).toBe(3);
   });
 
   it("puts them in 最近開啟 for the guest", async () => {

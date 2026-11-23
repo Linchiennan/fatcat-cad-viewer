@@ -16,7 +16,8 @@ export const DEMO_DATE = Date.UTC(2026, 9, 29);
 export async function seedDemoDrawings(opened = false): Promise<number> {
   // an old library moves over only into an empty one: let that happen first
   await migrateLegacyLibrary().catch(() => {});
-  const have = new Set((await listLibraryDrawings()).filter((e) => e.demo).map((e) => e.name));
+  // by the demo file it came from, not its name: a renamed demo, or one named "… (2)", is still there
+  const have = new Set((await listLibraryDrawings()).filter((e) => e.demo).map((e) => e.demoOf ?? e.name));
   let n = 0;
   for (const name of [...DEMO_FILES].reverse()) { // the plan last, so it heads 最近開啟
     if (have.has(name)) continue;
@@ -24,7 +25,7 @@ export async function seedDemoDrawings(opened = false): Promise<number> {
       const res = await fetch(`./demo/${encodeURIComponent(name)}`);
       if (!res.ok) continue;
       const blob = await res.blob();
-      await importDrawingToLibrary(new File([blob], name, { type: blob.type, lastModified: DEMO_DATE }), ROOT_ID, undefined, { at: DEMO_DATE, opened });
+      await importDrawingToLibrary(new File([blob], name, { type: blob.type, lastModified: DEMO_DATE }), ROOT_ID, undefined, { at: DEMO_DATE, opened, of: name });
       n++;
     } catch { /* the other demos still come */ }
   }
@@ -45,7 +46,7 @@ const DEMO_SPOTS: readonly { x: number; y: number; angle: number; place: string;
 export async function seedDemoProject(): Promise<boolean> {
   const store = await import("../camera/batchStore");
   if (await store.hasDemoBatch()) return false;
-  const plan = (await listLibraryDrawings()).find((e) => e.demo && e.name === DEMO_PLAN);
+  const plan = (await listLibraryDrawings()).find((e) => e.demo && (e.demoOf ?? e.name) === DEMO_PLAN);
   if (!plan) return false;
   // the same sheet key the viewer gives the plan, so the project opens on it
   const viewKey = sheetKey(await drawingIdentity(await readLibraryDrawing(plan.id)), "Model");

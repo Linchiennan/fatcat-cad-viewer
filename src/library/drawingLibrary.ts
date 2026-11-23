@@ -31,6 +31,8 @@ export type LibraryDrawingEntry = EntryBase & {
   /** A demo drawing shipped with the app: kept in every library and never deleted or replaced (用戶 2026-11-23：「有登入的
    * 正式版，依樣保留範例，而且不讓客戶刪除」). */
   demo?: true;
+  /** which shipped demo file it is (its name may change: renamed by the customer, or " (2)" beside a file of theirs) */
+  demoOf?: string;
 };
 export type LibraryEntry = LibraryFolderEntry | LibraryDrawingEntry;
 
@@ -329,7 +331,7 @@ export async function importDrawingWithDecision(file: File, parentId: string, de
 }
 
 /** Add a file (name de-duplicated as "name (2).ext"); lastOpenedAt = now. `demo` marks a shipped demo drawing, dated `at`. */
-export async function importDrawingToLibrary(file: File, parentId: string = ROOT_ID, guard?: ImportGuard, demo?: { at: number; opened: boolean }): Promise<LibraryDrawingEntry> {
+export async function importDrawingToLibrary(file: File, parentId: string = ROOT_ID, guard?: ImportGuard, demo?: { at: number; opened: boolean; of: string }): Promise<LibraryDrawingEntry> {
   if (!isValidLibraryName(file.name)) throw fail("INVALID_NAME", "invalid name");
   const format = checkIncomingFile(file);
   const mimeType = file.type || "application/octet-stream";
@@ -342,7 +344,7 @@ export async function importDrawingToLibrary(file: File, parentId: string = ROOT
       id: newId(), kind: "drawing", parentId, name: uniqueLibraryName(file.name, await takenNames(tx, parentId), true),
       createdAt: at, updatedAt: at, format, mimeType, size: file.size,
       lastModified: sourceDate(file.lastModified), lastOpenedAt: demo && !demo.opened ? 0 : now, contentRevision: newId(),
-      originalSourcePath: fileSource(file).path, ...(demo ? { demo: true as const } : {}),
+      originalSourcePath: fileSource(file).path, ...(demo ? { demo: true as const, demoOf: demo.of } : {}),
     };
     await req(entriesOf(tx).add(entry));
     await req(contentsOf(tx).add({ id: entry.id, blob } satisfies ContentRecord));
