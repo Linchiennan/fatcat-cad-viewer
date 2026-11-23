@@ -326,7 +326,15 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
             <div className="camera-row camera-sel">
               <span>{t("camera.selected", { no: markerText(selected, photos), place: selected.place || "—" })}{count ? " · " + photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(nos.get(p.id)!)).join("、") : ""}</span>
               <button type="button" onClick={() => setRenumbering(true)}>{t("camera.renumber")}</button>
-              <button type="button" className="camera-danger" onClick={() => setConfirm({ message: t("camera.deletePointAsk", { no: selected.no }), okLabel: t("camera.deletePoint"), onOk: () => void deletePoint(selected.id).then(() => { setSelectedId(null); return reload(batch); }).catch(fail) })}>{t("camera.tool.delete")}</button>
+              <button type="button" className="camera-danger" onClick={() => setConfirm({ message: t("camera.deletePointAsk", { no: selected.no }), okLabel: t("camera.deletePoint"), onOk: () => void deletePoint(selected.id).then(() => { setSelectedId(null); return reload(batch); }).catch(fail) })}>{t("camera.deletePoint")}</button>
+              {/* the photos of this spot, right here (用戶 2026-11-23：最右邊加「刪除照片」，不用到清單才能刪) */}
+              <button type="button" className="camera-danger" disabled={!count} onClick={() => {
+                const own = photos.filter((p) => p.pointId === selected.id);
+                setConfirm({
+                  message: t("camera.deletePointPhotosAsk", { no: selected.no, N: own.length, list: own.map((p) => plainLabel(nos.get(p.id)!)).join("、") }), okLabel: t("camera.deletePhoto"),
+                  onOk: () => void (async () => { for (const ph of own) await deletePhoto(ph.id); await reload(batch); })().catch(fail),
+                });
+              }}>{t("camera.deletePhoto")}</button>
             </div>
           )
         ) : placing ? <p className="camera-hint">{t("camera.placeHintShort")}</p> : null}
