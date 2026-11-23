@@ -48,9 +48,17 @@ export function saveBoardPos(p: BoardPos): void {
   try { localStorage.setItem(BOARD_KEY, JSON.stringify({ x: p.x, y: p.y, width: p.width })); } catch { /* private mode */ }
 }
 
+/** What the home page's 工程相機 asked for: open this batch, or start a new one (用戶 2026-11-23：工程相機自己獨立). */
+export type CameraLaunch = { batchId?: string; space?: string; newBatch?: boolean };
+
 export type CameraContext = {
   /** file name of the drawing (floor and batch name come from it) */
   drawingName: string;
+  /** its 我的圖面 entry, kept on the batch so the home page can open the drawing again */
+  drawingId?: string;
+  /** a start from the home page, done once the batches of this sheet are known */
+  launch?: CameraLaunch | null;
+  onLaunched?(): void;
   viewKey: string;
   space: string;
   index: MeasurementIndex | null;
@@ -123,9 +131,13 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   const reloadBatches = useCallback(async () => {
     const all = await listBatches();
-    setBatches(all.filter((b) => b.viewKey === ctx.viewKey));
+    const mine = all.filter((b) => b.viewKey === ctx.viewKey);
+    setBatches(mine);
     setSigners(await listSigners());
+    setLoadedFor(ctx.viewKey);
+    return mine;
   }, [ctx.viewKey]);
+  const [loadedFor, setLoadedFor] = useState("");
 
   const reload = useCallback(async (b: CameraBatch | null) => {
     if (!b) { setPoints([]); setPhotos([]); return; }
@@ -168,12 +180,24 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const openBatch = async (b: CameraBatch) => {
     setBatch(b); setSelectedId(null); setView("work");
     await reload(b);
+    // older batches did not keep their 我的圖面 entry: note it now, so the home page can open them
+    if (!b.drawingId && ctx.drawingId) void updateBatch(b.id, { drawingId: ctx.drawingId }).then(setBatch).catch(() => {});
   };
+
+  // A start from the home page: the batch picked there, or a new batch's settings.
+  useEffect(() => {
+    const go = ctx.launch;
+    if (!open || !go || loadedFor !== ctx.viewKey) return;
+    ctx.onLaunched?.();
+    if (go.newBatch) { setBatch(null); setView("settings"); return; }
+    const b = batches.find((x) => x.id === go.batchId);
+    if (b) void openBatch(b);
+  }, [open, ctx.launch, loadedFor, ctx.viewKey, batches]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const newBatchDraft = (): NewBatch => {
     const r = remembered();
     return {
-      name: "", drawingName: ctx.drawingName, viewKey: ctx.viewKey, space: ctx.space,
+      name: "", drawingName: ctx.drawingName, ...(ctx.drawingId ? { drawingId: ctx.drawingId } : {}), viewKey: ctx.viewKey, space: ctx.space,
       company: r.company ?? "", project: r.project ?? "", trade: r.trade ?? "", item: r.item ?? "", inspector: r.inspector ?? "",
       signerId: r.signerId, cardDate: "",
     };

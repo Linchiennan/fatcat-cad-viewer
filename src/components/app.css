@@ -130,6 +130,11 @@ button { cursor: pointer; }
 .home-title span { display: block; white-space: nowrap; }
 .home-lead { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.7; }
 .home-library { margin-top: 8px; }
+/* 我的圖面 + 工程相機 side by side (用戶 2026-11-23) */
+.home-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.home-actions .home-library { margin-top: 0; }
+.home-actions > button { min-width: 0; white-space: nowrap; }
+.home-actions .home-camera svg { width: 22px; height: 22px; flex: none; }
 .home-features { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 0; padding: 0; list-style: none; color: var(--text); font-size: 0.73rem; font-weight: 700; }
 .home-features li { display: flex; align-items: center; gap: 10px; }
 .feature-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 5px rgba(255, 181, 71, 0.16); margin: 0 4px; }

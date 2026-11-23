@@ -55,7 +55,11 @@ function measure(bar: HTMLElement): { top: Float64Array; width: number; paw: [nu
     for (const el of Array.from(btn.querySelectorAll<SVGGeometryElement>(".glove-ears path, .glove-paw path, .glove-paw ellipse"))) {
       const m = el.getScreenCTM(), paw = !!el.closest(".glove-paw");
       if (!m || typeof el.getTotalLength !== "function") continue;
-      const len = el.getTotalLength(), steps = Math.max(16, Math.ceil(len * Math.hypot(m.a, m.b) * 0.5)); // a point every ~2 px is plenty
+      // a shape not rendered at this moment (the bar hidden while a drawing opens from the home page's 工程相機)
+      // throws InvalidStateError: skip it, the line is measured again when the bar shows
+      let len: number;
+      try { len = el.getTotalLength(); } catch { continue; }
+      const steps = Math.max(16, Math.ceil(len * Math.hypot(m.a, m.b) * 0.5)); // a point every ~2 px is plenty
       for (let i = 0; i <= steps; i++) {
         const p = el.getPointAtLength((len * i) / steps), q = new DOMPoint(p.x, p.y).matrixTransform(m);
         if (!paw) { put(q.x, q.y); continue; }

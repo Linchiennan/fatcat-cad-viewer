@@ -12,7 +12,7 @@ import { useI18n, type TranslationKey } from "../i18n/translations";
 import { nativeErrorText } from "../i18n/nativeErrors";
 import { isArchiveFormat, isCadFormat, LARGE_DXF_BYTES, prepareDrawingFile, type DrawingFormat } from "../files/fileTypes";
 import { convertDwgToDxf } from "../dwg/convertDwg";
-import { importDrawingToLibrary, migrateLegacyLibrary } from "../library/drawingLibrary";
+import { importDrawingToLibrary, listLibraryDrawings, migrateLegacyLibrary, openLibraryDrawing } from "../library/drawingLibrary";
 import { LibraryScreen } from "../library/LibraryScreen";
 import { handleLibraryBack } from "../library/libraryView";
 import { incomingDrawingPlugin, readIncomingDrawingFile, type IncomingDrawing } from "../native/incomingDrawing";
@@ -50,7 +50,9 @@ import { CloseIcon } from "../components/Icons";
 import { backStack, decideBack, registerBackHandler, type ShellBackState, type ShellScreen } from "./backDispatch";
 import { HomeScreen } from "./HomeScreen";
 import { CheckStrip, FileBar, type StripTab } from "./ViewerChrome";
-import { useCameraSession } from "../camera/useCameraSession";
+import { useCameraSession, type CameraLaunch } from "../camera/useCameraSession";
+import { CameraHome } from "../camera/CameraHome";
+import type { CameraBatch } from "../camera/types";
 import { isAbort, progressFraction, readFailureCode, toAppError, viewerFailureCode } from "./shellText";
 import { loadCadViewer, loadMeasurePanel, loadPdfViewer, MissingModuleError, type CadViewerParts, type MeasurePanelComponent, type PdfViewerComponent } from "./viewerModules";
 
@@ -139,6 +141,8 @@ export function App() {
   confirmRef.current = confirm;
   const [nameCard, setNameCard] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
+  /** a 工程相機 start from the home page waiting for its drawing (see CameraHome) */
+  const [cameraLaunch, setCameraLaunch] = useState<CameraLaunch | null>(null);
   const [legal, setLegal] = useState<"privacy" | "source" | null>(null);
   const closeLegal = useCallback(() => setLegal(null), []);
   const [incomingArchive, setIncomingArchive] = useState<File | null>(null);
@@ -561,7 +565,8 @@ export function App() {
 
   // ---- library -------------------------------------------------------------------------------------------
   const openLibrary = useCallback(() => setLibraryOpen(true), []);
-  const closeLibrary = useCallback(() => { setLibraryOpen(false); setIncomingArchive(null); }, []);
+  // a library closed without opening a drawing drops a waiting 工程相機 start (新增批次 from the home page)
+  const closeLibrary = useCallback(() => { setLibraryOpen(false); setIncomingArchive(null); setCameraLaunch(null); }, []);
 
   // ---- Back / Esc (T10 4.3) -------------------------------------------------------------------------------
   const backState: ShellBackState = {
@@ -646,7 +651,27 @@ export function App() {
   const cad = useLazyPart<CadViewerParts>(loadCadViewer, !!drawable && !isPdf && showing, onMissingViewer);
   // Engineering camera (spec 009): batches of site photos placed on this sheet.
   const [cameraOpen, setCameraOpen] = useState(false);
-  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { drawingName: last?.file.name ?? "", viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await h.exportWithOverlay({ range: "sheet", format: "pdf", paper: "A3", title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
+  // 工程相機 from the home page (用戶 2026-11-23：自己獨立): pick a batch → its drawing opens, on the batch's layout, with
+  // the camera panel on that batch; 新增批次 → choose a drawing in 我的圖面 → the panel opens on new-batch settings.
+  const [cameraHome, setCameraHome] = useState(false);
+  const [cameraHomeNote, setCameraHomeNote] = useState("");
+  const pickCameraBatch = useCallback(async (b: CameraBatch) => {
+    try {
+      const id = b.drawingId ?? (await listLibraryDrawings()).find((e) => e.name === b.drawingName)?.id;
+      if (!id) { setCameraHomeNote(t("camera.homeMissing", { name: b.drawingName })); return; }
+      const file = await openLibraryDrawing(id);
+      setCameraLaunch({ batchId: b.id, space: b.space });
+      setCameraHome(false); setCameraHomeNote("");
+      void openDrawing(file, id);
+    } catch { setCameraHomeNote(t("camera.homeMissing", { name: b.drawingName })); }
+  }, [openDrawing, t]);
+  useEffect(() => {
+    const go = cameraLaunch;
+    if (!go || screen !== "viewing" || !report || switching || isPdf) return;
+    if (go.space && go.space !== space && spaces.some((x) => x.name === go.space)) { setSwitching(true); canvasRef.current?.switchSpace(go.space); return; }
+    setSearchOpen(false); endMeasure(); endMarkup(); setCadTab(null); setCameraOpen(true);
+  }, [cameraLaunch, screen, report, switching, isPdf, space, spaces]); // eslint-disable-line react-hooks/exhaustive-deps
+  const camera = useCameraSession(cameraOpen && screen === "viewing" && !isPdf, { drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: index?.viewKey ?? "", space, index, exportSheet: async (paint) => { const h = canvasRef.current as unknown as ExportCapable | null; if (!h?.exportWithOverlay) throw new Error("no sheet export"); const r = await h.exportWithOverlay({ range: "sheet", format: "pdf", paper: "A3", title: (last?.file.name ?? "對位圖").replace(/.[^.]+$/, ""), sheet: space }, paint); return { blob: r.blob, sheetWidth: r.sheetWidth }; } }, () => setCameraOpen(false));
   const Pdf = useLazyPart<PdfViewerComponent>(loadPdfViewer, !!drawable && isPdf && showing, onMissingViewer);
   const Panel = useLazyPart<MeasurePanelComponent>(loadMeasurePanel, measuring && (measureDetail || !glove));
 
@@ -708,7 +733,9 @@ export function App() {
       ) : null}
 
       <div className="app-content" hidden={libraryOpen} inert={closeConfirm}>
-        {screen === "home" ? <HomeScreen onLibrary={openLibrary} onLegal={setLegal} /> : null}
+        {screen === "home" ? <HomeScreen onLibrary={openLibrary} onCamera={() => { setCameraHomeNote(""); setCameraHome(true); }} onLegal={setLegal} /> : null}
+        {cameraHome ? <CameraHome message={cameraHomeNote} onPick={(b) => void pickCameraBatch(b)} onClose={() => setCameraHome(false)}
+          onNew={() => { setCameraLaunch({ newBatch: true }); setCameraHome(false); openLibrary(); }} /> : null}
 
         {screen === "error" && error ? (
           <ErrorScreen error={error} onLibrary={openLibrary} onRetry={last ? retry : undefined} onBack={goHome} />

@@ -219,8 +219,10 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
   const shoot = async () => {
     if (busy) return;
     setBusy(true);
-    try { const photo = await takePicture(); flyThumb(photo); await onShot(photo, pos); setShots((n) => n + 1); } finally { setBusy(false); }
+    try { const photo = await takePicture(); flyThumb(photo); await onShot(photo, pos); setShots((n) => n + 1); backSoon(); } finally { setBusy(false); }
   };
+  // one photo, then back to the drawing 0.2 s later (用戶 2026-11-23：「拍完照片就關閉拍照模式，自動返回，要延遲0.2秒才關閉」)
+  const backSoon = () => { window.setTimeout(() => closeRef.current(), 200); };
 
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const area = shown();
@@ -245,7 +247,7 @@ export function CameraScreen({ board, text, signer, onShot, onPos, onClose }: {
           <p>{t("camera.cameraDenied")}</p>
           <label className="camera-shoot camera-primary">{t("camera.systemCamera")}
             <input type="file" accept="image/*" capture="environment" hidden
-              onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) { await onShot(f, pos); setShots((n) => n + 1); } }} />
+              onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) { await onShot(f, pos); setShots((n) => n + 1); backSoon(); } }} />
           </label>
         </div>
       ) : (

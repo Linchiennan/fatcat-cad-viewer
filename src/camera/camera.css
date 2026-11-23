@@ -166,3 +166,13 @@
 .camera-sheet .camera-sel button { flex: none; white-space: nowrap; }
 /* the place name row below the tools: full width */
 .camera-compact .camera-place { justify-self: stretch; width: 100%; }
+/* 工程相機 from the home page: the batch list on its own screen (用戶 2026-11-23) */
+.camera-home { position: fixed; inset: 0; z-index: 150; display: flex; flex-direction: column; background: var(--bg, #0b1118); color: var(--text); padding: calc(10px + var(--safe-top, 0px)) 16px calc(16px + var(--safe-bottom, 0px)); }
+.camera-home-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.camera-home-head h2 { margin: 0; font-size: 1.2rem; }
+.camera-home-head .camera-x { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 1.5px solid var(--tile-line); background: var(--tile-bg); color: var(--text); display: inline-flex; align-items: center; justify-content: center; }
+.camera-home-head .camera-x svg { width: 22px; height: 22px; }
+.camera-home-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; padding-top: 12px; }
+.camera-home-new { min-height: 48px; border-radius: 12px; border: 1.5px solid var(--accent-hi); font: inherit; font-size: 1rem; }
+.camera-home .camera-batches button { min-height: 56px; border-radius: 12px; border: 1px solid var(--tile-line); background: rgba(255, 255, 255, 0.035); color: var(--text); font: inherit; display: flex; gap: 2px; }
+.camera-home .camera-message-box { flex: none; height: auto; min-height: 36px; -webkit-line-clamp: 3; }

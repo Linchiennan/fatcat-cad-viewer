@@ -35,7 +35,7 @@ export function versionLine(t: ReturnType<typeof useI18n>["t"], native: boolean)
   return `${t("home.version")} ${shortVersion(packageInfo.version)} · ${platform}`;
 }
 
-export function HomeScreen({ onLibrary, onLegal }: { onLibrary(): void; onLegal?(kind: "privacy" | "source"): void }) {
+export function HomeScreen({ onLibrary, onCamera, onLegal }: { onLibrary(): void; onCamera?(): void; onLegal?(kind: "privacy" | "source"): void }) {
   const { t, locale } = useI18n();
   const native = Capacitor.isNativePlatform();
   const showInstallHint = IS_WEB_BUILD && isAppleMobile() && !isStandalone();
@@ -59,9 +59,17 @@ export function HomeScreen({ onLibrary, onLegal }: { onLibrary(): void; onLegal?
             <span aria-hidden="true">{t("home.titleLine2")}</span>
           </h1>
           <p className="home-lead">{t("home.lead")}</p>
-          <button type="button" className="primary-btn home-library" onClick={onLibrary}>
-            <FolderCheckIcon />{t("home.myDrawings")}
-          </button>
+          {/* 我的圖面 and 工程相機 side by side, each its own entry (用戶 2026-11-23) */}
+          <div className="home-actions">
+            <button type="button" className="primary-btn home-library" onClick={onLibrary}>
+              <FolderCheckIcon />{t("home.myDrawings")}
+            </button>
+            {onCamera ? (
+              <button type="button" className="primary-btn home-camera" onClick={onCamera}>
+                <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z" /><circle cx="12" cy="13.2" r="3.4" /></svg>{t("camera.homeButton")}
+              </button>
+            ) : null}
+          </div>
           <ul className="home-features" aria-label={t("home.featuresLabel")}>
             <li><span className="feature-dot" aria-hidden="true" />{t("home.formats")}</li>
             <li><ShieldIcon className="feature-icon" />{IS_WEB_BUILD ? (locale === 'en' ? 'Local drawings · online access check' : '圖檔本機處理 · 授權需連線') : t("home.offline")}</li>
