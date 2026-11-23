@@ -111,7 +111,9 @@
 .camera-badge { position: absolute; top: -5px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #ff5a4a; color: #fff; font-style: normal; font-size: 0.7rem; line-height: 18px; }
 .camera-row { display: flex; align-items: center; gap: 8px; min-height: 36px; font-size: 0.85rem; color: var(--muted); }
 .camera-row > span { flex: none; }
-.camera-scale-row input { flex: 1; min-width: 0; }
+/* 符號 slider in the panel head (用戶 2026-11-23：與位置交換) */
+.camera-head-scale { justify-self: stretch; min-width: 0; display: flex; flex-direction: column; gap: 0; font-size: 0.7rem; color: var(--muted); }
+.camera-head-scale input { width: 100%; min-width: 0; min-height: 28px; }
 .camera-sel { justify-content: flex-end; }
 .camera-sheet .camera-row button { min-height: 36px; height: 36px; padding: 0 12px; font-size: 0.85rem; }
 .camera-row input[type="number"] { width: 64px; min-height: 36px; padding: 0 8px; border-radius: 8px; border: 1.5px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
@@ -153,3 +155,5 @@
 .camera-place.editing input { grid-column: 1 / 3; grid-row: 2; min-width: 0; flex: 1; width: 100%; min-height: 32px; padding: 0 6px; border-radius: 8px; border: 1px solid var(--tile-line); background: #0b151d; color: var(--text); font: inherit; font-size: 16px; }
 /* the spot buttons keep their one-line size; the note box takes what is left */
 .camera-sheet .camera-sel button { flex: none; white-space: nowrap; }
+/* the place name row below the tools: full width */
+.camera-compact .camera-place { justify-self: stretch; width: 100%; }

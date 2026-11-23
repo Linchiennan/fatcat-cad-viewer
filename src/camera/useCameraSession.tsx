@@ -323,9 +323,10 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
           <button type="button" title={t("camera.settings")} onClick={() => setView("settings")}>{I("M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM19.4 13.5l1.6 1.2-1.8 3.1-1.9-.6a7.6 7.6 0 0 1-2 1.2l-.4 2H11l-.4-2a7.6 7.6 0 0 1-2-1.2l-1.9.6-1.8-3.1 1.6-1.2a7.4 7.4 0 0 1 0-2.4L4.9 9.3l1.8-3.1 1.9.6a7.6 7.6 0 0 1 2-1.2L11 3.6h3.6l.4 2a7.6 7.6 0 0 1 2 1.2l1.9-.6 1.8 3.1-1.6 1.2a7.4 7.4 0 0 1 0 2.4z")}<span>{t("camera.tool.settings")}</span></button>
           <button type="button" title={t("camera.exportTitle")} onClick={() => { setMessage(""); setView("export"); }}>{I("M12 15V4M8 8l4-4 4 4M5 13v6h14v-6")}<span>{t("camera.tool.export")}</span></button>
         </div>
-        <label className="camera-row camera-scale-row"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
-          <input type="range" min={0.5} max={3} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
-        </label>
+        {/* the selected spot and its place name, tap to rename; full width here, swapped with the 符號 slider (用戶 2026-11-23：
+            「新版的把位置跟符號的拉桿交換」) */}
+        {selected ? <PlaceField key={selected.id} label={t("camera.spotNo", { no: markerText(selected, photos) })} place={selected.place}
+          photos={photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(nos.get(p.id)!)).join("、")} onSave={(v) => void renamePlace(selected, v)} /> : null}
         {selected ? (
           renumbering ? (
             <form className="camera-row" onSubmit={(e) => { e.preventDefault(); const v = Number(new FormData(e.currentTarget).get("no")); setRenumbering(false); void renumberPoint(selected.id, v).then(() => reload(batch)).catch(fail); }}>
@@ -361,11 +362,13 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       style={pull ? { transform: `translateY(${pull}px)`, transition: "none" } : undefined}>
       <div className="camera-grip" role="button" tabIndex={0} aria-label={t(collapsed ? "camera.gripOpen" : "camera.gripHide")} title={t(collapsed ? "camera.gripOpen" : "camera.gripHide")}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
-      <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the selected spot and its place name sit
-            there instead, tap to rename it (用戶 2026-11-23：「並把位置調整到剛剛刪除的這個，並增加點擊修改的功能」) */}
-        {batch && view === "work" && selected ? <PlaceField key={selected.id} label={t("camera.spotNo", { no: markerText(selected, photos) })} place={selected.place}
-          photos={photos.filter((p) => p.pointId === selected.id).map((p) => plainLabel(photoLabels(points, photos).get(p.id)!)).join("、")} onSave={(v) => void renamePlace(selected, v)} />
-          : <span className="camera-head-space" aria-hidden="true" />}
+      <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the 符號 slider sits there (swapped with the place name,
+            用戶 2026-11-23) */}
+        {batch && view === "work" ? (
+          <label className="camera-head-scale"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
+            <input type="range" min={0.5} max={3} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
+          </label>
+        ) : <span className="camera-head-space" aria-hidden="true" />}
         {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
         {batch && view === "work" ? (
           <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setShooting(true); }}>
