@@ -73,7 +73,7 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
                 <button type="button" onClick={() => pick(b)} onPointerDown={(e) => down(b, e)} onPointerMove={move} onPointerUp={up}
                   onPointerCancel={up} onPointerLeave={up} onContextMenu={(e) => e.preventDefault()}>
                   <strong>{b.demo ? <em className="camera-demo-tag">{t("camera.demoTag")}</em> : null}{b.name || t("camera.homeUnnamed")}</strong>
-                  <small>{b.drawingName.replace(/\.[^.]+$/, "")}{b.space && b.space !== "Model" ? ` · ${b.space}` : ""} · {day(b.updatedAt)}</small>
+                  <small>{b.drawingName.replace(/\.[^.]+$/, "")}{b.space && b.space !== "Model" ? ` · ${/^PDF p\.(\d+)$/.test(b.space) ? t("camera.pdfPage", { n: b.space.slice(6) }) : b.space}` : ""} · {day(b.updatedAt)}</small>
                 </button>
               </li>
             ))}

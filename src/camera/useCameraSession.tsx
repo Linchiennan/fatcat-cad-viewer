@@ -572,7 +572,7 @@ function BatchSettings({ initial, createdAt, signers: initialSigners, onSave, on
   const [signers, setSigners] = useState<readonly Signer[]>(initialSigners);
   const [signing, setSigning] = useState(false);
   const field = (key: keyof NewBatch, label: string, extra?: { required?: boolean }) => (
-    <label key={key} className={extra?.required && !String(d[key] ?? "").trim() ? "camera-missing" : undefined}><span>{label}{extra?.required ? <em className="camera-required">＊必填</em> : null}</span>
+    <label key={key} className={extra?.required && !String(d[key] ?? "").trim() ? "camera-missing" : undefined}><span>{label}{extra?.required ? <em className="camera-required">{t("camera.required")}</em> : null}</span>
       <input value={String(d[key] ?? "")} required={extra?.required} onChange={(e) => setD({ ...d, [key]: e.target.value })} /></label>
   );
   // 查驗人員 is required and the signature is bound to that name (用戶 2026-11-23：「查驗人員設定成一定要輸入人名，並且

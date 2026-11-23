@@ -354,3 +354,25 @@ form.camera-row input[type="number"] { flex: 1 1 auto; width: auto; min-width: 0
 
 /* the drawing tip at the top of the project list: red and bold so it is seen before 新增專案 (用戶 2026-11-23) */
 .camera-home-tip { margin: 0 0 10px; color: #ff5a4e; font-weight: 700; font-size: 0.95rem; line-height: 1.4; }
+
+/* 待修清單一起修（用戶 2026-11-24 自查後「等等多累積BUG後再一起修」） */
+/* 4: 位置 N stays on one line; a long name is cut with … instead of squeezing it upright */
+.camera-sheet button.camera-place span { flex: none; white-space: nowrap; }
+.camera-sheet button.camera-place strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camera-sheet form.camera-place.editing span { white-space: nowrap; }
+/* 8: in the camera's confirms the safe choice is filled, the deleting one red, as on the project list */
+:is(.camera-sheet, .camera-home, .camera-screen) .confirm-box button.close-keep { border: 0; background: var(--accent); color: var(--on-accent); }
+:is(.camera-sheet, .camera-home, .camera-screen) .confirm-box button.close-go { border: 1.5px solid #b34b4b; background: transparent; color: #ff8a80; }
+/* 3: a low phone held sideways: the rows give up height before anything is covered (the panel scrolls only past that) */
+@media (orientation: landscape) and (max-height: 600px) {
+  .camera-sheet.working { grid-template-rows: repeat(3, minmax(42px, 1fr)); }
+  .camera-sheet.working .camera-sel { align-items: stretch; }
+  .camera-sheet.working .camera-sel button { min-height: 40px; line-height: 1.1; white-space: pre-line; overflow-wrap: break-word; }
+  .camera-sheet.working .camera-sel .camera-message-box { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+}
+@media (orientation: landscape) and (max-height: 330px) {
+  .camera-sheet.working { gap: 4px; padding: 6px 8px; }
+  .camera-sheet.working .camera-tools > button, .camera-sheet.working .camera-tools > label { font-size: 0.76rem; }
+  .camera-sheet.working button.camera-place { min-height: 32px; }
+  .camera-sheet.working .camera-sel button { min-height: 36px; font-size: 0.72rem; }
+}

@@ -255,7 +255,7 @@ export function App() {
     setLibraryOpen(false); setCloseConfirm(false);
     resetDrawingState();
     pendingImport.current = false;
-    setCameraLaunch(null);
+    setCameraLaunch(null); setCameraOpen(false);
     setLast(null); setDrawable(null); setError(null); setScreen("home");
     if (was) recordDiagnostic("drawing.close", { name: was.file.name.replace(/^.*[\\/]/, "") });
   }, [cancelWork, resetDrawingState]);

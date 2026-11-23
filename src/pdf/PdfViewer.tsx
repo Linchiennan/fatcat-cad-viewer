@@ -42,7 +42,9 @@ export type PdfViewerProps = ViewerEvents & {
   file: File;
   /** the camera's spots on the page shown */
   photoMarkers?: PdfMarkers | null;
-  /** the camera panel is open: one finger is for the spots, two fingers move the page, and the page stays (no pager) */
+  /** the camera panel is open (sideways the page fits beside it). With a project open (photoMarkers) one finger is for the
+   * spots, two fingers move the page and the page stays (no pager); before that the page moves and turns as usual, so a
+   * project can be started on any page (用戶 2026-11-23 自查後「兩個都修」) */
   camera?: boolean;
   /** the page shown and the page count, after each page is drawn */
   onPage?(page: number, pages: number): void;
@@ -68,7 +70,9 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(function Pd
   const sheet = useRef<HTMLDivElement | null>(null);
   const [geo, setGeo] = useState<PageGeometry | null>(null);
   const cameraOn = useRef(false);
-  cameraOn.current = !!camera || !!photoMarkers;
+  cameraOn.current = !!photoMarkers;
+  const panelOpen = useRef(false);
+  panelOpen.current = !!camera;
   const measureNow = useRef<() => void>(() => {});
   // the camera opening or closing changes the free box (its panel takes the right side when sideways)
   useEffect(() => { measureNow.current(); }, [camera]);
@@ -139,7 +143,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(function Pd
     if (!el) return;
     const measure = () => {
       setWidth(el.clientWidth);
-      const sideways = cameraOn.current && typeof matchMedia === "function" && matchMedia(SIDEWAYS).matches;
+      const sideways = panelOpen.current && typeof matchMedia === "function" && matchMedia(SIDEWAYS).matches;
       if (!sideways) { setFitBox(null); return; }
       const cs = getComputedStyle(el), px = (v: string) => parseFloat(v) || 0;
       const w = el.clientWidth - px(cs.paddingLeft) - px(cs.paddingRight), h = el.clientHeight - px(cs.paddingTop) - px(cs.paddingBottom);
@@ -345,7 +349,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(function Pd
       </div>
       {drawing && doc ? <div className="pdf-rendering" role="status">{t("pdf.rendering")}</div> : null}
       {/* one project is one page: no page change while the camera is open */}
-      <nav className="pdf-pager" hidden={!!camera || !!photoMarkers}>
+      <nav className={`pdf-pager${camera ? " over-camera" : ""}`} hidden={!!photoMarkers}>
         <button type="button" aria-label={t("pdf.prev")} title={t("pdf.prev")} disabled={!doc || page <= 1} onClick={() => goTo(page - 1)}>‹</button>
         <span>{t("pdf.page")}</span>
         <input type="text" inputMode="numeric" value={typed} disabled={!doc} aria-label={t("pdf.page")}

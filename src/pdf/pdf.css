@@ -44,3 +44,10 @@
 @media (orientation: landscape) and (max-height: 600px) {
   :root:has(.camera-sheet) .pdf-scroll { padding: 8px calc(224px + env(safe-area-inset-right, 0px)) 8px calc(75px + env(safe-area-inset-left, 0px)); }
 }
+
+/* the camera open with no project yet: the pager stays, at the top clear of the panel, to pick the page for a new project
+   (用戶 2026-11-23 自查後「兩個都修」) */
+.pdf-pager.over-camera { top: calc(80px + env(safe-area-inset-top, 0px)); bottom: auto; }
+@media (orientation: landscape) and (max-height: 600px) {
+  .pdf-pager.over-camera { top: 8px; left: calc(75px + env(safe-area-inset-left, 0px)); transform: none; max-width: calc(100% - 75px - 376px); }
+}

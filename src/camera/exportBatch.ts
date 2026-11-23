@@ -116,7 +116,9 @@ async function collectFiles(input: ExportInput): Promise<{ files: Zippable; base
   if (parts.cardDocx) files[`照片保存卡/${base}.docx`] = [buildCardDocx(heading, entries, bytes), { level: 0 }];
   if (parts.cardPdf) files[`照片保存卡/${base}.pdf`] = [await buildCardPdf(heading, entries, composed, base), { level: 0 }];
   input.onProgress?.(placed.length + 1, total);
-  const sheet = safe(batch.drawingName.replace(/\.[^.]+$/, ""));
+  // a PDF page says which page it is (用戶 2026-11-24 自查)
+  const page = /^PDF p\.(\d+)$/.exec(batch.space ?? "")?.[1];
+  const sheet = safe(batch.drawingName.replace(/\.[^.]+$/, "") + (page ? `-第${page}頁` : ""));
   const markerLabels = new Map(points.map((p) => [p.id, markerText(p, photos)]));
   if (parts.sheetMono && input.sheetMonoPdf) files[`對位圖/${sheet}-黑白.pdf`] = [new Uint8Array(await input.sheetMonoPdf.arrayBuffer()), { level: 0 }];
   if (parts.sheetPdf && input.sheetPdf) files[`對位圖/${sheet}-彩色.pdf`] = [new Uint8Array(await input.sheetPdf.arrayBuffer()), { level: 0 }];
