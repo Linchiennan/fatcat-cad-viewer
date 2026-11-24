@@ -41,8 +41,8 @@ function remember(b: Remembered): void {
  * clamped to the picture by boardRect, so the board sits in the corner whatever the picture's shape (upright or sideways). */
 
 
-/** 符號 slider range (用戶 2026-11-23：「符號大小要從10%到200%」; was 50–300 %); older batches above it are capped */
-const MARKER_SCALE_MIN = 0.1, MARKER_SCALE_MAX = 2;
+/** 符號 slider range (用戶 2026-11-24：「箭頭大小改成10%到300%」; 2026-11-23 was 10–200 %) */
+const MARKER_SCALE_MIN = 0.1, MARKER_SCALE_MAX = 3;
 const clampScale = (v: number) => Math.min(MARKER_SCALE_MAX, Math.max(MARKER_SCALE_MIN, v));
 
 /** a phone held sideways (the same test as the camera screen's landscape layout) */
