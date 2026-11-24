@@ -122,6 +122,9 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
   const [signers, setSigners] = useState<Signer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  // an unplaced photo being put on the drawing: the next tap on an arrow or an empty spot takes it (用戶 2026-11-24)
+  const [locating, setLocating] = useState<PhotoRecord | null>(null);
+  useEffect(() => { if (view !== "work" || !open) setLocating(null); }, [view, open]);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState("");
   // a note belongs to the screen it was said on: switching screens clears it (the 清單 showed the spot-lock note, cut off)
@@ -413,9 +416,31 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     onMove: () => {}, onTurn: () => {},
   } : null;
 
+  /** The photo being located joins spot pt: the board's place follows the spot, the spot gets picked. */
+  const locateTo = async (ph: PhotoRecord, pt: ShotPoint) => {
+    if (!batch) return;
+    setLocating(null); setPlacing(false);
+    try {
+      await updatePhoto(ph.id, { pointId: pt.id, board: { ...ph.board, place: pt.place } });
+      setSelectedId(pt.id);
+      await reload(batch);
+      setMessage(t("camera.located", { no: cardNo(pt.no) }));
+    } catch (e) { fail(e); }
+  };
+
   const markers = copyMarkers ?? (open && batch ? {
-    points, labels, selectedId, placing, scale: markerScale, done,
+    points, labels, selectedId, placing: placing || !!locating, scale: markerScale, done,
     onAdd: async (at: { x: number; y: number }) => {
+      if (locating) {
+        // an empty spot: a new arrow there takes the photo
+        if (points.length >= MAX_POINTS) { setLocating(null); setMessage(t("camera.batchFull", { N: MAX_POINTS })); return; }
+        try {
+          const p = await addPoint(batch.id, { x: at.x, y: at.y, angle: 90, place: placeName(ctx.drawingName, at, texts, ctx.placeRadius) });
+          setPoints((list) => [...list, p]);
+          await locateTo(locating, p);
+        } catch (e) { fail(e); }
+        return;
+      }
       // 001–999 in a batch; beyond that a new batch (用戶 2026-11-23)
       if (points.length >= MAX_POINTS) { setPlacing(false); setMessage(t("camera.batchFull", { N: MAX_POINTS })); return; }
       try {
@@ -423,7 +448,11 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         setPoints((list) => [...list, p]); setSelectedId(p.id); // placing stays on: tap after tap (用戶 2026-11-22：放點要能連續放)
       } catch (e) { fail(e); }
     },
-    onSelect: (id: string | null) => { setSelectedId(id); setRenumbering(false); },
+    onSelect: (id: string | null) => {
+      const pt = locating && id ? points.find((q) => q.id === id) : undefined;
+      if (locating && pt) { void locateTo(locating, pt); return; }
+      setSelectedId(id); setRenumbering(false);
+    },
     onMove: async (id: string, at: { x: number; y: number }) => {
       try {
         const p = await updatePoint(id, { x: at.x, y: at.y, place: placeName(ctx.drawingName, at, texts, ctx.placeRadius) });
@@ -507,6 +536,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         else requestAnimationFrame(() => ctx.focusPoint?.(pt.x, pt.y));
       }}
       onEdit={(ph, board) => void updatePhoto(ph.id, { board }).then(() => reload(batch)).catch(fail)}
+      onLocate={(ph) => { setLocating(ph); setPlacing(false); setSelectedId(null); setFull(false); setCollapsed(false); setMessage(""); setView("work"); }}
       onDelete={(ph) => setConfirm({ message: t("camera.deletePhotoAsk"), okLabel: t("camera.deletePhoto"), onOk: () => void deletePhoto(ph.id).then(async () => {
         await reload(batch);
         // the last one gone: back to the camera's page with its tools, not an empty list (用戶 2026-11-23：「我刪光照片 怎麼
@@ -557,6 +587,16 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <div className="camera-actions">
           <button type="button" className="camera-primary" disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(false)}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
           <button type="button" className="camera-zip" title={t("camera.exportZipTip")} disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(true)}>{t("camera.exportZip")}</button>
+        </div>
+      </div>
+    );
+  } else if (view === "work" && batch && locating) {
+    // 定位 one photo: only the step and 取消, like the copy steps
+    body = (
+      <div className="camera-body camera-copy camera-locating">
+        <p className="camera-message camera-message-box camera-copy-step" role="status">{t("camera.locateStep")}</p>
+        <div className="camera-copy-actions">
+          <button type="button" onClick={() => { setLocating(null); setView("photos"); }}>{t("confirm.cancel")}</button>
         </div>
       </div>
     );
@@ -625,7 +665,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         ) : <span className="camera-head-space" aria-hidden="true" />}
         {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
         {batch && view === "work" ? (
-          <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setShooting(true); }}>
+          <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setLocating(null); setShooting(true); }}>
             <PawShape className="camera-paw-shape" />
             <svg className="camera-paw-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z" /><circle cx="12" cy="13.2" r="3.4" /></svg>
             <span>{t("camera.shoot")}</span>

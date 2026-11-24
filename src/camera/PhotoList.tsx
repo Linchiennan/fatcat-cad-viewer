@@ -32,13 +32,15 @@ function Thumb({ id }: { id: string }) {
   return src ? <img className="camera-thumb" src={src} alt="" /> : <span className="camera-thumb" />;
 }
 
-export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete, onDeleteAll }: {
+export function PhotoList({ points, photos, current, onFocus, onEdit, onLocate, onDelete, onDeleteAll }: {
   batch: CameraBatch; points: readonly ShotPoint[]; photos: readonly PhotoRecord[];
   /** the spot picked on the drawing: its photos are marked and scrolled to */
   current?: string | null;
   /** a photo tapped: show its spot on the drawing */
   onFocus?(photo: PhotoRecord): void;
   onEdit(photo: PhotoRecord, board: Whiteboard): void; onDelete(photo: PhotoRecord): void;
+  /** an unplaced photo to be put on the drawing (用戶 2026-11-24) */
+  onLocate?(photo: PhotoRecord): void;
   /** a photo held: offer to delete them all (用戶 2026-11-23：「清單內長按照片，出現全部刪除的選項」) */
   onDeleteAll?(): void;
 }) {
@@ -70,6 +72,8 @@ export function PhotoList({ points, photos, current, onFocus, onEdit, onDelete, 
             <BoardForm board={ph.board} onSave={(b) => { setEditing(null); onEdit(ph, b); }} onCancel={() => setEditing(null)} />
           ) : (
             <div className="camera-actions" onClick={(e) => e.stopPropagation()}>
+              {/* an unplaced photo: 定位, then a tap on the drawing (用戶 2026-11-24) */}
+              {!ph.pointId && onLocate ? <button type="button" className="camera-locate" onClick={() => onLocate(ph)}>{t("camera.locate")}</button> : null}
               <button type="button" onClick={() => setEditing(ph.id)}>{t("camera.editBoard")}</button>
               {/* no 放到選取的位置 (用戶 2026-11-23：「放到選取位置按鈕全部取消」) */}
               <button type="button" className="camera-danger" onClick={() => onDelete(ph)}>{t("camera.deletePhoto")}</button>

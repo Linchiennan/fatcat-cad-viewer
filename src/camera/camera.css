@@ -405,3 +405,14 @@ form.camera-row input[type="number"] { flex: 1 1 auto; width: auto; min-width: 0
 .camera-copy-actions button { flex: 1 1 0; min-width: 88px; min-height: 44px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #1d3343; color: var(--text); font: inherit; font-size: 0.9rem; }
 .camera-copy-actions button.camera-primary { background: var(--accent); color: var(--on-accent); border: 0; font-weight: 700; }
 .camera-copy-actions button:disabled { opacity: 0.45; }
+
+/* 未定位照片的「定位」 (用戶 2026-11-24) */
+.camera-sheet .camera-photo-info .camera-actions button.camera-locate { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 700; }
+/* 定位 on an unplaced card: its three buttons stay on one line (用戶 2026-11-24) */
+.camera-sheet .camera-photo.loose .camera-photo-info .camera-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.camera-sheet .camera-photo.loose .camera-photo-info .camera-actions button { padding: 0 4px; }
+/* sideways while 定位: the paw on top, the step and 取消 under it at full width */
+@media (orientation: landscape) and (max-height: 600px) {
+  .camera-sheet.working > .camera-locating { grid-column: 1 / -1; grid-row: 2 / 4; justify-content: center; gap: 8px; }
+  .camera-sheet.working > .camera-locating .camera-copy-step { font-size: 0.8rem; line-height: 1.35; padding: 6px 8px; }
+}
