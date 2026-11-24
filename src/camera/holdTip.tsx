@@ -38,6 +38,7 @@ export function useHoldTip() {
   const bind = (key: string) => ({
     onPointerDown: (e: ReactPointerEvent) => {
       held.current = null; at.current = { x: e.clientX, y: e.clientY };
+      window.clearTimeout(hover.current); // a press is not a resting mouse
       const el = e.currentTarget as HTMLElement;
       window.clearTimeout(timer.current); window.clearTimeout(hide.current);
       timer.current = window.setTimeout(() => { held.current = key; setShown({ key, at: el.getBoundingClientRect() }); }, LONG_PRESS_MS);
@@ -60,7 +61,12 @@ export function useHoldTip() {
       else if (held.current === key) later(key);
     },
     onContextMenu: (e: ReactMouseEvent) => e.preventDefault(),
-    onClickCapture: (e: ReactMouseEvent) => { if (held.current === key) { held.current = null; e.preventDefault(); e.stopPropagation(); } },
+    onClickCapture: (e: ReactMouseEvent) => {
+      if (held.current === key) { held.current = null; e.preventDefault(); e.stopPropagation(); return; }
+      // a real click: no bubble left behind for a button the click may take off the screen (the resting-mouse one
+      // fired after 照片 opened the list and stayed up)
+      window.clearTimeout(hover.current); window.clearTimeout(timer.current); setShown(null);
+    },
   });
   const tip = (key: string, name: string, text: string) => (shown?.key === key
     ? createPortal(<span ref={(el) => { if (el) placeTip(el, shown.at); }} className="glove-tip camera-hold-tip" role="tooltip"><strong>{name}</strong>{text}</span>, document.body)
