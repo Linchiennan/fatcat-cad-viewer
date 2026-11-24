@@ -106,8 +106,10 @@ export function moveGripRadius(scale = 1): number {
 }
 /** 用戶 2026-11-22：「要加大定點時箭頭的轉圈範圍，現在過小」: at least 80 px (was 44), always well past the arrow tip. */
 export const TURN_GRIP_MIN_PX = 80;
+export const TURN_GRIP_GROW = 1.5;
 export function turnGripRadius(scale = 1): number {
-  return Math.max(MARKER_RADIUS_PX * scale * ARROW_TIP + 30, moveGripRadius(scale) + 50, TURN_GRIP_MIN_PX);
+  // 1.5 times as wide (用戶 2026-11-24：「放大箭頭旋轉的範圍，再大1.5倍」)
+  return TURN_GRIP_GROW * Math.max(MARKER_RADIUS_PX * scale * ARROW_TIP + 30, moveGripRadius(scale) + 50, TURN_GRIP_MIN_PX);
 }
 
 /** ox / oy: finger minus marker centre at the start, so a moved point keeps its place under the finger */
@@ -122,6 +124,7 @@ export function markerFont(label: string, k: number): number {
 /** Below this the number is a blot that hides the circle and arrow, so it is left out until the drawing is zoomed in. */
 export const MIN_TEXT_PX = 5;
 
+type ShotPointLike = Props["points"][number];
 type Drag = { id: string; kind: "move" | "turn"; pointerId: number; start: number; moved: boolean; free: boolean; ox: number; oy: number };
 
 export function PhotoMarkerLayer(props: Props) {
@@ -195,6 +198,14 @@ export function PhotoMarkerLayer(props: Props) {
   };
   const endDrag = (e: ReactPointerEvent) => {
     if (!drag || drag.pointerId !== e.pointerId) return;
+    if (drag.kind === "turn" && !drag.moved && svg.current) {
+      // the ring lies over its neighbours so a turn never grabs them; a plain tap on one still picks it
+      const r = svg.current.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      const k = screenMarkerScale(props.sheetWidth, props.ppu, props.scale ?? 1);
+      const hit = props.points.filter((q) => q.id !== drag.id).map((q) => { const [c] = props.project([{ x: q.x, y: q.y }]); return { q, d: Math.hypot(c.x - x, c.y - y) }; })
+        .filter((h) => Number.isFinite(h.d) && h.d <= moveGripRadius(k)).sort((a, b) => a.d - b.d)[0];
+      if (hit) { setDrag(null); setGhost(null); props.onSelect(hit.q.id); return; }
+    }
     if (ghost?.id === drag.id) {
       if (drag.kind === "move" && ghost.x !== undefined && ghost.y !== undefined) props.onMove(drag.id, { x: ghost.x, y: ghost.y });
       if (drag.kind === "turn" && ghost.angle !== undefined) props.onTurn(drag.id, ghost.angle);
@@ -206,23 +217,24 @@ export function PhotoMarkerLayer(props: Props) {
   return (
     <svg ref={svg} className={"photo-marker-layer" + (props.placing ? " placing" : "") + (props.ghost ? " ghost" : "")} aria-label={t("camera.markersLabel")}
       onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
-      {/* The selected point's turn ring, under every point: anywhere around it turns it, but a neighbour inside the
-          ring is still grabbed by its own move grip (用戶 2026-11-22：「當定點箭頭有照片時，變成不能移動」— the new
-          point's ring lay on top of the photographed one next to it). Not while placing, so taps add points. */}
-      {(() => {
+      {/* the selected point last, so its arrow and move grip are on top of its neighbours */}
+      {/* The selected point's turn ring lies over the other points (用戶 2026-11-24：「再轉的同時其他箭頭不要去動到」; it was under
+          them so a neighbour inside it was grabbed instead), under the selected point itself so its own move grip and arrow
+          still work. A plain tap on a neighbour inside it picks that neighbour (endDrag). Not while placing, so taps add points. */}
+      {[...props.points].sort((a, b) => Number(a.id === props.selectedId) - Number(b.id === props.selectedId)).flatMap((p, i, all) => {
+        const turnRing = i === all.length - 1 && p.id === props.selectedId ? (() => {
         const p = props.placing ? null : props.points.find((q) => q.id === props.selectedId && !props.done?.has(q.id));
         if (!p) return null;
         const g = ghost?.id === p.id ? ghost : null, [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
         if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
         const k = screenMarkerScale(props.sheetWidth, props.ppu, props.scale ?? 1);
         return (
-          <g data-photo-marker={p.id}>
+          <g key="turn-ring" data-photo-marker={p.id}>
             <circle cx={c.x} cy={c.y} r={turnGripRadius(k)} className="photo-marker-grip photo-marker-turn" onPointerDown={(e) => begin(e, p.id, "turn")} />
           </g>
         );
-      })()}
-      {/* the selected point last, so its arrow and move grip are on top of its neighbours */}
-      {[...props.points].sort((a, b) => Number(a.id === props.selectedId) - Number(b.id === props.selectedId)).map((p) => {
+      })() : null;
+        const point = ((p: ShotPointLike) => {
         const g = ghost?.id === p.id ? ghost : null;
         const [c] = props.project([{ x: g?.x ?? p.x, y: g?.y ?? p.y }]);
         if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
@@ -232,7 +244,7 @@ export function PhotoMarkerLayer(props: Props) {
           <g key={p.id} data-photo-marker={p.id} className={selected ? "selected" : undefined}>
             {selected ? <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k * 1.3 + 2} strokeWidth={Math.max(1, 3 * k)} className="photo-marker-ring" /> : null}
             {/* finger-sized grip (用戶 2026-11-22：箭頭在手機上移動困難): the circle and a margin around it moves it.
-                Invisible; the drawn arrow and circle are unchanged. The selected point's turn ring is drawn below. */}
+                Invisible; the drawn arrow and circle are unchanged. The selected point's turn ring lies over the others, under this point. */}
             <path d={arrowPath(c.x, c.y, angle, k)} fill={MARKER_RED} className={"photo-marker-arrow" + (isDone ? " locked" : "")}
               onPointerDown={(e) => begin(e, p.id, "turn")} />
             <circle cx={c.x} cy={c.y} r={MARKER_RADIUS_PX * k} strokeWidth={markerLine(k)} className="photo-marker-circle" stroke={MARKER_RED} fill={isDone ? MARKER_DONE : "none"} />
@@ -242,6 +254,8 @@ export function PhotoMarkerLayer(props: Props) {
               textAnchor="middle" dominantBaseline="central">{label}</text> : null}
           </g>
         );
+        })(p);
+        return turnRing ? [turnRing, point] : [point];
       })}
       {(props.pins ?? []).map((pin, i) => {
         const [c] = props.project([{ x: pin.x, y: pin.y }]);
