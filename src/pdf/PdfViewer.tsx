@@ -47,7 +47,7 @@ export type PdfViewerProps = ViewerEvents & {
    * project can be started on any page (用戶 2026-11-23 自查後「兩個都修」) */
   camera?: boolean;
   /** the page shown and the page count, after each page is drawn */
-  onPage?(page: number, pages: number): void;
+  onPage?(page: number, pages: number, size?: { width: number; height: number }): void;
   /** the words on the page shown, in page points (the camera names a spot after the room it is in) */
   onPageTexts?(texts: { text: string; x: number; y: number }[]): void;
 };
@@ -197,7 +197,7 @@ export const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(function Pd
       }
       setDrawing(false);
       events.current.onProgress("preparing", page, doc.numPages);
-      events.current.onPage?.(page, doc.numPages);
+      events.current.onPage?.(page, doc.numPages, { width: base.width, height: base.height });
       if (events.current.onPageTexts) void import("../camera/pdfSheet").then((m) => m.pdfPageTexts(p)).then((x) => { if (!stale) events.current.onPageTexts?.(x); }).catch(() => {});
       if (!readyOnce.current) { readyOnce.current = true; events.current.onReady(); }
     })().catch((e) => { if (!stale && !isCancel(e)) fail("PDF_OPEN_FAILED", e); });

@@ -156,6 +156,18 @@ export async function listPoints(batchId: string): Promise<ShotPoint[]> {
   return all.sort((a, b) => a.no - b.no);
 }
 
+/** Spots copied from another project (用戶 2026-11-24：複製到另一張圖), in their order, numbered after the ones there. */
+export async function addPoints(batchId: string, list: readonly { x: number; y: number; angle: number; place: string }[]): Promise<ShotPoint[]> {
+  return tx("readwrite", async (s) => {
+    const existing = await inBatch<ShotPoint>(s.points, batchId);
+    let no = nextNumber(existing);
+    const out: ShotPoint[] = [];
+    for (const at of list) { const point: ShotPoint = { id: newId(), batchId, no: no++, ...at }; await req(s.points.add(point)); out.push(point); }
+    await touch(s, batchId);
+    return out;
+  });
+}
+
 /** A new point gets the next number. */
 export async function addPoint(batchId: string, at: { x: number; y: number; angle: number; place: string }): Promise<ShotPoint> {
   return tx("readwrite", async (s) => {

@@ -6,7 +6,7 @@ import { useI18n } from "../i18n/translations";
 import type { MeasurementIndex } from "../viewer/measurementGeometry";
 import { plainCadText } from "../viewer/textSearch";
 import {
-  addPhoto, addPoint, createBatch, deleteAllPhotos, deleteAllPoints, deleteBatch, deletePhoto, deletePoint, getBatch, listBatches, listPhotos, listPoints, listSigners,
+  addPhoto, addPoint, addPoints, createBatch, deleteAllPhotos, deleteAllPoints, deleteBatch, deletePhoto, deletePoint, getBatch, listBatches, listPhotos, listPoints, listSigners,
   renumberPoint, updateBatch, updatePhoto, updatePoint, type NewBatch,
 } from "./batchStore";
 import { batchName, cardNo, markerText, MAX_POINTS, photoLabels, plainLabel, rocDate } from "./numbering";
@@ -15,6 +15,8 @@ import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
 import { ALL_PARTS, exportBatch, exportBatchFiles, type ExportParts } from "./exportBatch";
 import { useLongPress } from "./longPress";
+import { alignSnap, applyTransform, composeTransform, copiedPlace, startTransform, transformFromPairs, transformTurn, type SpotTransform } from "./copySpots";
+import type { DrawingPoint } from "../types/drawing";
 import type { SheetMark } from "./sheetLinks";
 import { ARROW_TIP } from "./PhotoMarkerLayer";
 import { allowRotation } from "../native/screenRotation";
@@ -75,7 +77,8 @@ export function saveBoardPos(p: BoardPos): void {
 }
 
 /** What the home page's 工程相機 asked for: open this batch, or start a new one (用戶 2026-11-23：工程相機自己獨立). */
-export type CameraLaunch = { batchId?: string; space?: string; newBatch?: boolean };
+/** copyFrom: a project whose spots are laid on this drawing (用戶 2026-11-24：複製到另一張圖) */
+export type CameraLaunch = { batchId?: string; space?: string; newBatch?: boolean; copyFrom?: string };
 
 export type CameraContext = {
   /** move the drawing so this point (drawing units) shows above the panel (用戶 2026-11-23：清單與箭頭雙向跳) */
@@ -98,11 +101,16 @@ export type CameraContext = {
   /** words on a PDF page and how near a spot they count (page points) */
   placeTexts?: PlaceText[];
   placeRadius?: { room: number; unit: number };
+  /** the page as a box (a PDF base): copied spots that fall outside start fitted into it */
+  sheetBounds?: { minX: number; minY: number; maxX: number; maxY: number };
   /** the sheet as PDF with `paint` drawn on (photo points), and its width in drawing units */
   exportSheet?(paint: Parameters<NonNullable<ExportCapable["exportWithOverlay"]>>[1], mode: "color" | "mono"): Promise<{ blob: Blob; sheetWidth: number }>;
 };
 
-type View = "batches" | "settings" | "work" | "photos" | "export";
+type View = "batches" | "settings" | "work" | "photos" | "export" | "copy";
+
+/** A copy on its way: the source project and spots, the pairs lined up so far, and the step of 兩點對齊. */
+type CopyState = { source: CameraBatch; points: ShotPoint[]; start: SpotTransform; pairs: { from: DrawingPoint; to: DrawingPoint }[]; step: "look" | "pickSpot" | "pickPlace"; picked: string | null; snapped: (DrawingPoint & { kind: string | null }) | null };
 
 export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () => void) {
   const { t } = useI18n();
@@ -289,6 +297,18 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     if (!open || !go || loadedFor !== ctx.viewKey) return;
     ctx.onLaunched?.();
     if (go.newBatch) { setBatch(null); setView("settings"); return; }
+    // 複製到另一張圖: the spots of that project, see-through on this drawing, until 確定
+    if (go.copyFrom) {
+      void Promise.all([getBatch(go.copyFrom), listPoints(go.copyFrom)]).then(([source, pts]) => {
+        if (!source) return;
+        setBatch(null); setSelectedId(null); setPlacing(false);
+        // the drawing's extent: the page of a PDF, or what is drawn on a CAD sheet
+        let box = ctx.sheetBounds ?? null;
+        if (!box && ctx.index?.entities.length) { box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }; for (const e of ctx.index.entities) { const q = e.bounds; if ([q.minX, q.minY, q.maxX, q.maxY].every(Number.isFinite)) { box.minX = Math.min(box.minX, q.minX); box.minY = Math.min(box.minY, q.minY); box.maxX = Math.max(box.maxX, q.maxX); box.maxY = Math.max(box.maxY, q.maxY); } } }
+        setCopy({ source, points: pts, start: startTransform(pts, box && Number.isFinite(box.minX) ? box : null), pairs: [], step: "look", picked: null, snapped: null }); setView("copy");
+      }).catch(fail);
+      return;
+    }
     // read it again: the list here may predate a rename on the home page (用戶 2026-11-23：長按專案→修改名稱)
     if (go.batchId) void getBatch(go.batchId).then((b) => { if (b) return openBatch(b); }).catch(fail);
   }, [open, ctx.launch, loadedFor, ctx.viewKey, batches]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -347,7 +367,53 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
     } catch (e) { fail(e); }
   };
 
-  const markers = open && batch ? {
+  const [copy, setCopy] = useState<CopyState | null>(null);
+  // where the spots start (as they are, or fitted into the page), then the pairs lined up from there
+  const copyT = useMemo(() => (copy ? composeTransform(copy.start, transformFromPairs(copy.pairs)) : transformFromPairs([])), [copy]);
+  const copyPoints = useMemo(() => (copy ? copy.points.map((p) => ({ ...p, ...applyTransform(copyT, p), angle: p.angle + transformTurn(copyT) })) : []), [copy, copyT]);
+  /** 確定: a new project on this drawing with the copied spots and the source's settings and signature */
+  const makeCopy = async () => {
+    if (!copy) return;
+    const src = copy.source, turn = transformTurn(copyT);
+    try {
+      const fields: NewBatch = {
+        name: batchName(Date.now(), src.item), drawingName: ctx.drawingName, ...(ctx.drawingId ? { drawingId: ctx.drawingId } : {}), viewKey: ctx.viewKey, space: ctx.space,
+        company: src.company, project: src.project, trade: src.trade, item: src.item, inspector: src.inspector, ...(src.signerId ? { signerId: src.signerId } : {}),
+        cardDate: "", ...(src.boardFont ? { boardFont: src.boardFont } : {}), ...(src.boardWeight ? { boardWeight: src.boardWeight } : {}), ...(src.markerScale ? { markerScale: src.markerScale } : {}),
+      };
+      const made = await createBatch(fields);
+      const stage = loadStage(src.id);
+      if (stage) saveStage(made.id, stage);
+      await addPoints(made.id, copy.points.map((p) => {
+        const q = applyTransform(copyT, p);
+        return { x: q.x, y: q.y, angle: (((p.angle + turn) % 360) + 360) % 360, place: copiedPlace(placeName(ctx.drawingName, q, texts, ctx.placeRadius), p.place, src.drawingName, ctx.drawingName) };
+      }));
+      setCopy(null);
+      await reloadBatches();
+      noteForPage.current = t("camera.copyDone", { N: copy.points.length, name: src.name });
+      await openBatch(made);
+    } catch (e) { fail(e); }
+  };
+  const copyMarkers = open && view === "copy" && copy ? {
+    points: copyPoints, labels: new Map(copy.points.map((p) => [p.id, String(p.no)])), selectedId: copy.picked, placing: copy.step === "pickPlace",
+    scale: copy.source.markerScale ?? markerScale, done: new Set<string>(), ghost: true,
+    pins: [
+      ...(ctx.pdf ? [] : [{ x: 0, y: 0, label: t("camera.copyBase"), color: "#2f8cff" }]),
+      ...(copy.snapped ? [{ x: copy.snapped.x, y: copy.snapped.y, label: copy.snapped.kind ? t("camera.copySnapped") : t("camera.copyHere"), color: "#ffb547" }] : []),
+    ],
+    onAdd: (at: { x: number; y: number }, ppu?: number) => {
+      if (copy.step !== "pickPlace" || !copy.picked) return;
+      const from = copy.points.find((p) => p.id === copy.picked);
+      if (!from) return;
+      // pulled onto a column corner or grid crossing within about a fingertip (as when measuring)
+      const s = ctx.pdf ? { ...at, kind: null } : alignSnap(ctx.index, at, ppu && ppu > 0 ? 24 / ppu : 0);
+      setCopy({ ...copy, pairs: [...copy.pairs, { from: applyTransform(copy.start, from), to: { x: s.x, y: s.y } }].slice(-2), step: "look", picked: null, snapped: s });
+    },
+    onSelect: (id: string | null) => { if (copy.step === "pickSpot" && id) setCopy({ ...copy, picked: id, step: "pickPlace" }); },
+    onMove: () => {}, onTurn: () => {},
+  } : null;
+
+  const markers = copyMarkers ?? (open && batch ? {
     points, labels, selectedId, placing, scale: markerScale, done,
     onAdd: async (at: { x: number; y: number }) => {
       // 001–999 in a batch; beyond that a new batch (用戶 2026-11-23)
@@ -371,7 +437,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       } catch (e) { fail(e); }
     },
     onLocked: () => setMessage(t("camera.pointLocked")),
-  } : null;
+  } : null);
 
   /** New place name for a spot; its photos that showed the old name on the board follow. */
   const renamePlace = async (p: ShotPoint, place: string) => {
@@ -406,6 +472,20 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         )}
         <button type="button" className="camera-primary camera-batch-new" onClick={() => { setBatch(null); setView("settings"); }}>
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>{t("camera.newBatch")}</button>
+      </div>
+    );
+  } else if (view === "copy" && copy) {
+    const step = copy.step === "pickSpot" ? t("camera.copyPickSpot") : copy.step === "pickPlace" ? t("camera.copyPickPlace")
+      : copy.pairs.length ? t("camera.copyAligned", { N: copy.pairs.length }) : t(ctx.pdf ? "camera.copyLookPdf" : "camera.copyLook");
+    body = (
+      <div className="camera-body camera-copy">
+        <p className="camera-copy-what">{t("camera.copyWhat", { name: copy.source.name, N: copy.points.length })}</p>
+        <p className="camera-message camera-message-box camera-copy-step" role="status">{step}</p>
+        <div className="camera-copy-actions">
+          <button type="button" className="camera-primary" disabled={copy.step !== "look"} onClick={() => void makeCopy()}>{t("camera.copyMake")}</button>
+          <button type="button" onClick={() => setCopy({ ...copy, step: copy.step === "look" ? "pickSpot" : "look", picked: null })}>{copy.step === "look" ? t(copy.pairs.length ? "camera.copyAlignMore" : "camera.copyAlign") : t("confirm.cancel")}</button>
+          {copy.pairs.length ? <button type="button" onClick={() => setCopy({ ...copy, pairs: [], step: "look", picked: null, snapped: null })}>{t("camera.copyReset")}</button> : null}
+        </div>
       </div>
     );
   } else if (view === "settings") {
@@ -538,7 +618,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setCollapsed((c) => !c); } }} {...grip}><span /></div>
       <header className="camera-head">{/* no title text (用戶 2026-11-23 白板 #1「刪除」); the 符號 slider sits there (swapped with the place name,
             用戶 2026-11-23) */}
-        {view === "batches" ? <span className="camera-head-label">{t("camera.batchesShort")}</span> : view === "export" ? <span className="camera-head-label">{t("camera.exportTitle")}</span> : batch && view === "work" ? (
+        {view === "batches" ? <span className="camera-head-label">{t("camera.batchesShort")}</span> : view === "copy" ? <span className="camera-head-label">{t("camera.copyTitle")}</span> : view === "export" ? <span className="camera-head-label">{t("camera.exportTitle")}</span> : batch && view === "work" ? (
           <label className="camera-head-scale"><span>{t("camera.sizeShort", { pct: Math.round(markerScale * 100) })}</span>
             <input type="range" min={MARKER_SCALE_MIN} max={MARKER_SCALE_MAX} step={0.1} value={markerScale} aria-label={t("camera.markerSize", { pct: Math.round(markerScale * 100) })} onChange={(e) => changeScale(Number(e.target.value))} />
           </label>
@@ -556,7 +636,7 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         {/* no X on the camera page itself (用戶 2026-11-23：「貓爪右邊的X」拿掉); 設定／清單／匯出 keep theirs to go back */}
         {view === "work" ? <span className="camera-head-space" aria-hidden="true" /> : (
           <button type="button" className="camera-x" aria-label={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")} title={t(subView ? "camera.backToCamera" : ctx.onProjects ? "camera.toProjects" : "camera.close")}
-          onClick={() => { if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); if (ctx.onProjects) ctx.onProjects(); else onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+          onClick={() => { if (view === "copy") { setCopy(null); setView("batches"); return; } if (subView) { setView(batch ? "work" : "batches"); return; } setPlacing(false); if (ctx.onProjects) ctx.onProjects(); else onClose(); }}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
         )}</header>
       {body}
       {message && !(view === "work" && selected && !renumbering) ? <p className="camera-message camera-message-box camera-message-bottom" role="status" title={message}>{message}</p> : null}

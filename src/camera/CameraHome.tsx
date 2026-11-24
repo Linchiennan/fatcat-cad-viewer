@@ -8,8 +8,10 @@ import { deleteBatch, listBatches, listPhotos, updateBatch } from "./batchStore"
 import type { CameraBatch } from "./types";
 import "./camera.css";
 
-export function CameraHome({ onPick, onNew, onClose, message }: {
+export function CameraHome({ onPick, onNew, onCopy, onClose, message }: {
   onPick(batch: CameraBatch): void;
+  /** 複製到另一張圖: pick the drawing next, the spots follow (用戶 2026-11-24) */
+  onCopy?(batch: CameraBatch): void;
   onNew(): void;
   onClose(): void;
   /** why the last pick could not open (its drawing is no longer in 我的圖面) */
@@ -64,6 +66,8 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
         {/* before a drawing is picked: label rooms and the floor on it first (用戶 2026-11-23：「底圖上要先有各空間名稱跟樓層名稱才方便辨識」
             「放在首頁，上方提示，用紅字粗體明顯」) */}
         <p className="camera-home-tip">{t("camera.homeDrawingTip")}</p>
+        {/* how to take a floor's spots to the next floor (用戶 2026-11-24：「你首頁記得寫說明」) */}
+        {onCopy ? <p className="camera-home-copy-tip">{t("camera.homeCopyTip")}</p> : null}
         <button type="button" className="camera-primary camera-home-new" onClick={onNew}>{t("camera.homeNew")}</button>
         {message || note ? <p className="camera-message camera-message-box" role="alert" title={message || note}>{message || note}</p> : null}
         {batches === null ? null : batches.length ? (
@@ -87,6 +91,7 @@ export function CameraHome({ onPick, onNew, onClose, message }: {
             <h2>{menu.name || t("camera.homeUnnamed")}</h2>
             <div className="camera-home-menu-choices">
               <button type="button" className="close-keep" onClick={() => { const b = menu; setMenu(null); setRenaming({ batch: b, name: b.name }); }}>{t("camera.renameBatch")}</button>
+              {onCopy ? <button type="button" className="close-keep camera-home-copy" onClick={() => { const b = menu; setMenu(null); onCopy(b); }}>{t("camera.copyToDrawing")}</button> : null}
               <button type="button" className="close-go" onClick={() => { const b = menu; setMenu(null); void askDelete(b); }}>{t("camera.deleteBatch")}</button>
               <button type="button" className="camera-home-menu-cancel" onClick={() => setMenu(null)}>{t("confirm.cancel")}</button>
             </div>

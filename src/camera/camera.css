@@ -390,3 +390,18 @@ form.camera-row input[type="number"] { flex: 1 1 auto; width: auto; min-width: 0
 .camera-parts .camera-check-sub.off { color: var(--muted); opacity: 0.55; }
 .camera-parts .camera-check-sub.off::before { border-color: var(--muted); }
 .camera-sheet .camera-parts .camera-check.camera-check-sub { font-size: 0.78rem; }
+
+/* 複製到另一張圖: the copied spots see-through until the copy is made (用戶 2026-11-24) */
+.photo-marker-layer.ghost [data-photo-marker] { opacity: 0.55; }
+.photo-marker-layer.ghost [data-photo-marker].selected { opacity: 1; }
+
+/* 複製到另一張圖 (用戶 2026-11-24) */
+.camera-home-copy-tip { margin: -4px 0 10px; color: var(--accent-hi); font-size: 0.9rem; line-height: 1.4; }
+.camera-home .confirm-box .camera-home-menu-choices button.camera-home-copy { background: transparent; border: 1.5px solid var(--accent-hi); color: var(--accent-hi); }
+.camera-copy { display: flex; flex-direction: column; gap: 10px; }
+.camera-copy-what { margin: 0; font-size: 0.85rem; color: var(--text); line-height: 1.4; }
+.camera-sheet .camera-copy .camera-copy-step { flex: none; height: auto; min-height: 40px; font-size: 0.82rem; }
+.camera-copy-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.camera-copy-actions button { flex: 1 1 0; min-width: 88px; min-height: 44px; border-radius: 10px; border: 1.5px solid var(--tile-line); background: #1d3343; color: var(--text); font: inherit; font-size: 0.9rem; }
+.camera-copy-actions button.camera-primary { background: var(--accent); color: var(--on-accent); border: 0; font-weight: 700; }
+.camera-copy-actions button:disabled { opacity: 0.45; }

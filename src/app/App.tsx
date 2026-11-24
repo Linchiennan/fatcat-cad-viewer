@@ -218,6 +218,7 @@ export function App() {
   const [pdfPage, setPdfPage] = useState(0);
   const [pdfId, setPdfId] = useState("");
   const [pdfTexts, setPdfTexts] = useState<PlaceText[] | null>(null);
+  const [pdfSize, setPdfSize] = useState<{ width: number; height: number } | null>(null);
   const request = useRef(0);
   const abort = useRef<AbortController | null>(null);
   const pendingImport = useRef(false);
@@ -718,7 +719,7 @@ export function App() {
     h.centerOn({ x, y }, { x: (r.left + right) / 2 - r.left, y: (Math.max(r.top, 0) + bottom) / 2 - r.top });
   }, onProjects: () => { setCameraOpen(false); goHome(); setCameraHomeNote(""); setCameraHome(true); }, drawingName: last?.file.name ?? "", drawingId: last?.entryId, launch: cameraLaunch, onLaunched: () => setCameraLaunch(null), viewKey: isPdf ? pdfViewKey : index?.viewKey ?? "", space: isPdf ? pdfSpace : space, index: isPdf ? null : index,
     // a PDF page: its words name the spots (a room label within about 7 cm of paper, the unit within 25 cm)
-    ...(isPdf ? { pdf: true, placeTexts: pdfTexts ?? [], placeRadius: { room: 200, unit: 700 } } : {}),
+    ...(isPdf ? { pdf: true, placeTexts: pdfTexts ?? [], placeRadius: { room: 200, unit: 700 }, ...(pdfSize ? { sheetBounds: { minX: 0, minY: 0, maxX: pdfSize.width, maxY: pdfSize.height } } : {}) } : {}),
     exportSheet: async (paint, mode) => {
     if (isPdf) {
       if (!drawable || !(pdfPage > 0)) throw new Error("no page");
@@ -747,7 +748,7 @@ export function App() {
   if (drawable && showing) {
     if (isPdf) {
       viewer = Pdf ? <Pdf ref={pdfRef} file={drawable} onProgress={onProgress} onReady={onReady} onError={onViewerError}
-        photoMarkers={camera.photoMarkers} camera={cameraOpen} onPage={(n) => setPdfPage(n)} onPageTexts={setPdfTexts} /> : null;
+        photoMarkers={camera.photoMarkers} camera={cameraOpen} onPage={(n, _pages, size) => { setPdfPage(n); if (size) setPdfSize(size); }} onPageTexts={setPdfTexts} /> : null;
     } else if (cad) {
       viewer = (
         <cad.Canvas ref={canvasRef} file={drawable} holdPicture={xrefsApplying && drawable === applyingFile.current} createEngine={cad.createEngine} measurement={settings}
@@ -792,7 +793,8 @@ export function App() {
       <div className="app-content" hidden={libraryOpen} inert={closeConfirm}>
         {screen === "home" ? <HomeScreen onLibrary={openLibrary} onCamera={() => { setCameraHomeNote(""); setCameraHome(true); }} onLegal={setLegal} /> : null}
         {cameraHome ? <CameraHome message={cameraHomeNote} onPick={(b) => void pickCameraBatch(b)} onClose={() => setCameraHome(false)}
-          onNew={() => { setCameraLaunch({ newBatch: true }); setCameraHome(false); openLibrary(); }} /> : null}
+          onNew={() => { setCameraLaunch({ newBatch: true }); setCameraHome(false); openLibrary(); }}
+          onCopy={(b) => { setCameraLaunch({ copyFrom: b.id }); setCameraHome(false); openLibrary(); }} /> : null}
 
         {screen === "error" && error ? (
           <ErrorScreen error={error} onLibrary={openLibrary} onRetry={last ? retry : undefined} onBack={goHome} />

@@ -27,7 +27,8 @@ type Props = {
   project(points: readonly DrawingPoint[]): DrawingPoint[];
   unproject(x: number, y: number): DrawingPoint;
   ppu: number;
-  onAdd(at: DrawingPoint): void;
+  /** ppu: screen px per drawing unit now (a tap pulled onto a corner nearby uses it as the reach) */
+  onAdd(at: DrawingPoint, ppu?: number): void;
   onSelect(id: string | null): void;
   onMove(id: string, at: DrawingPoint): void;
   onTurn(id: string, angle: number): void;
@@ -37,6 +38,10 @@ type Props = {
   scale?: number;
   /** sheet width in drawing units: markers are sized on the drawing (markerUnitRadius) and zoom with it */
   sheetWidth?: number;
+  /** 複製到另一張圖 preview (用戶 2026-11-24): the spots drawn see-through, picked but never moved or turned */
+  ghost?: boolean;
+  /** marks drawn on top, not spots: the blue 基準點 at 0,0, a pulled-in tap (shown on screen only, never exported) */
+  pins?: readonly { x: number; y: number; label: string; color: string }[];
 };
 
 /**
@@ -150,7 +155,7 @@ export function PhotoMarkerLayer(props: Props) {
       const t0 = tap; tap = null;
       if (!t0 || t0.id !== e.pointerId || t0.moved) return;
       const s = live.current;
-      if (s.placing) s.onAdd(s.unproject(t0.x, t0.y));
+      if (s.placing) s.onAdd(s.unproject(t0.x, t0.y), s.ppu);
       else s.onSelect(null);
     };
     const cancel = (e: PointerEvent) => { pointers.delete(e.pointerId); tap = null; };
@@ -166,6 +171,7 @@ export function PhotoMarkerLayer(props: Props) {
     e.stopPropagation(); e.preventDefault();
     try { (e.currentTarget as Element).setPointerCapture?.(e.pointerId); } catch { /* pointer already gone: the drag still works without capture */ }
     props.onSelect(id);
+    if (props.ghost) return; // a preview spot is only picked
     // a point with photos stays as it was shot: selected, but neither moved nor turned until its photos are deleted
     // (用戶 2026-11-23：「有拍到照片的箭頭我說不能移動了，裡面的照片刪除才能移動」「轉向也鎖」)
     if (props.done?.has(id)) { props.onLocked?.(id); return; }
@@ -198,7 +204,7 @@ export function PhotoMarkerLayer(props: Props) {
 
   if (!(props.ppu > 0)) return <svg ref={svg} className="photo-marker-layer" aria-hidden="true" />;
   return (
-    <svg ref={svg} className={"photo-marker-layer" + (props.placing ? " placing" : "")} aria-label={t("camera.markersLabel")}
+    <svg ref={svg} className={"photo-marker-layer" + (props.placing ? " placing" : "") + (props.ghost ? " ghost" : "")} aria-label={t("camera.markersLabel")}
       onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
       {/* The selected point's turn ring, under every point: anywhere around it turns it, but a neighbour inside the
           ring is still grabbed by its own move grip (用戶 2026-11-22：「當定點箭頭有照片時，變成不能移動」— the new
@@ -234,6 +240,16 @@ export function PhotoMarkerLayer(props: Props) {
               onPointerDown={(e) => begin(e, p.id, "move")} />
             {markerFont(label, k) >= MIN_TEXT_PX ? <text x={c.x} y={c.y} className="photo-marker-text" fill={isDone ? "#fff" : MARKER_RED} fontSize={markerFont(label, k)}
               textAnchor="middle" dominantBaseline="central">{label}</text> : null}
+          </g>
+        );
+      })}
+      {(props.pins ?? []).map((pin, i) => {
+        const [c] = props.project([{ x: pin.x, y: pin.y }]);
+        if (!Number.isFinite(c.x) || !Number.isFinite(c.y)) return null;
+        return (
+          <g key={`pin${i}`} className="photo-marker-pin" pointerEvents="none">
+            <circle cx={c.x} cy={c.y} r={7} fill={pin.color} stroke="#fff" strokeWidth={2} />
+            <text x={c.x + 11} y={c.y} fill={pin.color} fontSize={13} fontWeight={700} dominantBaseline="central" stroke="#0b1118" strokeWidth={3} paintOrder="stroke">{pin.label}</text>
           </g>
         );
       })}
