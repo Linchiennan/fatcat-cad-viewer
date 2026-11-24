@@ -152,7 +152,7 @@ export const CAMERA_STRINGS = {
   "camera.flash.torch": { zh: "常亮", en: "Torch" },
   "camera.tool.place": { zh: "放點", en: "Spot" },
   "camera.tool.gallery": { zh: "相簿", en: "Gallery" },
-  "camera.tool.list": { zh: "清單", en: "List" },
+  "camera.tool.list": { zh: "照片", en: "Photos" },
   "camera.tool.settings": { zh: "設定", en: "Setup" },
   "camera.tool.export": { zh: "匯出", en: "Export" },
   "camera.sizeShort": { zh: "符號 {pct}%", en: "Marker {pct}%" },
