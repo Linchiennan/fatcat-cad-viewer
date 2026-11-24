@@ -68,6 +68,12 @@ export function CameraHome({ onPick, onNew, onCopy, onClose, message }: {
         <p className="camera-home-tip">{t("camera.homeDrawingTip")}</p>
         {/* how to take a floor's spots to the next floor (用戶 2026-11-24：「你首頁記得寫說明」) */}
         {onCopy ? <p className="camera-home-copy-tip">{t("camera.homeCopyTip")}</p> : null}
+        {/* the whole flow in five steps and every long press (用戶 2026-11-24：首頁加使用說明) */}
+        <details className="camera-home-guide">
+          <summary>{t("camera.guide")}</summary>
+          <ol>{(["camera.guide.1", "camera.guide.2", "camera.guide.3", "camera.guide.4", "camera.guide.5"] as const).map((k) => <li key={k}>{t(k)}</li>)}</ol>
+          <p className="camera-home-guide-hold">{t("camera.guide.hold")}</p>
+        </details>
         <button type="button" className="camera-primary camera-home-new" onClick={onNew}>{t("camera.homeNew")}</button>
         {message || note ? <p className="camera-message camera-message-box" role="alert" title={message || note}>{message || note}</p> : null}
         {batches === null ? null : batches.length ? (

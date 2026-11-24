@@ -15,6 +15,7 @@ import { PhotoList } from "./PhotoList";
 import type { ExportCapable } from "../export/types";
 import { ALL_PARTS, exportBatch, exportBatchFiles, type ExportParts } from "./exportBatch";
 import { useLongPress } from "./longPress";
+import { useHoldTip } from "./holdTip";
 import { alignSnap, applyTransform, composeTransform, copiedPlace, startTransform, transformFromPairs, transformTurn, type SpotTransform } from "./copySpots";
 import type { DrawingPoint } from "../types/drawing";
 import type { SheetMark } from "./sheetLinks";
@@ -346,11 +347,12 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
 
   // 放點 held: offer 刪除全部定點, and ask once more before anything goes (用戶 2026-11-23：「長按放點，出現刪除全部點位的
   // 選項，要有再度確認」); a spot takes its photos with it
+  const holdTip = useHoldTip();
   const placeHold = useLongPress<null>(() => {
     if (!batch) return;
     if (!points.length) { setMessage(t("camera.noPointsToDelete")); return; }
     const n = points.length, m = photos.filter((p) => p.pointId).length, b = batch;
-    setConfirm({ message: t("camera.deleteAllPointsOffer", { N: n }), okLabel: t("camera.deleteAllPoints"),
+    setConfirm({ message: t("camera.deleteAllPointsOffer", { N: n }), detail: t("camera.placeTip"), okLabel: t("camera.deleteAllPoints"),
       onOk: () => setConfirm({ message: t("camera.deleteAllPointsAsk", { N: n, M: m }), okLabel: t("camera.deleteAllPoints"),
         onOk: () => void deleteAllPoints(b.id).then(async (r) => { setSelectedId(null); setPlacing(false); await reload(b); setMessage(t("camera.deletedAllPoints", { N: r.points, M: r.photos })); }).catch(fail) }) });
   });
@@ -580,13 +582,13 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         <fieldset className="camera-parts">
           {/* a PDF base has no CAD coordinates to line the DXF / LISP up with (用戶 2026-11-23 選 B) */}
           {(["sheetMono", "sheetPdf", "sheetLinks", "markerDxf", "arrowLisp", "photos", "originals", "cardDocx", "cardPdf"] as const).filter((k) => !(ctx.pdf && (k === "markerDxf" || k === "arrowLisp"))).map((k) => (
-            <label key={k} className={k === "sheetLinks" ? "camera-check camera-check-sub" + (parts.sheetMono || parts.sheetPdf ? "" : " off") : "camera-check"} title={k === "sheetMono" || k === "sheetPdf" || k === "sheetLinks" ? t(`camera.part.${k}.tip`) : undefined}><input type="checkbox" checked={parts[k]} disabled={k === "sheetLinks" && !(parts.sheetMono || parts.sheetPdf)} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
+            <label key={k} className={(k === "sheetLinks" ? "camera-check camera-check-sub" + (parts.sheetMono || parts.sheetPdf ? "" : " off") : "camera-check") + " has-tip"} {...holdTip.bind("part." + k)}>{holdTip.tip("part." + k, t(`camera.part.${k}`), t(`camera.part.${k}.tip`))}<input type="checkbox" checked={parts[k]} disabled={k === "sheetLinks" && !(parts.sheetMono || parts.sheetPdf)} onChange={(e) => setParts({ ...parts, [k]: e.target.checked })} />{t(`camera.part.${k}`)}</label>
           ))}
         </fieldset>
         {progress ? <p role="status">{t("camera.exporting", { done: progress.done, total: progress.total })}</p> : null}
         <div className="camera-actions">
-          <button type="button" className="camera-primary" disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(false)}>{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
-          <button type="button" className="camera-zip" title={t("camera.exportZipTip")} disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(true)}>{t("camera.exportZip")}</button>
+          <button type="button" className="camera-primary has-tip" {...holdTip.bind("go")} disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(false)}>{holdTip.tip("go", t("camera.exportGo"), t("camera.exportGoTip"))}{placedCount ? t("camera.exportGo") : t("camera.exportEmpty")}</button>
+          <button type="button" className="camera-zip has-tip" {...holdTip.bind("zip")} disabled={!placedCount || !!progress || !Object.values(parts).some(Boolean)} onClick={() => void run(true)}>{holdTip.tip("zip", t("camera.exportZip"), t("camera.exportZipTip"))}{t("camera.exportZip")}</button>
         </div>
       </div>
     );
@@ -608,13 +610,13 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
       <div className="camera-body camera-compact">
         {/* compact tool row (用戶 2026-11-22 白板 #2：精簡美化，太佔空間) */}
         <div className="camera-tools">
-          <button type="button" aria-pressed={placing} title={t("camera.placeTip")} {...placeHold.bind(null)} onClick={() => { if (placeHold.consumed()) return; setPlacing((v) => !v); }}>{I("M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21zM12 8.2v4.6M9.7 10.5h4.6")}<span>{t("camera.tool.place")}</span></button>
-          <label title={t("camera.fromGallery")}>{I("M4 5h16v14H4zM4 15l4.5-4.5 4 4 3-3L20 15M15.5 9.2h.01")}<span>{t("camera.tool.gallery")}</span>
+          <button type="button" aria-pressed={placing} {...placeHold.bind(null)} onClick={() => { if (placeHold.consumed()) return; setPlacing((v) => !v); }}>{I("M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21zM12 8.2v4.6M9.7 10.5h4.6")}<span>{t("camera.tool.place")}</span></button>
+          <label className="has-tip" {...holdTip.bind("gallery")}>{holdTip.tip("gallery", t("camera.fromGallery"), t("camera.galleryTip"))}{I("M4 5h16v14H4zM4 15l4.5-4.5 4 4 3-3L20 15M15.5 9.2h.01")}<span>{t("camera.tool.gallery")}</span>
             <input type="file" accept="image/*" multiple hidden onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; void keepPhotos(fs); }} />
           </label>
-          <button type="button" title={t("camera.list")} onClick={() => setView("photos")}>{I("M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01")}<span>{t("camera.tool.list")}</span>{unplaced ? <em className="camera-badge">{unplaced}</em> : null}</button>
-          <button type="button" title={t("camera.settings")} onClick={() => setView("settings")}>{I("M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM19.4 13.5l1.6 1.2-1.8 3.1-1.9-.6a7.6 7.6 0 0 1-2 1.2l-.4 2H11l-.4-2a7.6 7.6 0 0 1-2-1.2l-1.9.6-1.8-3.1 1.6-1.2a7.4 7.4 0 0 1 0-2.4L4.9 9.3l1.8-3.1 1.9.6a7.6 7.6 0 0 1 2-1.2L11 3.6h3.6l.4 2a7.6 7.6 0 0 1 2 1.2l1.9-.6 1.8 3.1-1.6 1.2a7.4 7.4 0 0 1 0 2.4z")}<span>{t("camera.tool.settings")}</span></button>
-          <button type="button" title={t("camera.exportTitle")} onClick={() => { setMessage(""); setView("export"); }}>{I("M12 15V4M8 8l4-4 4 4M5 13v6h14v-6")}<span>{t("camera.tool.export")}</span></button>
+          <button type="button" className="has-tip" {...holdTip.bind("list")} onClick={() => setView("photos")}>{holdTip.tip("list", t("camera.list"), t("camera.listTip"))}{I("M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01")}<span>{t("camera.tool.list")}</span>{unplaced ? <em className="camera-badge">{unplaced}</em> : null}</button>
+          <button type="button" className="has-tip" {...holdTip.bind("settings")} onClick={() => setView("settings")}>{holdTip.tip("settings", t("camera.settings"), t("camera.settingsTip"))}{I("M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM19.4 13.5l1.6 1.2-1.8 3.1-1.9-.6a7.6 7.6 0 0 1-2 1.2l-.4 2H11l-.4-2a7.6 7.6 0 0 1-2-1.2l-1.9.6-1.8-3.1 1.6-1.2a7.4 7.4 0 0 1 0-2.4L4.9 9.3l1.8-3.1 1.9.6a7.6 7.6 0 0 1 2-1.2L11 3.6h3.6l.4 2a7.6 7.6 0 0 1 2 1.2l1.9-.6 1.8 3.1-1.6 1.2a7.4 7.4 0 0 1 0 2.4z")}<span>{t("camera.tool.settings")}</span></button>
+          <button type="button" className="has-tip" {...holdTip.bind("export")} onClick={() => { setMessage(""); setView("export"); }}>{holdTip.tip("export", t("camera.exportTitle"), t("camera.exportTip"))}{I("M12 15V4M8 8l4-4 4 4M5 13v6h14v-6")}<span>{t("camera.tool.export")}</span></button>
         </div>
         {/* the selected spot and its place name, tap to rename; full width here, swapped with the 符號 slider (用戶 2026-11-23：
             「新版的把位置跟符號的拉桿交換」) */}
@@ -665,7 +667,8 @@ export function useCameraSession(open: boolean, ctx: CameraContext, onClose: () 
         ) : <span className="camera-head-space" aria-hidden="true" />}
         {/* the shutter sits in the title row as a cat paw, so it is there even with the panel pulled down (用戶 2026-11-22 白板 #1) */}
         {batch && view === "work" ? (
-          <button type="button" className="camera-paw" title={t("camera.shootTip")} aria-label={t("camera.shoot")} onClick={() => { setPlacing(false); setLocating(null); setShooting(true); }}>
+          <button type="button" className="camera-paw has-tip" aria-label={t("camera.shoot")} {...holdTip.bind("shoot")} onClick={() => { setPlacing(false); setLocating(null); setShooting(true); }}>
+            {holdTip.tip("shoot", t("camera.shoot"), t("camera.shootTip"))}
             <PawShape className="camera-paw-shape" />
             <svg className="camera-paw-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z" /><circle cx="12" cy="13.2" r="3.4" /></svg>
             <span>{t("camera.shoot")}</span>
